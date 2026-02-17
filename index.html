@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BioMech AI — Real-Time Biomechanical Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@100;300;400;600;700;900&family=Share+Tech+Mono&family=Michroma&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="static/css/style.css"/>
+</head>
+<body>
+
+<!-- ── Animated Background ─────────────────────────────────────── -->
+<canvas id="bg-canvas"></canvas>
+<div class="scan-line"></div>
+
+<!-- ── Splash Screen ───────────────────────────────────────────── -->
+<div id="splash" class="splash">
+  <div class="splash-inner">
+    <div class="splash-logo">
+      <div class="splash-hex">
+        <svg viewBox="0 0 100 115" fill="none">
+          <polygon points="50,5 95,30 95,85 50,110 5,85 5,30" stroke="url(#hexGrad)" stroke-width="2" fill="none"/>
+          <defs>
+            <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00ffcc"/>
+              <stop offset="100%" stop-color="#7c3aed"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span class="splash-icon">⚡</span>
+      </div>
+    </div>
+    <h1 class="splash-title">BIO<span>MECH</span> AI</h1>
+    <p class="splash-sub">Real-Time Biomechanical Analysis System</p>
+    <div class="splash-loading">
+      <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
+      <div class="loading-text" id="loading-text">Initializing TensorFlow.js...</div>
+    </div>
+    <div class="splash-stats">
+      <div class="ss-item"><span id="ss-tf">—</span><small>TF.js</small></div>
+      <div class="ss-item"><span id="ss-mp">—</span><small>Pose Model</small></div>
+      <div class="ss-item"><span id="ss-cam">—</span><small>Camera</small></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Main App ─────────────────────────────────────────────────── -->
+<div id="app" class="app hidden">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo-mark">⚡</div>
+      <div class="logo-text">
+        <span class="logo-main">BIO<em>MECH</em> AI</span>
+        <span class="logo-sub">Biomechanical Analysis v2.0</span>
+      </div>
+    </div>
+    <div class="header-center">
+      <div class="pulse-indicator" id="pulse-indicator">
+        <div class="pulse-dot"></div>
+        <span id="pulse-label">READY</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="hdr-chip"><span class="chip-label">FPS</span><span id="hdr-fps">--</span></div>
+      <div class="hdr-chip"><span class="chip-label">REPS</span><span id="hdr-reps">0</span></div>
+      <div class="hdr-chip accent"><span class="chip-label">SCORE</span><span id="hdr-score">100%</span></div>
+      <button class="hdr-btn" id="settings-btn" onclick="toggleSettings()">⚙</button>
+    </div>
+  </header>
+
+  <!-- Body -->
+  <div class="body-grid">
+
+    <!-- ── LEFT PANEL ─────────────────────────────────────────── -->
+    <aside class="left-panel">
+
+      <!-- Exercise Selector -->
+      <div class="section-card">
+        <div class="card-header"><span class="card-title">EXERCISES</span><div class="card-line"></div></div>
+        <div class="exercise-list" id="exercise-list">
+          <button class="ex-card active" data-ex="squat" onclick="selectExercise('squat')">
+            <div class="ex-card-icon">🏋️</div>
+            <div class="ex-card-info"><span class="ex-card-name">Squat</span><span class="ex-card-target">Knee: 90°</span></div>
+            <div class="ex-card-glow"></div>
+          </button>
+          <button class="ex-card" data-ex="pushup" onclick="selectExercise('pushup')">
+            <div class="ex-card-icon">💪</div>
+            <div class="ex-card-info"><span class="ex-card-name">Push-Up</span><span class="ex-card-target">Elbow: 90°</span></div>
+            <div class="ex-card-glow"></div>
+          </button>
+          <button class="ex-card" data-ex="lunge" onclick="selectExercise('lunge')">
+            <div class="ex-card-icon">🦵</div>
+            <div class="ex-card-info"><span class="ex-card-name">Lunge</span><span class="ex-card-target">Both Knees: 90°</span></div>
+            <div class="ex-card-glow"></div>
+          </button>
+          <button class="ex-card" data-ex="plank" onclick="selectExercise('plank')">
+            <div class="ex-card-icon">⚡</div>
+            <div class="ex-card-info"><span class="ex-card-name">Plank</span><span class="ex-card-target">Body: 180°</span></div>
+            <div class="ex-card-glow"></div>
+          </button>
+          <button class="ex-card" data-ex="bicep_curl" onclick="selectExercise('bicep_curl')">
+            <div class="ex-card-icon">🔥</div>
+            <div class="ex-card-info"><span class="ex-card-name">Bicep Curl</span><span class="ex-card-target">Elbow: 45°</span></div>
+            <div class="ex-card-glow"></div>
+          </button>
+          <button class="ex-card" data-ex="shoulder_press" onclick="selectExercise('shoulder_press')">
+            <div class="ex-card-icon">🏆</div>
+            <div class="ex-card-info"><span class="ex-card-name">Shoulder Press</span><span class="ex-card-target">Elbow: 180°</span></div>
+            <div class="ex-card-glow"></div>
+          </button>
+          <button class="ex-card" data-ex="deadlift" onclick="selectExercise('deadlift')">
+            <div class="ex-card-icon">💎</div>
+            <div class="ex-card-info"><span class="ex-card-name">Deadlift</span><span class="ex-card-target">Hip: 180°</span></div>
+            <div class="ex-card-glow"></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Instruction Panel -->
+      <div class="section-card inst-card" id="inst-card">
+        <div class="card-header"><span class="card-title">📋 INSTRUCTIONS</span></div>
+        <p class="inst-text" id="inst-text">Stand with feet shoulder-width apart. Bend knees to 90°. Keep torso upright throughout.</p>
+        <div class="inst-tips" id="inst-tips">
+          <div class="inst-tip">👁 Face camera at full body distance</div>
+          <div class="inst-tip">💡 Good lighting improves accuracy</div>
+        </div>
+      </div>
+
+      <!-- Formula Display -->
+      <div class="section-card formula-card">
+        <div class="card-header"><span class="card-title">📐 BIOMECHANICS ENGINE</span></div>
+        <div class="formula-block">
+          <div class="formula-eq">cos(θ) = <sup>AB² + BC² − AC²</sup><div class="fraction-bar"></div><sub>2 · AB · BC</sub></div>
+          <div class="formula-label">Law of Cosines — Real-time Joint Angle</div>
+        </div>
+        <div class="pipeline">
+          <div class="pip-step active">MediaPipe</div>
+          <div class="pip-arrow">→</div>
+          <div class="pip-step active">Landmarks</div>
+          <div class="pip-arrow">→</div>
+          <div class="pip-step active">Cosine Rule</div>
+          <div class="pip-arrow">→</div>
+          <div class="pip-step active">Feedback</div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- ── CENTER PANEL ─────────────────────────────────────────── -->
+    <section class="center-panel">
+
+      <!-- Camera View -->
+      <div class="camera-container">
+        <div class="cam-frame">
+          <div class="cam-corner tl"></div>
+          <div class="cam-corner tr"></div>
+          <div class="cam-corner bl"></div>
+          <div class="cam-corner br"></div>
+          <div class="cam-scanline"></div>
+
+          <video id="webcam" autoplay muted playsinline style="display:none;"></video>
+          <canvas id="output-canvas"></canvas>
+
+          <!-- Startup Overlay -->
+          <div class="cam-overlay" id="cam-overlay">
+            <div class="cam-overlay-icon">📷</div>
+            <h3>Ready to Train</h3>
+            <p>Click <strong>START SESSION</strong> to activate camera</p>
+            <p class="cam-overlay-sub">Stand 2–3 meters away for full body tracking</p>
+          </div>
+
+          <!-- Live HUD overlays -->
+          <div class="live-hud" id="live-hud" style="display:none;">
+            <div class="hud-exercise" id="hud-exercise">SQUAT</div>
+            <div class="hud-timer" id="hud-timer">0:00</div>
+            <div class="hud-quality" id="hud-quality">
+              <div class="quality-bar-track">
+                <div class="quality-bar-fill" id="quality-bar"></div>
+              </div>
+              <span id="quality-pct">100%</span>
+            </div>
+          </div>
+
+          <!-- Alert Banner -->
+          <div class="alert-banner" id="alert-banner">
+            <span class="alert-icon" id="alert-icon">⚡</span>
+            <span id="alert-text">Awaiting pose detection...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls Bar -->
+      <div class="controls-bar">
+        <button class="ctrl-btn start" id="btn-start" onclick="startSession()">
+          <span class="ctrl-icon">▶</span>
+          <span class="ctrl-label">START SESSION</span>
+          <div class="btn-glow"></div>
+        </button>
+        <button class="ctrl-btn stop" id="btn-stop" onclick="stopSession()" disabled>
+          <span class="ctrl-icon">⏹</span>
+          <span class="ctrl-label">STOP</span>
+        </button>
+        <button class="ctrl-btn reset" onclick="resetSession()">
+          <span class="ctrl-icon">↺</span>
+          <span class="ctrl-label">RESET</span>
+        </button>
+        <button class="ctrl-btn screenshot" onclick="takeScreenshot()">
+          <span class="ctrl-icon">📸</span>
+          <span class="ctrl-label">CAPTURE</span>
+        </button>
+        <button class="ctrl-btn ai" onclick="openAICoach()">
+          <span class="ctrl-icon">🤖</span>
+          <span class="ctrl-label">AI COACH</span>
+          <div class="btn-pulse-ring"></div>
+        </button>
+      </div>
+
+      <!-- Live Joint Angles Display -->
+      <div class="angles-strip" id="angles-strip">
+        <div class="angle-chip" id="ac-0"><span class="ac-name">—</span><span class="ac-val">—°</span></div>
+        <div class="angle-chip" id="ac-1"><span class="ac-name">—</span><span class="ac-val">—°</span></div>
+        <div class="angle-chip" id="ac-2"><span class="ac-name">—</span><span class="ac-val">—°</span></div>
+        <div class="angle-chip" id="ac-3"><span class="ac-name">—</span><span class="ac-val">—°</span></div>
+      </div>
+    </section>
+
+    <!-- ── RIGHT PANEL ─────────────────────────────────────────── -->
+    <aside class="right-panel">
+
+      <!-- Rep Counter -->
+      <div class="section-card rep-section">
+        <div class="card-header"><span class="card-title">REP COUNTER</span><div class="card-line"></div></div>
+        <div class="rep-display">
+          <div class="rep-number" id="rep-number">0</div>
+          <div class="rep-label">REPS COMPLETED</div>
+          <div class="rep-rings-wrap">
+            <div class="rep-ring r1"></div>
+            <div class="rep-ring r2"></div>
+            <div class="rep-ring r3"></div>
+          </div>
+        </div>
+        <div class="rep-state-row">
+          <div class="rep-state-chip" id="chip-down">DOWN</div>
+          <div class="rep-state-arrow">↕</div>
+          <div class="rep-state-chip" id="chip-up">UP</div>
+        </div>
+      </div>
+
+      <!-- Form Score -->
+      <div class="section-card score-section">
+        <div class="card-header"><span class="card-title">FORM SCORE</span><div class="card-line"></div></div>
+        <div class="score-ring-wrap">
+          <svg class="score-svg" viewBox="0 0 140 140">
+            <defs>
+              <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00ffcc"/>
+                <stop offset="100%" stop-color="#7c3aed"/>
+              </linearGradient>
+            </defs>
+            <circle class="score-track" cx="70" cy="70" r="58"/>
+            <circle class="score-progress" id="score-prog" cx="70" cy="70" r="58"
+                    stroke-dasharray="364.4" stroke-dashoffset="0"/>
+          </svg>
+          <div class="score-inner">
+            <div class="score-pct" id="score-pct">100</div>
+            <div class="score-unit">%</div>
+            <div class="score-grade" id="score-grade">A+</div>
+          </div>
+        </div>
+        <div class="score-breakdown" id="score-breakdown">
+          <div class="sb-item"><span>Depth</span><div class="sb-bar"><div class="sb-fill" style="width:100%"></div></div></div>
+          <div class="sb-item"><span>Alignment</span><div class="sb-bar"><div class="sb-fill" style="width:100%"></div></div></div>
+          <div class="sb-item"><span>Balance</span><div class="sb-bar"><div class="sb-fill" style="width:100%"></div></div></div>
+        </div>
+      </div>
+
+      <!-- Live Feedback -->
+      <div class="section-card feedback-section">
+        <div class="card-header"><span class="card-title">LIVE FEEDBACK</span><div class="card-line"></div></div>
+        <div class="feedback-list" id="feedback-list">
+          <div class="fb-item info">
+            <div class="fb-icon">💡</div>
+            <div class="fb-text">Start session to receive real-time feedback</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Stats -->
+      <div class="section-card stats-section">
+        <div class="card-header"><span class="card-title">SESSION STATS</span><div class="card-line"></div></div>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-val" id="stat-time">0:00</div>
+            <div class="stat-label">Duration</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val" id="stat-best">100%</div>
+            <div class="stat-label">Best Form</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val" id="stat-total-reps">0</div>
+            <div class="stat-label">Total Reps</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-val" id="stat-alerts">0</div>
+            <div class="stat-label">Corrections</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Log -->
+      <div class="section-card log-section">
+        <div class="card-header"><span class="card-title">ACTIVITY LOG</span><div class="card-line"></div></div>
+        <div class="log-list" id="log-list">
+          <div class="log-empty">Session not started</div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<!-- ── Settings Modal ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="settings-modal" style="display:none;" onclick="closeSettings()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <span>⚙ SETTINGS</span>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="setting-group">
+        <label class="setting-label">Gemini API Key (for AI Coach)</label>
+        <input class="setting-input" type="password" id="gemini-key-input" placeholder="AIza...your-key-here"/>
+        <small class="setting-hint">Get free key at <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a></small>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">Skeleton Style</label>
+        <select class="setting-input" id="skeleton-style">
+          <option value="neon">Neon Cyan</option>
+          <option value="fire">Fire Orange</option>
+          <option value="matrix">Matrix Green</option>
+          <option value="purple">Holographic Purple</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">Detection Confidence</label>
+        <input class="setting-range" type="range" id="conf-slider" min="50" max="95" value="70"/>
+        <span id="conf-val">70%</span>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">Show Angle Labels</label>
+        <div class="toggle-wrap">
+          <input type="checkbox" id="show-angles" class="toggle-input" checked/>
+          <label class="toggle-label" for="show-angles"></label>
+        </div>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">Show Skeleton</label>
+        <div class="toggle-wrap">
+          <input type="checkbox" id="show-skeleton" class="toggle-input" checked/>
+          <label class="toggle-label" for="show-skeleton"></label>
+        </div>
+      </div>
+      <div class="setting-group">
+        <label class="setting-label">Voice Feedback</label>
+        <div class="toggle-wrap">
+          <input type="checkbox" id="voice-feedback" class="toggle-input"/>
+          <label class="toggle-label" for="voice-feedback"></label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-save" onclick="saveSettings()">SAVE SETTINGS</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── AI Coach Modal ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="ai-modal" style="display:none;" onclick="closeAICoach()">
+  <div class="modal-box ai-modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header ai-header">
+      <div class="ai-header-left">
+        <div class="ai-avatar">🤖</div>
+        <div>
+          <span class="ai-title">GEMINI 2.5 FLASH COACH</span>
+          <span class="ai-subtitle">Real-time Biomechanical Analysis</span>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeAICoach()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="ai-context-row">
+        <div class="ai-ctx-chip" id="ai-ex-chip">Exercise: —</div>
+        <div class="ai-ctx-chip" id="ai-score-chip">Score: —</div>
+        <div class="ai-ctx-chip" id="ai-rep-chip">Reps: —</div>
+      </div>
+      <div class="ai-response-area" id="ai-response-area">
+        <div class="ai-welcome">
+          <div class="ai-welcome-icon">🧬</div>
+          <p>Click <strong>Analyze My Form</strong> to receive AI-powered biomechanical coaching from Gemini 2.5 Flash.</p>
+          <p class="ai-welcome-sub">Gemini will analyze your joint angles, form score, and rep count to give personalized coaching.</p>
+        </div>
+      </div>
+      <div class="ai-no-key" id="ai-no-key" style="display:none;">
+        <p>⚠️ No Gemini API key found. Add it in <strong>Settings ⚙</strong>.</p>
+        <p>Get a free key at <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a></p>
+      </div>
+    </div>
+    <div class="modal-footer ai-footer">
+      <button class="modal-save ai-analyze-btn" id="ai-analyze-btn" onclick="runGeminiAnalysis()">
+        <span class="ai-btn-icon">🧬</span> ANALYZE MY FORM
+      </button>
+      <button class="modal-cancel" onclick="closeAICoach()">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Screenshot Toast ────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+<script src="static/js/biomech.js"></script>
+</body>
+</html>
