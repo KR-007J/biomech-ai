@@ -1,397 +1,431 @@
 /* ══════════════════════════════════════════════════════════════════
-   BioMech AI — Core Engine v2.1
-   MediaPipe Pose + Cosine Rule + Gemini 2.5 Flash
-   Responsive: Desktop 3-col | Mobile tab-navigation
-   API key auto-loaded from server — no user input needed
+   BioMech AI v3.0 — Full Feature Engine
+   NEW: Session History · Achievements · Recording · Voice Commands
+        Metronome · Muscle Heatmap · Share Card · Profiles · Programs
+        Audio Cues · Rep Velocity · Progressive Overload Tips
 ══════════════════════════════════════════════════════════════════ */
-
 'use strict';
 
-// ── Configuration ──────────────────────────────────────────────────
+// ── CONFIG ─────────────────────────────────────────────────────────
 const CONFIG = {
-  minDetectionConf: 0.7,
-  minTrackingConf:  0.7,
-  modelComplexity:  1,
-  skeletonStyle:    'neon',
-  showAngles:       true,
-  showSkeleton:     true,
-  voiceFeedback:    false,
+  minDetectionConf:0.7, minTrackingConf:0.7, modelComplexity:1,
+  skeletonStyle:'neon', showAngles:true, showSkeleton:true,
+  voiceFeedback:false, audioCues:true,
 };
 
-// ── Exercise Database ──────────────────────────────────────────────
+// ── EXERCISE DATABASE ──────────────────────────────────────────────
 const EXERCISES = {
-  squat: {
-    name: 'Squat',
-    instruction: 'Stand with feet shoulder-width apart. Bend knees to 90°. Keep torso upright throughout.',
-    tips: ['Face camera at full body distance', 'Point toes slightly outward', 'Keep chest up, core tight'],
-    repJoint: 'left_knee', repDownThreshold: 110, repUpThreshold: 160,
-    checkpoints: {
-      knee:    { ideal: 90,  tolerance: 18, label: 'Knee Depth',   weight: 40 },
-      hip:     { ideal: 90,  tolerance: 25, label: 'Hip Hinge',    weight: 30 },
-      balance: { ideal: 0,   tolerance: 15, label: 'Knee Balance', weight: 30 },
-    }
-  },
-  pushup: {
-    name: 'Push-Up',
-    instruction: 'Keep body in straight line. Lower until elbows reach 90°. Full range of motion.',
-    tips: ['Hands slightly wider than shoulders', 'Squeeze glutes and core', 'Look at floor 30cm ahead'],
-    repJoint: 'left_elbow', repDownThreshold: 110, repUpThreshold: 155,
-    checkpoints: {
-      elbow:     { ideal: 90,  tolerance: 18, label: 'Elbow Bend', weight: 50 },
-      alignment: { ideal: 180, tolerance: 12, label: 'Body Line',  weight: 50 },
-    }
-  },
-  lunge: {
-    name: 'Lunge',
-    instruction: 'Step forward. Both knees at 90°. Front knee directly over ankle.',
-    tips: ['Keep torso tall', 'Front knee tracks over second toe', 'Push back through front heel'],
-    repJoint: 'right_knee', repDownThreshold: 110, repUpThreshold: 160,
-    checkpoints: {
-      front_knee: { ideal: 90, tolerance: 18, label: 'Front Knee',     weight: 45 },
-      back_knee:  { ideal: 90, tolerance: 18, label: 'Back Knee',      weight: 35 },
-      torso:      { ideal: 90, tolerance: 25, label: 'Torso Upright',  weight: 20 },
-    }
-  },
-  plank: {
-    name: 'Plank',
-    instruction: 'Straight line from head to heels. Engage core throughout. Hold position.',
-    tips: ['Press floor away', 'Neutral spine — no sagging', 'Breathe steadily'],
-    repJoint: null, repDownThreshold: 0, repUpThreshold: 0,
-    checkpoints: {
-      body: { ideal: 180, tolerance: 10, label: 'Body Straight', weight: 60 },
-      hip:  { ideal: 180, tolerance: 10, label: 'Hip Level',     weight: 40 },
-    }
-  },
-  bicep_curl: {
-    name: 'Bicep Curl',
-    instruction: 'Elbows close to torso. Full range: straight arm to full curl. Controlled descent.',
-    tips: ["Don't swing body", 'Supinate wrist on the way up', 'Squeeze at the top'],
-    repJoint: 'left_elbow', repDownThreshold: 130, repUpThreshold: 50,
-    checkpoints: {
-      curl_depth: { ideal: 40, tolerance: 20, label: 'Curl Depth',  weight: 60 },
-      stability:  { ideal: 0,  tolerance: 10, label: 'Body Stable', weight: 40 },
-    }
-  },
-  shoulder_press: {
-    name: 'Shoulder Press',
-    instruction: 'Press overhead to full extension. Elbows at 90° at start position.',
-    tips: ['Core tight, slight forward lean', 'Full lockout at top', 'Control the descent'],
-    repJoint: 'left_elbow', repDownThreshold: 100, repUpThreshold: 155,
-    checkpoints: {
-      elbow:   { ideal: 90,  tolerance: 20, label: 'Start Position', weight: 50 },
-      lockout: { ideal: 175, tolerance: 10, label: 'Lockout',        weight: 50 },
-    }
-  },
-  deadlift: {
-    name: 'Deadlift',
-    instruction: 'Hip hinge movement. Bar close to body. Neutral spine throughout.',
-    tips: ['Brace core before lifting', 'Drive hips forward', 'Keep bar over mid-foot'],
-    repJoint: 'left_hip', repDownThreshold: 70, repUpThreshold: 155,
-    checkpoints: {
-      hip_hinge:    { ideal: 45,  tolerance: 20, label: 'Hip Hinge',    weight: 45 },
-      back_neutral: { ideal: 180, tolerance: 20, label: 'Back Neutral', weight: 55 },
-    }
-  }
+  squat:{name:'Squat',instruction:'Stand feet shoulder-width apart. Bend knees to 90°. Keep torso upright.',tips:['Face camera at full body distance','Point toes slightly outward','Keep chest up, core tight'],repJoint:'left_knee',repDownThreshold:110,repUpThreshold:160,muscles:{torso:0.3,leftLeg:0.9,rightLeg:0.9,glutes:0.8}},
+  pushup:{name:'Push-Up',instruction:'Keep body in straight line. Lower until elbows reach 90°. Full range.',tips:['Hands wider than shoulders','Squeeze glutes and core','Look at floor 30cm ahead'],repJoint:'left_elbow',repDownThreshold:110,repUpThreshold:155,muscles:{torso:0.6,leftArm:0.9,rightArm:0.9}},
+  lunge:{name:'Lunge',instruction:'Step forward. Both knees at 90°. Front knee over ankle.',tips:['Keep torso tall','Front knee tracks second toe','Push through front heel'],repJoint:'right_knee',repDownThreshold:110,repUpThreshold:160,muscles:{leftLeg:0.85,rightLeg:0.85,glutes:0.6,torso:0.2}},
+  plank:{name:'Plank',instruction:'Straight line head to heels. Engage core. Hold position.',tips:['Press floor away','Neutral spine','Breathe steadily'],repJoint:null,repDownThreshold:0,repUpThreshold:0,muscles:{torso:0.95,leftArm:0.4,rightArm:0.4,leftLeg:0.3,rightLeg:0.3}},
+  bicep_curl:{name:'Bicep Curl',instruction:'Elbows close to torso. Full range. Controlled descent.',tips:["Don't swing body",'Supinate wrist on the way up','Squeeze at the top'],repJoint:'left_elbow',repDownThreshold:130,repUpThreshold:50,muscles:{leftArm:0.95,rightArm:0.95,torso:0.1}},
+  shoulder_press:{name:'Shoulder Press',instruction:'Press overhead to full extension. Elbows 90° at start.',tips:['Core tight','Full lockout at top','Control descent'],repJoint:'left_elbow',repDownThreshold:100,repUpThreshold:155,muscles:{leftArm:0.8,rightArm:0.8,torso:0.5}},
+  deadlift:{name:'Deadlift',instruction:'Hip hinge. Bar close to body. Neutral spine throughout.',tips:['Brace core before lifting','Drive hips forward','Bar over mid-foot'],repJoint:'left_hip',repDownThreshold:70,repUpThreshold:155,muscles:{torso:0.8,leftLeg:0.7,rightLeg:0.7,glutes:0.9}},
 };
 
-// ── MediaPipe Landmark Indices ─────────────────────────────────────
-const LM = {
-  NOSE:0,LEFT_EYE:1,RIGHT_EYE:2,
-  LEFT_SHOULDER:11,RIGHT_SHOULDER:12,
-  LEFT_ELBOW:13,RIGHT_ELBOW:14,
-  LEFT_WRIST:15,RIGHT_WRIST:16,
-  LEFT_HIP:23,RIGHT_HIP:24,
-  LEFT_KNEE:25,RIGHT_KNEE:26,
-  LEFT_ANKLE:27,RIGHT_ANKLE:28,
-  LEFT_HEEL:29,RIGHT_HEEL:30,
-  LEFT_FOOT:31,RIGHT_FOOT:32,
-};
+// ── LANDMARK INDICES ───────────────────────────────────────────────
+const LM={NOSE:0,LEFT_SHOULDER:11,RIGHT_SHOULDER:12,LEFT_ELBOW:13,RIGHT_ELBOW:14,LEFT_WRIST:15,RIGHT_WRIST:16,LEFT_HIP:23,RIGHT_HIP:24,LEFT_KNEE:25,RIGHT_KNEE:26,LEFT_ANKLE:27,RIGHT_ANKLE:28,LEFT_HEEL:29,RIGHT_HEEL:30};
 
-// ── State ──────────────────────────────────────────────────────────
+// ── WORKOUT PROGRAMS ───────────────────────────────────────────────
+const PROGRAMS = [
+  {id:'beginner',name:'Beginner Strength',weeks:4,desc:'Foundation movement patterns',exercises:['squat','pushup','lunge'],color:'#00ffcc'},
+  {id:'mobility',name:'Mobility & Form',weeks:3,desc:'Perfect your technique',exercises:['plank','lunge','deadlift'],color:'#a78bfa'},
+  {id:'upper',name:'Upper Body Power',weeks:4,desc:'Arms, shoulders & chest',exercises:['pushup','bicep_curl','shoulder_press'],color:'#f59e0b'},
+  {id:'full',name:'Full Body Blast',weeks:6,desc:'Complete workout program',exercises:['squat','pushup','deadlift','bicep_curl'],color:'#ec4899'},
+];
+
+// ── ACHIEVEMENTS ───────────────────────────────────────────────────
+const ACHIEVEMENTS_DEF = [
+  {id:'first_rep',   icon:'🎯', name:'First Rep',        desc:'Complete your first rep',   check:s=>s.totalReps>=1},
+  {id:'ten_reps',    icon:'💪', name:'10 Rep Club',       desc:'Complete 10 reps',          check:s=>s.totalReps>=10},
+  {id:'century',     icon:'💯', name:'Century',           desc:'Complete 100 total reps',   check:s=>s.totalReps>=100},
+  {id:'perfect_form',icon:'⭐', name:'Perfect Form',      desc:'Score 100% on a session',   check:s=>s.bestScore>=100},
+  {id:'streak3',     icon:'🔥', name:'3-Day Warrior',     desc:'Work out 3 days in a row',  check:s=>s.streak>=3},
+  {id:'streak7',     icon:'🏆', name:'7-Day Legend',      desc:'Work out 7 days in a row',  check:s=>s.streak>=7},
+  {id:'speed_demon', icon:'⚡', name:'Speed Demon',       desc:'Complete 10 reps in 30s',   check:s=>s.fastestSet<=30},
+  {id:'all7',        icon:'🌟', name:'All-Rounder',       desc:'Try all 7 exercises',       check:s=>s.exercisesTried>=7},
+  {id:'ai_coach',    icon:'🤖', name:'AI Student',        desc:'Use AI Coach 5 times',      check:s=>s.aiCoachUses>=5},
+  {id:'week_warrior',icon:'📅', name:'Week Warrior',      desc:'Complete 10 sessions',      check:s=>s.totalSessions>=10},
+  {id:'recorded',    icon:'🎬', name:'On Camera',         desc:'Record a session',          check:s=>s.hasRecorded},
+  {id:'shared',      icon:'🔗', name:'Social Athlete',    desc:'Share a workout card',      check:s=>s.hasShared},
+];
+
+// ── STATE ──────────────────────────────────────────────────────────
 let state = {
-  exercise:      'squat',
-  sessionActive: false,
-  repCount:      0,
-  repState:      'up',
-  formScore:     100,
-  bestScore:     100,
-  totalReps:     0,
-  corrections:   0,
-  startTime:     null,
-  lastAngles:    {},
-  lastFeedback:  [],
-  frameCount:    0,
-  lastFpsTime:   Date.now(),
-  fps:           0,
-  pose:          null,
-  camera:        null,
-  videoEl:       null,
-  canvasEl:      null,
-  ctx:           null,
-  geminiKey:     '',   // auto-loaded from /api/config, never from user input
-  scoreBreakdown: { depth:100, alignment:100, balance:100 },
+  exercise:'squat', sessionActive:false, repCount:0, repState:'up',
+  formScore:100, bestScore:100, totalReps:0, corrections:0,
+  startTime:null, lastAngles:{}, lastFeedback:[], frameCount:0,
+  lastFpsTime:Date.now(), fps:0, pose:null, camera:null,
+  videoEl:null, canvasEl:null, ctx:null, geminiKey:'',
+  scoreBreakdown:{depth:100,alignment:100,balance:100},
+  scoreHistory:[], repTimestamps:[], sessionStartReps:0,
 };
 
-// ── Skeleton Styles ────────────────────────────────────────────────
+// ── PERSISTENT DATA (localStorage) ────────────────────────────────
+function loadStorage() {
+  try {
+    return JSON.parse(localStorage.getItem('biomech_v3')||'{}');
+  } catch(e) { return {}; }
+}
+function saveStorage(data) {
+  try { localStorage.setItem('biomech_v3', JSON.stringify(data)); } catch(e){}
+}
+function getDB() {
+  const defaults = {
+    sessions:[],totalReps:0,streak:0,lastDate:'',exercisesTried:[],
+    aiCoachUses:0,fastestSet:9999,hasRecorded:false,hasShared:false,
+    totalSessions:0,unlockedAchievements:[],
+    profiles:[{id:'p1',name:'Athlete 1',avatar:'🧑'}],activeProfile:'p1',
+    activeProgram:null, programProgress:{},
+  };
+  const saved = loadStorage();
+  return {...defaults,...saved};
+}
+
+let db = getDB();
+
+// ── SKELETON STYLES ────────────────────────────────────────────────
 const SKELETON_STYLES = {
-  neon:   { joint:'#00ffcc', bone:'#00ffcc', angle:'#00ffcc' },
-  fire:   { joint:'#ff6b35', bone:'#ff6b35', angle:'#ff6b35' },
-  matrix: { joint:'#00ff41', bone:'#00ff41', angle:'#00ff41' },
-  purple: { joint:'#a78bfa', bone:'#a78bfa', angle:'#a78bfa' },
+  neon:  {joint:'#00ffcc',bone:'#00ffcc'},
+  fire:  {joint:'#ff6b35',bone:'#ff6b35'},
+  matrix:{joint:'#00ff41',bone:'#00ff41'},
+  purple:{joint:'#a78bfa',bone:'#a78bfa'},
 };
 
-// ── Mobile Tab Navigation ──────────────────────────────────────────
-let currentTab = 'camera';
+// ── AUDIO ENGINE ───────────────────────────────────────────────────
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+function playBeep(freq=440, dur=0.08, vol=0.3, type='sine') {
+  if (!CONFIG.audioCues) return;
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    osc.type = type;
+    gain.gain.setValueAtTime(vol, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    osc.start(); osc.stop(ctx.currentTime + dur);
+  } catch(e){}
+}
+function playRepSound()   { playBeep(880, 0.06, 0.25, 'triangle'); }
+function playErrorSound() { playBeep(220, 0.15, 0.2,  'sawtooth'); }
+function playSuccessSound(){ playBeep(1047,0.1, 0.2, 'sine'); setTimeout(()=>playBeep(1319,0.15,0.2,'sine'),100); }
 
+// ── METRONOME ──────────────────────────────────────────────────────
+let metronomeBPM = 60, metronomeActive = false, metronomeInterval = null, metroBeat = 0;
+
+function toggleMetronome() {
+  metronomeActive = !metronomeActive;
+  const btn = document.getElementById('metro-toggle');
+  if (metronomeActive) {
+    btn.textContent = '⏸';
+    runMetronome();
+  } else {
+    btn.textContent = '▶';
+    clearInterval(metronomeInterval);
+    document.querySelectorAll('.metro-dot').forEach(d => d.classList.remove('beat'));
+  }
+}
+
+function runMetronome() {
+  clearInterval(metronomeInterval);
+  const interval = 60000 / metronomeBPM;
+  metronomeInterval = setInterval(() => {
+    metroBeat = (metroBeat + 1) % 4;
+    document.querySelectorAll('.metro-dot').forEach((d,i) => d.classList.toggle('beat', i === metroBeat));
+    playBeep(metroBeat === 0 ? 880 : 440, 0.05, 0.15, 'square');
+  }, interval);
+}
+
+function changeBPM(delta) {
+  metronomeBPM = Math.max(30, Math.min(180, metronomeBPM + delta));
+  document.getElementById('metro-bpm').textContent = `${metronomeBPM} BPM`;
+  if (metronomeActive) runMetronome();
+}
+
+// ── RECORDING ──────────────────────────────────────────────────────
+let mediaRecorder = null, recordedChunks = [], isRecording = false;
+
+function toggleRecording() {
+  if (isRecording) stopRecording();
+  else startRecording();
+}
+
+function startRecording() {
+  const canvas = document.getElementById('output-canvas');
+  if (!canvas || !state.sessionActive) { showToast('Start a session first!', 'error'); return; }
+  try {
+    const stream = canvas.captureStream(30);
+    mediaRecorder = new MediaRecorder(stream, {mimeType:'video/webm;codecs=vp8'});
+    recordedChunks = [];
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = saveRecording;
+    mediaRecorder.start(100);
+    isRecording = true;
+    document.getElementById('btn-record').classList.add('rec-active');
+    document.getElementById('btn-record').querySelector('.ctrl-icon').textContent = '⏹';
+    document.getElementById('rec-indicator').style.display = 'flex';
+    db.hasRecorded = true; saveStorage(db);
+    checkAchievements();
+    showToast('Recording started 🎬');
+    addLog('Recording started', 'good');
+  } catch(e) { showToast('Recording not supported on this browser', 'error'); }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  isRecording = false;
+  document.getElementById('btn-record').classList.remove('rec-active');
+  document.getElementById('btn-record').querySelector('.ctrl-icon').textContent = '⏺';
+  document.getElementById('rec-indicator').style.display = 'none';
+  addLog('Recording saved', 'good');
+}
+
+function saveRecording() {
+  const blob = new Blob(recordedChunks, {type:'video/webm'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `biomech-session-${Date.now()}.webm`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Video downloaded! 🎬');
+}
+
+// ── VOICE COMMANDS ──────────────────────────────────────────────────
+let voiceRecognition = null, voiceActive = false;
+const EXERCISE_KEYS = Object.keys(EXERCISES);
+
+function toggleVoiceCommands() {
+  if (voiceActive) stopVoiceCommands();
+  else startVoiceCommands();
+}
+
+function startVoiceCommands() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) { showToast('Voice commands not supported', 'error'); return; }
+  voiceRecognition = new SpeechRecognition();
+  voiceRecognition.continuous = true;
+  voiceRecognition.interimResults = false;
+  voiceRecognition.lang = 'en-US';
+  voiceRecognition.onresult = e => {
+    const cmd = e.results[e.results.length-1][0].transcript.toLowerCase().trim();
+    handleVoiceCommand(cmd);
+  };
+  voiceRecognition.onerror = () => {};
+  voiceRecognition.onend = () => { if (voiceActive) voiceRecognition.start(); };
+  voiceRecognition.start();
+  voiceActive = true;
+  document.getElementById('btn-voice').classList.add('voice-active');
+  document.getElementById('voice-status').style.display = 'flex';
+  showToast('🎙 Voice commands active!');
+}
+
+function stopVoiceCommands() {
+  if (voiceRecognition) { voiceRecognition.stop(); voiceRecognition = null; }
+  voiceActive = false;
+  document.getElementById('btn-voice').classList.remove('voice-active');
+  document.getElementById('voice-status').style.display = 'none';
+  showToast('Voice commands off');
+}
+
+function handleVoiceCommand(cmd) {
+  showToast(`🎙 "${cmd}"`, 'info');
+  if (cmd.includes('start'))  { if (!state.sessionActive) startSession(); }
+  else if (cmd.includes('stop') || cmd.includes('pause')) { if (state.sessionActive) stopSession(); }
+  else if (cmd.includes('reset')) resetSession();
+  else if (cmd.includes('record')) toggleRecording();
+  else if (cmd.includes('screenshot') || cmd.includes('capture')) takeScreenshot();
+  else if (cmd.includes('ai') || cmd.includes('coach') || cmd.includes('analyze')) openAICoach();
+  else if (cmd.includes('next')) {
+    const idx = EXERCISE_KEYS.indexOf(state.exercise);
+    selectExercise(EXERCISE_KEYS[(idx+1) % EXERCISE_KEYS.length]);
+  } else {
+    EXERCISE_KEYS.forEach(k => {
+      if (cmd.includes(EXERCISES[k].name.toLowerCase())) selectExercise(k);
+    });
+  }
+}
+
+// ── MOBILE TAB NAV ─────────────────────────────────────────────────
+let currentTab = 'camera';
 function showTab(tab) {
   currentTab = tab;
-
-  // Update nav tabs
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   const tabEl = document.getElementById(`tab-${tab}`);
   if (tabEl) tabEl.classList.add('active');
-
-  // Show/hide mobile panels
   document.querySelectorAll('.mobile-panel').forEach(p => p.classList.remove('active'));
-
-  if (tab === 'exercises') {
-    document.getElementById('mobile-exercises').classList.add('active');
-    // Hide center panel on mobile
-    document.querySelector('.center-panel').style.display = 'none';
-  } else if (tab === 'stats') {
-    document.getElementById('mobile-stats').classList.add('active');
-    document.querySelector('.center-panel').style.display = 'none';
-  } else {
-    // camera tab
-    document.querySelector('.center-panel').style.display = '';
-  }
+  const cp = document.querySelector('.center-panel');
+  if (tab === 'exercises') { document.getElementById('mobile-exercises').classList.add('active'); if(cp) cp.style.display='none'; }
+  else if (tab === 'stats')   { document.getElementById('mobile-stats').classList.add('active');     if(cp) cp.style.display='none'; }
+  else if (tab === 'progress'){ document.getElementById('mobile-progress').classList.add('active');  if(cp) cp.style.display='none'; renderHistoryChart('history-chart-m'); }
+  else { if(cp) cp.style.display=''; }
 }
 
-// ── Auto-load Gemini Key from Backend ─────────────────────────────
+// ── AUTO-LOAD GEMINI KEY ───────────────────────────────────────────
 async function loadGeminiKey() {
   try {
     const res = await fetch('/api/config');
-    if (!res.ok) throw new Error('endpoint unavailable');
+    if (!res.ok) throw new Error('no endpoint');
     const data = await res.json();
-    if (data.geminiKey) {
-      state.geminiKey = data.geminiKey;
-      console.log('✅ Gemini API key loaded from server');
-    } else {
-      console.warn('⚠️ GEMINI_API_KEY not set in Render environment variables');
-    }
-  } catch(err) {
-    console.warn('⚠️ Could not fetch /api/config:', err.message);
-  }
+    if (data.geminiKey) { state.geminiKey = data.geminiKey; console.log('✅ Gemini key loaded'); }
+  } catch(e) { console.warn('⚠️ /api/config not available'); }
 }
 
-// ── Cosine Rule Angle Calculator ───────────────────────────────────
-function calculateAngle(A, B, C) {
-  const AB = Math.hypot(B[0]-A[0], B[1]-A[1]);
-  const BC = Math.hypot(C[0]-B[0], C[1]-B[1]);
-  const AC = Math.hypot(C[0]-A[0], C[1]-A[1]);
-  if (AB===0 || BC===0) return 0;
-  const cosB = Math.max(-1, Math.min(1, (AB*AB + BC*BC - AC*AC) / (2*AB*BC)));
-  return Math.round(Math.acos(cosB) * (180/Math.PI));
+// ── ANGLE CALC ─────────────────────────────────────────────────────
+function calculateAngle(A,B,C) {
+  const AB=Math.hypot(B[0]-A[0],B[1]-A[1]),BC=Math.hypot(C[0]-B[0],C[1]-B[1]),AC=Math.hypot(C[0]-A[0],C[1]-A[1]);
+  if(AB===0||BC===0) return 0;
+  return Math.round(Math.acos(Math.max(-1,Math.min(1,(AB*AB+BC*BC-AC*AC)/(2*AB*BC))))*(180/Math.PI));
 }
+function lmXY(lms,idx){return[lms[idx].x,lms[idx].y];}
+function lmPX(lms,idx,w,h){return[lms[idx].x*w,lms[idx].y*h];}
 
-function lmXY(lms, idx) { return [lms[idx].x, lms[idx].y]; }
-function lmPX(lms, idx, w, h) { return [lms[idx].x*w, lms[idx].y*h]; }
-
-// ── Exercise Analyzers ─────────────────────────────────────────────
-function analyzeSquat(lms, w, h) {
-  const angles = {}, feedback = [];
-  let depthScore=100, alignScore=100, balScore=100;
-  try {
-    const LH=lmXY(lms,LM.LEFT_HIP), LK=lmXY(lms,LM.LEFT_KNEE), LA=lmXY(lms,LM.LEFT_ANKLE);
-    const RH=lmXY(lms,LM.RIGHT_HIP), RK=lmXY(lms,LM.RIGHT_KNEE), RA=lmXY(lms,LM.RIGHT_ANKLE);
+// ── ANALYZERS ──────────────────────────────────────────────────────
+function analyzeSquat(lms,w,h){
+  const angles={},feedback=[];let depthScore=100,alignScore=100,balScore=100;
+  try{
+    const LH=lmXY(lms,LM.LEFT_HIP),LK=lmXY(lms,LM.LEFT_KNEE),LA=lmXY(lms,LM.LEFT_ANKLE);
+    const RH=lmXY(lms,LM.RIGHT_HIP),RK=lmXY(lms,LM.RIGHT_KNEE),RA=lmXY(lms,LM.RIGHT_ANKLE);
     const LS=lmXY(lms,LM.LEFT_SHOULDER);
-    const lKnee=calculateAngle(LH,LK,LA), rKnee=calculateAngle(RH,RK,RA), lHip=calculateAngle(LS,LH,LK);
-    const avgKnee=(lKnee+rKnee)/2, kneeDiff=Math.abs(lKnee-rKnee);
-    angles.left_knee=lKnee; angles.right_knee=rKnee; angles.left_hip=lHip;
-    if(avgKnee>155){feedback.push({msg:'⬇ Go Deeper — Bend Knees to 90°',severity:'warning'});depthScore=Math.max(0,100-(avgKnee-90)*1.5);}
-    else if(avgKnee>=72&&avgKnee<=108){feedback.push({msg:'🎯 Perfect Squat Depth!',severity:'success'});}
-    else if(avgKnee<60){feedback.push({msg:'⬆ Too Deep — Rise Slightly',severity:'warning'});depthScore=70;}
+    const lK=calculateAngle(LH,LK,LA),rK=calculateAngle(RH,RK,RA),lH=calculateAngle(LS,LH,LK);
+    const avg=(lK+rK)/2,diff=Math.abs(lK-rK);
+    angles.left_knee=lK;angles.right_knee=rK;angles.left_hip=lH;
+    if(avg>155){feedback.push({msg:'⬇ Go Deeper — Bend Knees to 90°',severity:'warning'});depthScore=Math.max(0,100-(avg-90)*1.5);}
+    else if(avg>=72&&avg<=108){feedback.push({msg:'🎯 Perfect Squat Depth!',severity:'success'});}
+    else if(avg<60){feedback.push({msg:'⬆ Too Deep — Rise Slightly',severity:'warning'});depthScore=70;}
     else{depthScore=85;}
-    if(lHip<45){feedback.push({msg:"❌ Keep Torso Upright — Don't Lean Forward",severity:'error'});alignScore=40;}
-    else if(lHip<65){feedback.push({msg:'⚠ Less Forward Lean',severity:'warning'});alignScore=70;}
-    if(kneeDiff>20){feedback.push({msg:'⚖ Balance Both Sides — Knee Asymmetry',severity:'warning'});balScore=Math.max(0,100-kneeDiff*2);}
-  } catch(e){feedback.push({msg:'📷 Show Full Body in Frame',severity:'info'});return{angles,feedback,score:0,breakdown:{depth:0,alignment:0,balance:0}};}
+    if(lH<45){feedback.push({msg:"❌ Keep Torso Upright",severity:'error'});alignScore=40;}
+    else if(lH<65){feedback.push({msg:'⚠ Less Forward Lean',severity:'warning'});alignScore=70;}
+    if(diff>20){feedback.push({msg:'⚖ Balance Both Sides',severity:'warning'});balScore=Math.max(0,100-diff*2);}
+  }catch(e){feedback.push({msg:'📷 Show Full Body',severity:'info'});return{angles,feedback,score:0,breakdown:{depth:0,alignment:0,balance:0}};}
   return{angles,feedback,score:Math.round(depthScore*0.4+alignScore*0.35+balScore*0.25),breakdown:{depth:depthScore,alignment:alignScore,balance:balScore}};
 }
-
-function analyzePushup(lms, w, h) {
-  const angles={}, feedback=[];
-  let elbowScore=100, alignScore=100;
-  try {
+function analyzePushup(lms,w,h){
+  const angles={},feedback=[];let eS=100,aS=100;
+  try{
     const LS=lmXY(lms,LM.LEFT_SHOULDER),LE=lmXY(lms,LM.LEFT_ELBOW),LW=lmXY(lms,LM.LEFT_WRIST);
     const RS=lmXY(lms,LM.RIGHT_SHOULDER),RE=lmXY(lms,LM.RIGHT_ELBOW),RW=lmXY(lms,LM.RIGHT_WRIST);
     const LH=lmXY(lms,LM.LEFT_HIP),LA=lmXY(lms,LM.LEFT_ANKLE);
-    const lE=calculateAngle(LS,LE,LW),rE=calculateAngle(RS,RE,RW),bodyAngle=calculateAngle(LS,LH,LA);
-    const avg=(lE+rE)/2;
-    angles.left_elbow=lE; angles.right_elbow=rE; angles.body_alignment=bodyAngle;
-    if(avg>155){feedback.push({msg:'⬇ Lower Your Chest Further!',severity:'warning'});elbowScore=Math.max(0,100-(avg-90)*1.2);}
+    const lE=calculateAngle(LS,LE,LW),rE=calculateAngle(RS,RE,RW),body=calculateAngle(LS,LH,LA),avg=(lE+rE)/2;
+    angles.left_elbow=lE;angles.right_elbow=rE;angles.body_alignment=body;
+    if(avg>155){feedback.push({msg:'⬇ Lower Chest Further!',severity:'warning'});eS=Math.max(0,100-(avg-90)*1.2);}
     else if(avg>=72&&avg<=108){feedback.push({msg:'💪 Perfect Push-Up Depth!',severity:'success'});}
-    if(bodyAngle<152){feedback.push({msg:'❌ Raise Hips — Keep Body Straight',severity:'error'});alignScore=30;}
-    else if(bodyAngle>198){feedback.push({msg:'❌ Lower Hips — Stop Sagging',severity:'error'});alignScore=30;}
-    else if(Math.abs(bodyAngle-180)<12){feedback.push({msg:'✓ Great Body Alignment',severity:'success'});}
-  } catch(e){feedback.push({msg:'📷 Adjust Camera for Side View',severity:'info'});return{angles,feedback,score:0,breakdown:{depth:0,alignment:0,balance:100}};}
-  return{angles,feedback,score:Math.round(elbowScore*0.5+alignScore*0.5),breakdown:{depth:elbowScore,alignment:alignScore,balance:100}};
+    if(body<152){feedback.push({msg:'❌ Raise Hips',severity:'error'});aS=30;}
+    else if(body>198){feedback.push({msg:'❌ Lower Hips',severity:'error'});aS=30;}
+    else if(Math.abs(body-180)<12){feedback.push({msg:'✓ Great Body Alignment',severity:'success'});}
+  }catch(e){feedback.push({msg:'📷 Adjust Camera for Side View',severity:'info'});return{angles,feedback,score:0,breakdown:{depth:0,alignment:0,balance:100}};}
+  return{angles,feedback,score:Math.round(eS*0.5+aS*0.5),breakdown:{depth:eS,alignment:aS,balance:100}};
 }
-
-function analyzeLunge(lms,w,h){ return analyzeSquat(lms,w,h); }
-
-function analyzePlank(lms, w, h) {
-  const angles={}, feedback=[];
-  let bodyScore=100, hipScore=100;
-  try {
+function analyzeLunge(lms,w,h){return analyzeSquat(lms,w,h);}
+function analyzePlank(lms,w,h){
+  const angles={},feedback=[];let bS=100,hS=100;
+  try{
     const LS=lmXY(lms,LM.LEFT_SHOULDER),LH=lmXY(lms,LM.LEFT_HIP),LA=lmXY(lms,LM.LEFT_ANKLE);
-    const LE=lmXY(lms,LM.LEFT_ELBOW);
-    const bodyLine=calculateAngle(LS,LH,LA), upperBody=calculateAngle(LE,LS,LH);
-    angles.body_alignment=bodyLine; angles.hip_alignment=upperBody;
-    const dev=Math.abs(bodyLine-180);
-    if(dev>15){
-      feedback.push({msg:bodyLine<165?'❌ Hips Too High — Lower Down':'❌ Hips Sagging — Engage Core',severity:'error'});
-      bodyScore=Math.max(0,100-dev*4);
-    }else if(dev<6){feedback.push({msg:'⚡ Perfect Plank Position!',severity:'success'});}
-    else{feedback.push({msg:'⚠ Adjust Hip Height',severity:'warning'});bodyScore=75;}
-  } catch(e){feedback.push({msg:'📷 Show Side Profile',severity:'info'});return{angles,feedback,score:0,breakdown:{depth:0,alignment:100,balance:100}};}
-  return{angles,feedback,score:Math.round(bodyScore*0.7+hipScore*0.3),breakdown:{depth:bodyScore,alignment:hipScore,balance:100}};
+    const bl=calculateAngle(LS,LH,LA);angles.body_alignment=bl;
+    const dev=Math.abs(bl-180);
+    if(dev>15){feedback.push({msg:bl<165?'❌ Hips Too High':'❌ Hips Sagging — Engage Core',severity:'error'});bS=Math.max(0,100-dev*4);}
+    else if(dev<6){feedback.push({msg:'⚡ Perfect Plank!',severity:'success'});}
+    else{feedback.push({msg:'⚠ Adjust Hip Height',severity:'warning'});bS=75;}
+  }catch(e){feedback.push({msg:'📷 Show Side Profile',severity:'info'});return{angles,feedback,score:0,breakdown:{depth:0,alignment:100,balance:100}};}
+  return{angles,feedback,score:Math.round(bS*0.7+hS*0.3),breakdown:{depth:bS,alignment:hS,balance:100}};
 }
-
-function analyzeBicepCurl(lms, w, h) {
-  const angles={}, feedback=[];
-  let curlScore=100, stabScore=100;
-  try {
+function analyzeBicepCurl(lms,w,h){
+  const angles={},feedback=[];let cS=100;
+  try{
     const LS=lmXY(lms,LM.LEFT_SHOULDER),LE=lmXY(lms,LM.LEFT_ELBOW),LW=lmXY(lms,LM.LEFT_WRIST);
     const RS=lmXY(lms,LM.RIGHT_SHOULDER),RE=lmXY(lms,LM.RIGHT_ELBOW),RW=lmXY(lms,LM.RIGHT_WRIST);
     const lE=calculateAngle(LS,LE,LW),rE=calculateAngle(RS,RE,RW),avg=(lE+rE)/2;
-    angles.left_elbow=lE; angles.right_elbow=rE;
-    if(avg<35){feedback.push({msg:'🔥 Full Curl — Excellent Contraction!',severity:'success'});}
-    else if(avg<70){feedback.push({msg:'✓ Good Curl Range',severity:'success'});curlScore=85;}
-    else if(avg>150){feedback.push({msg:'↑ Start Curling Upward',severity:'info'});curlScore=60;}
-    else{feedback.push({msg:'⬆ Curl Higher — Full Range of Motion!',severity:'warning'});curlScore=65;}
-  } catch(e){feedback.push({msg:'📷 Face Camera — Arms Visible',severity:'info'});return{angles,feedback,score:0,breakdown:{depth:0,alignment:100,balance:100}};}
-  return{angles,feedback,score:Math.round(curlScore*0.65+stabScore*0.35),breakdown:{depth:curlScore,alignment:stabScore,balance:100}};
+    angles.left_elbow=lE;angles.right_elbow=rE;
+    if(avg<35){feedback.push({msg:'🔥 Full Curl — Excellent!',severity:'success'});}
+    else if(avg<70){feedback.push({msg:'✓ Good Curl Range',severity:'success'});cS=85;}
+    else if(avg>150){feedback.push({msg:'↑ Start Curling',severity:'info'});cS=60;}
+    else{feedback.push({msg:'⬆ Curl Higher!',severity:'warning'});cS=65;}
+  }catch(e){feedback.push({msg:'📷 Face Camera',severity:'info'});return{angles,feedback,score:0,breakdown:{depth:0,alignment:100,balance:100}};}
+  return{angles,feedback,score:Math.round(cS*0.7+30),breakdown:{depth:cS,alignment:100,balance:100}};
 }
-
-function analyzeShoulderPress(lms, w, h) {
-  const angles={}, feedback=[];
-  let score=100;
-  try {
+function analyzeShoulderPress(lms,w,h){
+  const angles={},feedback=[];let score=100;
+  try{
     const LS=lmXY(lms,LM.LEFT_SHOULDER),LE=lmXY(lms,LM.LEFT_ELBOW),LW=lmXY(lms,LM.LEFT_WRIST);
     const RS=lmXY(lms,LM.RIGHT_SHOULDER),RE=lmXY(lms,LM.RIGHT_ELBOW),RW=lmXY(lms,LM.RIGHT_WRIST);
-    const lE=calculateAngle(LS,LE,LW),rE=calculateAngle(RS,RE,RW),avg=(lE+rE)/2;
-    angles.left_elbow=lE; angles.right_elbow=rE;
-    if(avg>160){feedback.push({msg:'🏆 Full Lockout — Perfect!',severity:'success'});}
+    const avg=(calculateAngle(LS,LE,LW)+calculateAngle(RS,RE,RW))/2;
+    angles.left_elbow=Math.round(avg);
+    if(avg>160){feedback.push({msg:'🏆 Full Lockout!',severity:'success'});}
     else if(avg<100){feedback.push({msg:'↑ Press to Full Extension',severity:'warning'});score=Math.max(0,100-(160-avg)*1.2);}
-    else{feedback.push({msg:'↑ Press Higher for Full Extension',severity:'info'});score=75;}
-  } catch(e){feedback.push({msg:'📷 Show Upper Body',severity:'info'});return{angles,feedback,score:0,breakdown:{depth:0,alignment:100,balance:100}};}
+    else{feedback.push({msg:'↑ Press Higher',severity:'info'});score=75;}
+  }catch(e){return{angles,feedback,score:0,breakdown:{depth:0,alignment:100,balance:100}};}
   return{angles,feedback,score:Math.round(score),breakdown:{depth:score,alignment:100,balance:100}};
 }
-
-function analyzeDeadlift(lms, w, h) {
-  const angles={}, feedback=[];
-  let score=100;
-  try {
+function analyzeDeadlift(lms,w,h){
+  const angles={},feedback=[];let score=100;
+  try{
     const LS=lmXY(lms,LM.LEFT_SHOULDER),LH=lmXY(lms,LM.LEFT_HIP),LK=lmXY(lms,LM.LEFT_KNEE);
-    const hipAngle=calculateAngle(LS,LH,LK);
-    angles.left_hip=hipAngle;
-    if(hipAngle>155){feedback.push({msg:'💎 Full Hip Extension — Excellent!',severity:'success'});}
-    else if(hipAngle<50){feedback.push({msg:'⬆ Drive Hips Forward!',severity:'warning'});score=Math.max(0,100-(155-hipAngle));}
-  } catch(e){feedback.push({msg:'📷 Show Full Side Profile',severity:'info'});return{angles,feedback,score:0,breakdown:{depth:0,alignment:100,balance:100}};}
+    const h2=calculateAngle(LS,LH,LK);angles.left_hip=h2;
+    if(h2>155){feedback.push({msg:'💎 Full Extension!',severity:'success'});}
+    else if(h2<50){feedback.push({msg:'⬆ Drive Hips Forward!',severity:'warning'});score=Math.max(0,100-(155-h2));}
+  }catch(e){return{angles,feedback,score:0,breakdown:{depth:0,alignment:100,balance:100}};}
   return{angles,feedback,score:Math.round(score),breakdown:{depth:score,alignment:100,balance:100}};
 }
+const ANALYZERS={squat:analyzeSquat,pushup:analyzePushup,lunge:analyzeLunge,plank:analyzePlank,bicep_curl:analyzeBicepCurl,shoulder_press:analyzeShoulderPress,deadlift:analyzeDeadlift};
 
-const ANALYZERS = {
-  squat:analyzeSquat, pushup:analyzePushup, lunge:analyzeLunge,
-  plank:analyzePlank, bicep_curl:analyzeBicepCurl,
-  shoulder_press:analyzeShoulderPress, deadlift:analyzeDeadlift
-};
+// ── SKELETON DRAWING ───────────────────────────────────────────────
+const POSE_CONNECTIONS=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28],[27,29],[28,30]];
+const ANGLE_JOINTS={left_knee:[23,25,27],right_knee:[24,26,28],left_elbow:[11,13,15],right_elbow:[12,14,16],left_hip:[11,23,25],body_alignment:[11,23,27]};
 
-// ── Skeleton Drawing ───────────────────────────────────────────────
-const POSE_CONNECTIONS = [
-  [LM.LEFT_SHOULDER,LM.RIGHT_SHOULDER],[LM.LEFT_SHOULDER,LM.LEFT_ELBOW],
-  [LM.LEFT_ELBOW,LM.LEFT_WRIST],[LM.RIGHT_SHOULDER,LM.RIGHT_ELBOW],
-  [LM.RIGHT_ELBOW,LM.RIGHT_WRIST],[LM.LEFT_SHOULDER,LM.LEFT_HIP],
-  [LM.RIGHT_SHOULDER,LM.RIGHT_HIP],[LM.LEFT_HIP,LM.RIGHT_HIP],
-  [LM.LEFT_HIP,LM.LEFT_KNEE],[LM.LEFT_KNEE,LM.LEFT_ANKLE],
-  [LM.RIGHT_HIP,LM.RIGHT_KNEE],[LM.RIGHT_KNEE,LM.RIGHT_ANKLE],
-  [LM.LEFT_ANKLE,LM.LEFT_HEEL],[LM.RIGHT_ANKLE,LM.RIGHT_HEEL],
-];
-const ANGLE_JOINTS = {
-  left_knee:[LM.LEFT_HIP,LM.LEFT_KNEE,LM.LEFT_ANKLE],
-  right_knee:[LM.RIGHT_HIP,LM.RIGHT_KNEE,LM.RIGHT_ANKLE],
-  left_elbow:[LM.LEFT_SHOULDER,LM.LEFT_ELBOW,LM.LEFT_WRIST],
-  right_elbow:[LM.RIGHT_SHOULDER,LM.RIGHT_ELBOW,LM.RIGHT_WRIST],
-  left_hip:[LM.LEFT_SHOULDER,LM.LEFT_HIP,LM.LEFT_KNEE],
-  right_hip:[LM.RIGHT_SHOULDER,LM.RIGHT_HIP,LM.RIGHT_KNEE],
-  body_alignment:[LM.LEFT_SHOULDER,LM.LEFT_HIP,LM.LEFT_ANKLE],
-};
-
-function drawSkeleton(ctx, lms, w, h, feedback) {
-  if (!CONFIG.showSkeleton) return;
-  const style = SKELETON_STYLES[CONFIG.skeletonStyle] || SKELETON_STYLES.neon;
-  const hasError=feedback.some(f=>f.severity==='error');
-  const hasSuccess=feedback.some(f=>f.severity==='success');
-  let color = style.joint;
+function drawSkeleton(ctx,lms,w,h,feedback){
+  if(!CONFIG.showSkeleton) return;
+  const style=SKELETON_STYLES[CONFIG.skeletonStyle]||SKELETON_STYLES.neon;
+  const hasError=feedback.some(f=>f.severity==='error'),hasSuccess=feedback.some(f=>f.severity==='success');
+  let color=style.joint;
   if(hasError) color='#ef4444';
   else if(hasSuccess) color='#10b981';
-
-  // Glow layer
-  ctx.save();
-  ctx.globalAlpha=0.45;
+  ctx.save();ctx.globalAlpha=0.45;
   POSE_CONNECTIONS.forEach(([a,b])=>{
+    if(a>=lms.length||b>=lms.length) return;
     const pa=lmPX(lms,a,w,h),pb=lmPX(lms,b,w,h);
     ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);
-    ctx.strokeStyle=color;ctx.lineWidth=12;ctx.lineCap='round';
-    ctx.filter='blur(8px)';ctx.stroke();
+    ctx.strokeStyle=color;ctx.lineWidth=12;ctx.lineCap='round';ctx.filter='blur(8px)';ctx.stroke();
   });
-  ctx.restore();
-
-  // Sharp layer
-  ctx.save();ctx.filter='none';
+  ctx.restore();ctx.save();ctx.filter='none';
   POSE_CONNECTIONS.forEach(([a,b])=>{
+    if(a>=lms.length||b>=lms.length) return;
     const pa=lmPX(lms,a,w,h),pb=lmPX(lms,b,w,h);
     ctx.beginPath();ctx.moveTo(pa[0],pa[1]);ctx.lineTo(pb[0],pb[1]);
-    ctx.strokeStyle=color;ctx.lineWidth=3;ctx.lineCap='round';
-    ctx.shadowColor=color;ctx.shadowBlur=10;ctx.stroke();
+    ctx.strokeStyle=color;ctx.lineWidth=3;ctx.lineCap='round';ctx.shadowColor=color;ctx.shadowBlur=10;ctx.stroke();
   });
-  // Joint dots
-  Object.values(LM).forEach(idx=>{
-    if(idx>10){
-      const p=lmPX(lms,idx,w,h);
-      ctx.beginPath();ctx.arc(p[0],p[1],5,0,Math.PI*2);
-      ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=15;ctx.fill();
-      ctx.beginPath();ctx.arc(p[0],p[1],2,0,Math.PI*2);
-      ctx.fillStyle='#fff';ctx.shadowBlur=0;ctx.fill();
-    }
-  });
+  for(let idx=11;idx<=32;idx++){
+    if(idx>=lms.length) continue;
+    const p=lmPX(lms,idx,w,h);
+    ctx.beginPath();ctx.arc(p[0],p[1],5,0,Math.PI*2);ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=15;ctx.fill();
+    ctx.beginPath();ctx.arc(p[0],p[1],2,0,Math.PI*2);ctx.fillStyle='#fff';ctx.shadowBlur=0;ctx.fill();
+  }
   ctx.restore();
-
-  // Angle labels
-  if (CONFIG.showAngles) {
+  if(CONFIG.showAngles){
     ctx.save();
     Object.entries(state.lastAngles).forEach(([name,angle])=>{
       if(!ANGLE_JOINTS[name]) return;
-      const jIdx=ANGLE_JOINTS[name][1];
-      const p=lmPX(lms,jIdx,w,h);
-      ctx.fillStyle='rgba(4,6,15,0.82)';
-      ctx.beginPath();ctx.roundRect(p[0]-28,p[1]-16,56,28,6);ctx.fill();
+      const ji=ANGLE_JOINTS[name][1];if(ji>=lms.length) return;
+      const p=lmPX(lms,ji,w,h);
+      ctx.fillStyle='rgba(4,6,15,0.82)';ctx.beginPath();ctx.roundRect(p[0]-28,p[1]-16,56,28,6);ctx.fill();
       ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.shadowColor=color;ctx.shadowBlur=8;ctx.stroke();
-      ctx.fillStyle=color;ctx.shadowBlur=0;
-      ctx.font='bold 13px "Share Tech Mono"';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillStyle=color;ctx.shadowBlur=0;ctx.font='bold 13px "Share Tech Mono"';ctx.textAlign='center';ctx.textBaseline='middle';
       ctx.fillText(`${angle}°`,p[0],p[1]);
     });
     ctx.restore();
   }
 }
 
-// ── Rep Counting ───────────────────────────────────────────────────
-function countRep(angles, exercise) {
+// ── REP COUNTING ───────────────────────────────────────────────────
+function countRep(angles,exercise){
   const ex=EXERCISES[exercise];
   if(!ex.repJoint) return;
-  const angle=angles[ex.repJoint];
-  if(angle===undefined) return;
+  const angle=angles[ex.repJoint];if(angle===undefined) return;
   if(exercise==='bicep_curl'){
     if(angle<ex.repUpThreshold&&state.repState==='up'){state.repState='down';updateRepStateUI('down');}
     if(angle>ex.repDownThreshold&&state.repState==='down'){state.repState='up';updateRepStateUI('up');triggerRep();}
@@ -401,97 +435,87 @@ function countRep(angles, exercise) {
   }
 }
 
-function triggerRep() {
-  state.repCount++; state.totalReps++;
+function triggerRep(){
+  state.repCount++;state.totalReps++;
+  state.repTimestamps.push(Date.now());
+  // Check fastest set of 10
+  if(state.repTimestamps.length>=10){
+    const t=state.repTimestamps;
+    const setTime=(t[t.length-1]-t[t.length-10])/1000;
+    if(setTime<db.fastestSet){db.fastestSet=setTime;saveStorage(db);}
+  }
   // Desktop
   const el=document.getElementById('rep-number');
   if(el){el.textContent=state.repCount;el.classList.add('pop');setTimeout(()=>el.classList.remove('pop'),250);}
-  // Mobile mirror
   const elm=document.getElementById('rep-number-m');
   if(elm){elm.textContent=state.repCount;elm.classList.add('pop');setTimeout(()=>elm.classList.remove('pop'),250);}
   document.getElementById('hdr-reps').textContent=state.repCount;
-  const statReps=document.getElementById('stat-total-reps');
-  if(statReps) statReps.textContent=state.totalReps;
-  const statRepsM=document.getElementById('stat-reps-m');
-  if(statRepsM) statRepsM.textContent=state.totalReps;
+  setEl('stat-total-reps',state.totalReps);setEl('stat-reps-m',state.totalReps);
+  playRepSound();
   if(CONFIG.voiceFeedback) speak(`${state.repCount}`);
   addLog(`Rep ${state.repCount}`,state.formScore>70?'good':'bad');
   showToast(`Rep ${state.repCount} ✓`);
+  // Update db total reps
+  db.totalReps=state.totalReps;
+  checkAchievements();
 }
 
-function updateRepStateUI(s) {
-  // Desktop
+function updateRepStateUI(s){
   document.getElementById('chip-down')?.classList.toggle('active',s==='down');
   document.getElementById('chip-up')?.classList.toggle('active',s==='up');
-  // Mobile
   document.getElementById('chip-down-m')?.classList.toggle('active',s==='down');
   document.getElementById('chip-up-m')?.classList.toggle('active',s==='up');
 }
 
-// ── Pose Results Handler ───────────────────────────────────────────
-function onResults(results) {
-  const canvas=state.canvasEl, ctx=state.ctx, video=state.videoEl;
+// ── POSE RESULTS ───────────────────────────────────────────────────
+function onResults(results){
+  const canvas=state.canvasEl,ctx=state.ctx,video=state.videoEl;
   if(!canvas||!ctx) return;
   const w=canvas.width=video.videoWidth||canvas.offsetWidth;
   const h=canvas.height=video.videoHeight||canvas.offsetHeight;
-  ctx.clearRect(0,0,w,h);
-  ctx.save();ctx.scale(-1,1);ctx.translate(-w,0);
+  ctx.clearRect(0,0,w,h);ctx.save();ctx.scale(-1,1);ctx.translate(-w,0);
   ctx.drawImage(video,0,0,w,h);
-
   if(results.poseLandmarks&&state.sessionActive){
     const lms=results.poseLandmarks;
     const analysis=(ANALYZERS[state.exercise]||analyzeSquat)(lms,w,h);
-    state.lastAngles=analysis.angles;
-    state.lastFeedback=analysis.feedback;
-    state.formScore=analysis.score;
-    state.scoreBreakdown=analysis.breakdown;
-    if(analysis.score>state.bestScore) state.bestScore=analysis.score;
+    state.lastAngles=analysis.angles;state.lastFeedback=analysis.feedback;
+    state.formScore=analysis.score;state.scoreBreakdown=analysis.breakdown;
+    if(analysis.score>state.bestScore){state.bestScore=analysis.score;}
+    // Score history (every 30 frames)
+    if(state.frameCount%30===0){state.scoreHistory.push(analysis.score);if(state.scoreHistory.length>20) state.scoreHistory.shift();}
     countRep(analysis.angles,state.exercise);
     drawSkeleton(ctx,lms,w,h,analysis.feedback);
     ctx.restore();
-    updateFeedbackUI(analysis.feedback,analysis.score);
+    updateFeedbackUI(analysis.feedback);
     updateAnglesStrip(analysis.angles);
     updateFormScore(analysis.score,analysis.breakdown);
     updateAlertBanner(analysis.feedback);
     updatePulse(analysis.feedback);
+    // Audio error cue (throttled)
+    if(analysis.feedback.some(f=>f.severity==='error')&&state.frameCount%60===0) playErrorSound();
+    if(analysis.feedback.some(f=>f.severity==='success')&&state.frameCount%90===0) playSuccessSound();
   } else {
     ctx.restore();
     if(state.sessionActive) updateAlertBanner([{msg:'No Pose Detected — Step Back',severity:'info'}]);
   }
   state.frameCount++;
   const now=Date.now();
-  if(now-state.lastFpsTime>=1000){
-    state.fps=state.frameCount;state.frameCount=0;state.lastFpsTime=now;
-    document.getElementById('hdr-fps').textContent=state.fps;
-  }
+  if(now-state.lastFpsTime>=1000){state.fps=state.frameCount;state.frameCount=0;state.lastFpsTime=now;document.getElementById('hdr-fps').textContent=state.fps;}
 }
 
-// ── UI Updates ─────────────────────────────────────────────────────
-function updateFeedbackUI(feedback, score) {
+// ── UI UPDATES ─────────────────────────────────────────────────────
+function updateFeedbackUI(feedback){
   const icons={success:'✅',warning:'⚠️',error:'❌',info:'💡'};
-  const html = feedback.length
-    ? feedback.slice(0,4).map(fb=>`<div class="fb-item ${fb.severity}"><div class="fb-icon">${icons[fb.severity]||'•'}</div><div class="fb-text">${fb.msg}</div></div>`).join('')
-    : '<div class="fb-item info"><div class="fb-icon">💡</div><div class="fb-text">Analyzing pose...</div></div>';
-  // Desktop
-  const fl=document.getElementById('feedback-list');
-  if(fl) fl.innerHTML=html;
-  // Mobile
-  const flm=document.getElementById('feedback-list-m');
-  if(flm) flm.innerHTML=html;
+  const html=feedback.length?feedback.slice(0,4).map(fb=>`<div class="fb-item ${fb.severity}"><div class="fb-icon">${icons[fb.severity]||'•'}</div><div class="fb-text">${fb.msg}</div></div>`).join(''):'<div class="fb-item info"><div class="fb-icon">💡</div><div class="fb-text">Analyzing pose...</div></div>';
+  setHTML('feedback-list',html);setHTML('feedback-list-m',html);
   if(feedback.some(f=>f.severity==='error')){
-    state.corrections++;
-    const sa=document.getElementById('stat-alerts');
-    if(sa) sa.textContent=state.corrections;
-    const sam=document.getElementById('stat-alerts-m');
-    if(sam) sam.textContent=state.corrections;
+    state.corrections++;setEl('stat-alerts',state.corrections);setEl('stat-alerts-m',state.corrections);
   }
 }
-
-function updateAnglesStrip(angles) {
+function updateAnglesStrip(angles){
   const entries=Object.entries(angles).slice(0,4);
   entries.forEach(([name,val],i)=>{
-    const chip=document.getElementById(`ac-${i}`);
-    if(!chip) return;
+    const chip=document.getElementById(`ac-${i}`);if(!chip) return;
     chip.querySelector('.ac-name').textContent=name.replace(/_/g,' ');
     chip.querySelector('.ac-val').textContent=`${val}°`;
     chip.className='angle-chip';
@@ -499,128 +523,279 @@ function updateAnglesStrip(angles) {
     else if(val>=55&&val<=135) chip.classList.add('warn');
     else chip.classList.add('bad');
   });
-  for(let i=entries.length;i<4;i++){
-    const chip=document.getElementById(`ac-${i}`);
-    if(chip){chip.querySelector('.ac-name').textContent='—';chip.querySelector('.ac-val').textContent='—°';chip.className='angle-chip';}
-  }
+  for(let i=entries.length;i<4;i++){const c=document.getElementById(`ac-${i}`);if(c){c.querySelector('.ac-name').textContent='—';c.querySelector('.ac-val').textContent='—°';c.className='angle-chip';}}
 }
-
-function updateFormScore(score, breakdown) {
-  const circ=364.4, offset=circ-(score/100)*circ;
-  // Desktop
-  const sp=document.getElementById('score-pct');       if(sp) sp.textContent=score;
-  const prog=document.getElementById('score-prog');    if(prog) prog.style.strokeDashoffset=offset;
-  const sg=document.getElementById('score-grade');
-  // Mobile
-  const spm=document.getElementById('score-pct-m');    if(spm) spm.textContent=score;
-  const progm=document.getElementById('score-prog-m'); if(progm) progm.style.strokeDashoffset=offset;
-  const sgm=document.getElementById('score-grade-m');
-
-  let grade='A+';
-  if(score<50) grade='F';
-  else if(score<60) grade='D';
-  else if(score<70) grade='C';
-  else if(score<80) grade='B';
-  else if(score<90) grade='A';
-  if(sg) sg.textContent=grade;
-  if(sgm) sgm.textContent=grade;
-
-  // Header
+function updateFormScore(score,breakdown){
+  const circ=364.4,offset=circ-(score/100)*circ;
+  setEl('score-pct',score);setEl('score-pct-m',score);
+  const pg=document.getElementById('score-prog');if(pg) pg.style.strokeDashoffset=offset;
+  const pgm=document.getElementById('score-prog-m');if(pgm) pgm.style.strokeDashoffset=offset;
+  let grade='A+';if(score<50)grade='F';else if(score<60)grade='D';else if(score<70)grade='C';else if(score<80)grade='B';else if(score<90)grade='A';
+  setEl('score-grade',grade);setEl('score-grade-m',grade);
   const hdr=document.getElementById('hdr-score');
   if(hdr){hdr.textContent=score+'%';hdr.style.color=score>75?'#00ffcc':score>50?'#f59e0b':'#ef4444';}
-
-  // HUD
-  const qpct=document.getElementById('quality-pct');   if(qpct) qpct.textContent=score+'%';
-  const qbar=document.getElementById('quality-bar');   if(qbar) qbar.style.width=score+'%';
-
-  // Best score
-  const best=document.getElementById('stat-best');     if(best) best.textContent=state.bestScore+'%';
-  const bestm=document.getElementById('stat-best-m');  if(bestm) bestm.textContent=state.bestScore+'%';
-
-  // Breakdown bars (desktop)
+  setEl('quality-pct',score+'%');
+  const qb=document.getElementById('quality-bar');if(qb) qb.style.width=score+'%';
+  setEl('stat-best',state.bestScore+'%');setEl('stat-best-m',state.bestScore+'%');
   const d=breakdown||{depth:score,alignment:score,balance:score};
-  const bars=document.querySelectorAll('.sb-fill');
-  if(bars[0]) bars[0].style.width=Math.round(d.depth)+'%';
-  if(bars[1]) bars[1].style.width=Math.round(d.alignment)+'%';
-  if(bars[2]) bars[2].style.width=Math.round(d.balance)+'%';
+  const sb=document.getElementById('sb-depth');if(sb) sb.style.width=Math.round(d.depth)+'%';
+  const sa=document.getElementById('sb-align');if(sa) sa.style.width=Math.round(d.alignment)+'%';
+  const sba=document.getElementById('sb-balance');if(sba) sba.style.width=Math.round(d.balance)+'%';
 }
-
-function updateAlertBanner(feedback) {
-  const banner=document.getElementById('alert-banner');
-  const text=document.getElementById('alert-text');
-  const icon=document.getElementById('alert-icon');
+function updateAlertBanner(feedback){
+  const banner=document.getElementById('alert-banner');const text=document.getElementById('alert-text');const icon=document.getElementById('alert-icon');
   if(!feedback.length||!banner) return;
-  const top=feedback[0];
-  const icons={success:'✅',warning:'⚠️',error:'🚨',info:'⚡'};
-  text.textContent=top.msg;
-  icon.textContent=icons[top.severity]||'⚡';
-  banner.className='alert-banner '+top.severity;
+  const top=feedback[0];const icons={success:'✅',warning:'⚠️',error:'🚨',info:'⚡'};
+  text.textContent=top.msg;icon.textContent=icons[top.severity]||'⚡';banner.className='alert-banner '+top.severity;
 }
-
-function updatePulse(feedback) {
-  const dot=document.getElementById('pulse-dot');
-  const label=document.getElementById('pulse-label');
-  const hasError=feedback.some(f=>f.severity==='error');
-  const hasSuccess=feedback.some(f=>f.severity==='success');
+function updatePulse(feedback){
+  const dot=document.getElementById('pulse-dot'),label=document.getElementById('pulse-label');
+  const hasError=feedback.some(f=>f.severity==='error'),hasSuccess=feedback.some(f=>f.severity==='success');
   if(hasError){dot.className='pulse-dot error';label.textContent='FIX FORM';label.style.color='#ef4444';}
   else if(hasSuccess){dot.className='pulse-dot active';label.textContent='PERFECT FORM';label.style.color='#10b981';}
   else{dot.className='pulse-dot active';label.textContent='TRACKING';label.style.color='#00ffcc';}
 }
 
-// ── Timer ──────────────────────────────────────────────────────────
+// ── MUSCLE HEATMAP ─────────────────────────────────────────────────
+function updateHeatmap(exerciseKey){
+  const ex=EXERCISES[exerciseKey];if(!ex||!ex.muscles) return;
+  const m=ex.muscles;
+  const map={torso:'hm-torso',leftArm:'hm-left-arm',rightArm:'hm-right-arm',leftLeg:'hm-left-leg',rightLeg:'hm-right-leg',glutes:'hm-glutes'};
+  const mapM={torso:'hm-torso-m',leftArm:'hm-left-arm-m',rightArm:'hm-right-arm-m',leftLeg:'hm-left-leg-m',rightLeg:'hm-right-leg-m',glutes:'hm-glutes-m'};
+  Object.keys(map).forEach(k=>{
+    const val=m[k]||0;
+    const color=val>0.7?`rgba(239,68,68,${val})`:(val>0.3?`rgba(245,158,11,${val})`:`rgba(255,255,255,0.05)`);
+    const el=document.getElementById(map[k]);if(el) el.setAttribute('fill',color);
+    const elm=document.getElementById(mapM[k]);if(elm) elm.setAttribute('fill',color);
+  });
+  const label=document.getElementById('heatmap-label');
+  if(label){const active=Object.entries(m).filter(([,v])=>v>0.5).map(([k])=>k.replace(/([A-Z])/g,' $1').trim()).join(', ');label.textContent=active||'Low intensity';}
+}
+
+// ── SESSION HISTORY ────────────────────────────────────────────────
+function saveSession(){
+  const elapsed=state.startTime?Math.floor((Date.now()-state.startTime)/1000):0;
+  const session={id:Date.now(),exercise:state.exercise,exerciseName:EXERCISES[state.exercise]?.name||state.exercise,score:state.bestScore,reps:state.repCount,duration:elapsed,date:new Date().toLocaleDateString(),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})};
+  db.sessions.unshift(session);if(db.sessions.length>50) db.sessions.pop();
+  db.totalSessions++;db.totalReps=Math.max(db.totalReps,state.totalReps);
+  // Streak
+  const today=new Date().toDateString();
+  if(db.lastDate!==today){
+    const yesterday=new Date(Date.now()-86400000).toDateString();
+    db.streak=db.lastDate===yesterday?db.streak+1:1;
+    db.lastDate=today;
+  }
+  // Exercise tried
+  if(!db.exercisesTried.includes(state.exercise)){db.exercisesTried.push(state.exercise);}
+  saveStorage(db);
+  updateStreakUI();
+  checkAchievements();
+}
+
+function renderHistoryList(targetId){
+  const el=document.getElementById(targetId);if(!el) return;
+  if(!db.sessions.length){el.innerHTML='<div class="log-empty">No sessions yet</div>';return;}
+  const icons={squat:'🏋️',pushup:'💪',lunge:'🦵',plank:'⚡',bicep_curl:'🔥',shoulder_press:'🏆',deadlift:'💎'};
+  el.innerHTML=db.sessions.slice(0,15).map(s=>{
+    let grade='A+';if(s.score<50)grade='F';else if(s.score<60)grade='D';else if(s.score<70)grade='C';else if(s.score<80)grade='B';else if(s.score<90)grade='A';
+    const m=Math.floor(s.duration/60),sec=s.duration%60;
+    return`<div class="history-item"><div class="hist-icon">${icons[s.exercise]||'🏋️'}</div><div class="hist-info"><div class="hist-exercise">${s.exerciseName}</div><div class="hist-meta">${s.date} · ${s.time} · ${s.reps} reps · ${m}:${String(sec).padStart(2,'0')}</div></div><div style="text-align:right"><div class="hist-score">${s.score}%</div><div class="hist-grade">${grade}</div></div></div>`;
+  }).join('');
+}
+
+function renderHistoryChart(canvasId){
+  const canvas=document.getElementById(canvasId);if(!canvas) return;
+  const scores=db.sessions.slice(0,10).reverse().map(s=>s.score);
+  const labels=db.sessions.slice(0,10).reverse().map(s=>s.exerciseName.substring(0,3).toUpperCase());
+  if(window[canvasId+'_chart']) window[canvasId+'_chart'].destroy();
+  window[canvasId+'_chart']=new Chart(canvas,{
+    type:'line',
+    data:{labels,datasets:[{label:'Form Score',data:scores,borderColor:'#00ffcc',backgroundColor:'rgba(0,255,204,0.1)',borderWidth:2,pointBackgroundColor:'#00ffcc',pointRadius:4,tension:0.4,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},y:{min:0,max:100,ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}}}}
+  });
+}
+
+function openHistory(){
+  renderHistoryList('history-list');
+  renderHistoryChart('history-chart');
+  document.getElementById('history-modal').style.display='flex';
+}
+function closeHistory(){document.getElementById('history-modal').style.display='none';}
+function clearHistory(){if(confirm('Clear all session history?')){db.sessions=[];saveStorage(db);renderHistoryList('history-list');showToast('History cleared');}}
+
+// ── ACHIEVEMENTS ───────────────────────────────────────────────────
+function checkAchievements(){
+  const stats={totalReps:db.totalReps,bestScore:state.bestScore,streak:db.streak,fastestSet:db.fastestSet,exercisesTried:db.exercisesTried.length,aiCoachUses:db.aiCoachUses,hasRecorded:db.hasRecorded,hasShared:db.hasShared,totalSessions:db.totalSessions};
+  ACHIEVEMENTS_DEF.forEach(ach=>{
+    if(!db.unlockedAchievements.includes(ach.id)&&ach.check(stats)){
+      db.unlockedAchievements.push(ach.id);saveStorage(db);
+      showAchievementPopup(ach);
+    }
+  });
+  renderAchievements();
+}
+
+function showAchievementPopup(ach){
+  const popup=document.getElementById('ach-popup');
+  document.getElementById('ach-pop-icon').textContent=ach.icon;
+  document.getElementById('ach-pop-name').textContent=ach.name;
+  popup.classList.add('show');
+  playSuccessSound();
+  setTimeout(()=>popup.classList.remove('show'),3500);
+}
+
+function renderAchievements(){
+  ['achievements-grid','achievements-grid-m'].forEach(id=>{
+    const el=document.getElementById(id);if(!el) return;
+    el.innerHTML=ACHIEVEMENTS_DEF.map(a=>{
+      const unlocked=db.unlockedAchievements.includes(a.id);
+      return`<div class="ach-item${unlocked?' unlocked':''}" title="${a.desc}"><div class="ach-icon">${a.icon}</div><div class="ach-name">${a.name}</div><div class="ach-shine"></div></div>`;
+    }).join('');
+  });
+}
+
+// ── WORKOUT PROGRAMS ───────────────────────────────────────────────
+function renderPrograms(){
+  ['program-list','program-list-m'].forEach(id=>{
+    const el=document.getElementById(id);if(!el) return;
+    el.innerHTML=PROGRAMS.map(p=>{
+      const prog=db.programProgress[p.id]||0;
+      const pct=Math.round((prog/(p.weeks*7))*100);
+      const isActive=db.activeProgram===p.id;
+      return`<div class="prog-card${isActive?' active-prog':''}" onclick="selectProgram('${p.id}')">
+        <div class="prog-header"><span class="prog-name" style="color:${p.color}">${p.name}</span><span class="prog-week">${p.weeks}wk</span></div>
+        <div class="prog-desc">${p.desc}</div>
+        <div class="prog-progress"><div class="prog-progress-fill" style="width:${pct}%;background:${p.color}"></div></div>
+      </div>`;
+    }).join('');
+  });
+}
+
+function selectProgram(id){
+  db.activeProgram=db.activeProgram===id?null:id;
+  saveStorage(db);renderPrograms();
+  if(db.activeProgram){
+    const p=PROGRAMS.find(x=>x.id===id);
+    showToast(`Program: ${p.name} ✓`);
+    if(p.exercises[0]) selectExercise(p.exercises[0]);
+  }
+}
+
+// ── PROFILES ───────────────────────────────────────────────────────
+function renderProfiles(){
+  ['profile-list-desktop','profile-list-mobile','profile-list-modal'].forEach(id=>{
+    const el=document.getElementById(id);if(!el) return;
+    el.innerHTML=db.profiles.map(p=>`<div class="profile-chip${p.id===db.activeProfile?' active-profile':''}" onclick="switchProfile('${p.id}')"><span class="profile-avatar">${p.avatar}</span><span>${p.name}</span></div>`).join('');
+  });
+}
+function switchProfile(id){db.activeProfile=id;saveStorage(db);renderProfiles();showToast(`Profile: ${db.profiles.find(p=>p.id===id)?.name}`);}
+function addProfile(){
+  const name=document.getElementById('new-profile-name').value.trim();
+  const avatar=document.getElementById('new-profile-avatar').value;
+  if(!name){showToast('Enter a name','error');return;}
+  db.profiles.push({id:'p'+Date.now(),name,avatar});
+  saveStorage(db);renderProfiles();
+  document.getElementById('new-profile-name').value='';
+  showToast(`Profile "${name}" created!`);
+}
+function openProfiles(){renderProfiles();document.getElementById('profiles-modal').style.display='flex';}
+function closeProfiles(){document.getElementById('profiles-modal').style.display='none';}
+
+function updateStreakUI(){
+  setEl('streak-desktop',db.streak+'🔥');
+}
+
+// ── SHARE CARD ─────────────────────────────────────────────────────
+function openShareCard(){
+  const elapsed=state.startTime?Math.floor((Date.now()-state.startTime)/1000):0;
+  const m=Math.floor(elapsed/60),s=elapsed%60;
+  setEl('share-score',state.bestScore+'%');
+  setEl('share-reps',state.repCount);
+  setEl('share-time',`${m}:${String(s).padStart(2,'0')}`);
+  setEl('share-date',new Date().toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}));
+  setEl('share-exercise-badge',EXERCISES[state.exercise]?.name||'Workout');
+  document.getElementById('share-modal').style.display='flex';
+  db.hasShared=true;saveStorage(db);checkAchievements();
+}
+function closeShareCard(){document.getElementById('share-modal').style.display='none';}
+
+function downloadShareCard(){
+  const card=document.getElementById('share-card');
+  const canvas=document.createElement('canvas');
+  canvas.width=600;canvas.height=300;
+  const ctx=canvas.getContext('2d');
+  // Background
+  ctx.fillStyle='#04060f';ctx.fillRect(0,0,600,300);
+  // Grid pattern
+  ctx.strokeStyle='rgba(0,255,204,0.04)';ctx.lineWidth=1;
+  for(let x=0;x<600;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,300);ctx.stroke();}
+  for(let y=0;y<300;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(600,y);ctx.stroke();}
+  // Border
+  ctx.strokeStyle='rgba(0,255,204,0.3)';ctx.lineWidth=2;ctx.strokeRect(1,1,598,298);
+  // Title
+  ctx.fillStyle='#00ffcc';ctx.font='bold 28px monospace';ctx.textAlign='center';ctx.fillText('⚡ BIOMECH AI',300,60);
+  // Stats
+  const stats=[['FORM SCORE',state.bestScore+'%'],[EXERCISES[state.exercise]?.name||'EXERCISE',state.repCount+' REPS'],['DURATION',`${Math.floor((state.startTime?(Date.now()-state.startTime)/1000:0)/60)}m`]];
+  stats.forEach(([label,val],i)=>{
+    const x=100+i*200;
+    ctx.fillStyle='#00ffcc';ctx.font='bold 40px monospace';ctx.textAlign='center';ctx.fillText(val,x,160);
+    ctx.fillStyle='#94a3b8';ctx.font='12px monospace';ctx.fillText(label,x,185);
+  });
+  ctx.fillStyle='rgba(0,255,204,0.15)';ctx.beginPath();ctx.roundRect(200,210,200,40,20);ctx.fill();
+  ctx.fillStyle='#00ffcc';ctx.font='14px monospace';ctx.textAlign='center';ctx.fillText('biomech-ai.onrender.com',300,235);
+  const link=document.createElement('a');
+  link.download=`biomech-share-${Date.now()}.png`;
+  link.href=canvas.toDataURL('image/png');link.click();
+  showToast('Share card downloaded! 🔗');
+}
+
+// ── TIMER ──────────────────────────────────────────────────────────
 let timerInterval=null;
 function startTimer(){
   state.startTime=Date.now();
   timerInterval=setInterval(()=>{
     const e=Math.floor((Date.now()-state.startTime)/1000);
-    const m=Math.floor(e/60),s=e%60;
-    const t=`${m}:${s.toString().padStart(2,'0')}`;
-    const ht=document.getElementById('hud-timer');    if(ht) ht.textContent=t;
-    const st=document.getElementById('stat-time');    if(st) st.textContent=t;
-    const stm=document.getElementById('stat-time-m'); if(stm) stm.textContent=t;
+    const t=`${Math.floor(e/60)}:${String(e%60).padStart(2,'0')}`;
+    setEl('hud-timer',t);setEl('stat-time',t);setEl('stat-time-m',t);
   },1000);
 }
 function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null;}}
 
-// ── Session Control ────────────────────────────────────────────────
-async function startSession() {
-  try {
-    const video=document.getElementById('webcam');
-    const canvas=document.getElementById('output-canvas');
-    state.videoEl=video; state.canvasEl=canvas; state.ctx=canvas.getContext('2d');
-    const stream=await navigator.mediaDevices.getUserMedia({
-      video:{width:{ideal:1280},height:{ideal:720},facingMode:'user',frameRate:{ideal:30}},
-      audio:false
-    });
-    video.srcObject=stream; video.style.display='block';
+// ── SESSION CONTROL ────────────────────────────────────────────────
+async function startSession(){
+  try{
+    const video=document.getElementById('webcam'),canvas=document.getElementById('output-canvas');
+    state.videoEl=video;state.canvasEl=canvas;state.ctx=canvas.getContext('2d');
+    const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user',frameRate:{ideal:30}},audio:false});
+    video.srcObject=stream;video.style.display='block';
     await new Promise(res=>{video.onloadedmetadata=res;});
-    const pose=new Pose({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
-    pose.setOptions({
-      modelComplexity:CONFIG.modelComplexity,smoothLandmarks:true,
-      enableSegmentation:false,smoothSegmentation:false,
-      minDetectionConfidence:CONFIG.minDetectionConf,minTrackingConfidence:CONFIG.minTrackingConf,
-    });
+    const pose=new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
+    pose.setOptions({modelComplexity:CONFIG.modelComplexity,smoothLandmarks:true,enableSegmentation:false,minDetectionConfidence:CONFIG.minDetectionConf,minTrackingConfidence:CONFIG.minTrackingConf});
     pose.onResults(onResults);
     const camera=new Camera(video,{onFrame:async()=>{await pose.send({image:video});},width:1280,height:720});
     await camera.start();
-    state.pose=pose; state.camera=camera; state.sessionActive=true;
+    state.pose=pose;state.camera=camera;state.sessionActive=true;
+    state.scoreHistory=[];state.repTimestamps=[];state.sessionStartReps=state.totalReps;
     document.getElementById('cam-overlay').style.display='none';
     document.getElementById('live-hud').style.display='flex';
     document.getElementById('btn-start').disabled=true;
     document.getElementById('btn-stop').disabled=false;
-    const ll=document.getElementById('log-list'); if(ll) ll.innerHTML='';
+    setHTML('log-list','');
     startTimer();
     addLog('Session started','good');
     showToast('Session Started! 🚀');
-  } catch(err) {
-    console.error('Camera error:',err);
+    playSuccessSound();
+    // Update program progress
+    if(db.activeProgram){db.programProgress[db.activeProgram]=(db.programProgress[db.activeProgram]||0)+1;saveStorage(db);renderPrograms();}
+  }catch(err){
     showToast('Camera error: '+err.message,'error');
     updateAlertBanner([{msg:'Camera access denied — check permissions',severity:'error'}]);
   }
 }
 
-function stopSession() {
+function stopSession(){
   state.sessionActive=false;
+  if(isRecording) stopRecording();
   if(state.camera){state.camera.stop();state.camera=null;}
   if(state.pose){state.pose.close();state.pose=null;}
   const video=document.getElementById('webcam');
@@ -631,243 +806,186 @@ function stopSession() {
   document.getElementById('live-hud').style.display='none';
   document.getElementById('btn-start').disabled=false;
   document.getElementById('btn-stop').disabled=true;
-  const pd=document.getElementById('pulse-dot');
-  if(pd) pd.className='pulse-dot';
-  const pl=document.getElementById('pulse-label');
-  if(pl){pl.textContent='READY';pl.style.color='';}
+  const pd=document.getElementById('pulse-dot');if(pd) pd.className='pulse-dot';
+  const pl=document.getElementById('pulse-label');if(pl){pl.textContent='READY';pl.style.color='';}
   stopTimer();
-  addLog('Session stopped','good');
+  saveSession();
+  addLog('Session saved','good');
+  // AI summary prompt
+  if(state.repCount>0) showToast(`Session saved! ${state.repCount} reps · ${state.bestScore}% best`);
 }
 
-function resetSession() {
+function resetSession(){
   state.repCount=0;state.repState='up';state.bestScore=100;state.corrections=0;state.formScore=100;
-  ['rep-number','rep-number-m'].forEach(id=>{const e=document.getElementById(id);if(e) e.textContent='0';});
+  ['rep-number','rep-number-m'].forEach(id=>setEl(id,'0'));
   document.getElementById('hdr-reps').textContent='0';
-  ['stat-total-reps','stat-reps-m','stat-alerts','stat-alerts-m'].forEach(id=>{const e=document.getElementById(id);if(e) e.textContent='0';});
-  ['stat-best','stat-best-m'].forEach(id=>{const e=document.getElementById(id);if(e) e.textContent='100%';});
-  updateRepStateUI('up');
-  updateFormScore(100,{depth:100,alignment:100,balance:100});
-  showToast('Session Reset ↺');
-  addLog('Reset session','good');
+  ['stat-total-reps','stat-reps-m','stat-alerts','stat-alerts-m'].forEach(id=>setEl(id,'0'));
+  ['stat-best','stat-best-m'].forEach(id=>setEl(id,'100%'));
+  updateRepStateUI('up');updateFormScore(100,{depth:100,alignment:100,balance:100});
+  showToast('Session Reset ↺');addLog('Reset','good');
 }
 
-// ── Exercise Selection ─────────────────────────────────────────────
-function selectExercise(key) {
+// ── EXERCISE SELECT ────────────────────────────────────────────────
+function selectExercise(key){
   if(!EXERCISES[key]) return;
-  state.exercise=key; state.repCount=0; state.repState='up';
-  // Update all ex-card buttons (desktop + mobile)
+  state.exercise=key;state.repCount=0;state.repState='up';
   document.querySelectorAll('.ex-card').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll(`[data-ex="${key}"]`).forEach(b=>b.classList.add('active'));
   const ex=EXERCISES[key];
-  // Instruction text (desktop + mobile)
-  ['inst-text','inst-text-m'].forEach(id=>{const e=document.getElementById(id);if(e) e.textContent=ex.instruction;});
-  // Tips (desktop + mobile)
+  ['inst-text','inst-text-m'].forEach(id=>setEl(id,ex.instruction));
   const tipsHTML=ex.tips.map(t=>`<div class="inst-tip">${t}</div>`).join('');
-  ['inst-tips','inst-tips-m'].forEach(id=>{const e=document.getElementById(id);if(e) e.innerHTML=tipsHTML;});
-  document.getElementById('hud-exercise').textContent=ex.name.toUpperCase();
-  ['rep-number','rep-number-m'].forEach(id=>{const e=document.getElementById(id);if(e) e.textContent='0';});
+  ['inst-tips','inst-tips-m'].forEach(id=>setHTML(id,tipsHTML));
+  setEl('hud-exercise',ex.name.toUpperCase());
+  ['rep-number','rep-number-m'].forEach(id=>setEl(id,'0'));
   document.getElementById('hdr-reps').textContent='0';
   updateRepStateUI('up');
+  updateHeatmap(key);
   addLog(`Exercise: ${ex.name}`,'good');
+  if(!db.exercisesTried.includes(key)){db.exercisesTried.push(key);saveStorage(db);}
 }
 
-// ── Screenshot ─────────────────────────────────────────────────────
-function takeScreenshot() {
-  const canvas=document.getElementById('output-canvas');
-  if(!canvas) return;
-  const link=document.createElement('a');
-  link.download=`biomech-${Date.now()}.png`;
-  link.href=canvas.toDataURL('image/png');
-  link.click();
+// ── SCREENSHOT ─────────────────────────────────────────────────────
+function takeScreenshot(){
+  const canvas=document.getElementById('output-canvas');if(!canvas) return;
+  const link=document.createElement('a');link.download=`biomech-${Date.now()}.png`;link.href=canvas.toDataURL('image/png');link.click();
   showToast('Screenshot saved! 📸');
 }
 
-// ── AI Coach ───────────────────────────────────────────────────────
-function openAICoach() {
-  document.getElementById('ai-ex-chip').textContent=`Exercise: ${EXERCISES[state.exercise]?.name||'—'}`;
-  document.getElementById('ai-score-chip').textContent=`Score: ${state.formScore}%`;
-  document.getElementById('ai-rep-chip').textContent=`Reps: ${state.repCount}`;
+// ── AI COACH ───────────────────────────────────────────────────────
+function openAICoach(){
+  setEl('ai-ex-chip',`Exercise: ${EXERCISES[state.exercise]?.name||'—'}`);
+  setEl('ai-score-chip',`Score: ${state.formScore}%`);
+  setEl('ai-rep-chip',`Reps: ${state.repCount}`);
   document.getElementById('ai-modal').style.display='flex';
 }
 function closeAICoach(){document.getElementById('ai-modal').style.display='none';}
 
-async function runGeminiAnalysis() {
+async function runGeminiAnalysis(){
+  db.aiCoachUses++;saveStorage(db);checkAchievements();
   const key=state.geminiKey;
   if(!key){
-    document.getElementById('ai-response-area').innerHTML=`
-      <div class="ai-text" style="color:#f87171;">
-        ⚠️ AI Coach unavailable — Gemini API key not configured on server.<br><br>
-        <small>Add <strong>GEMINI_API_KEY</strong> to Render environment variables.</small>
-      </div>`;
+    setHTML('ai-response-area',`<div class="ai-text" style="color:#f87171;">⚠️ AI Coach unavailable — GEMINI_API_KEY not set on server.</div>`);
     return;
   }
-  const area=document.getElementById('ai-response-area');
-  const btn=document.getElementById('ai-analyze-btn');
+  const area=document.getElementById('ai-response-area'),btn=document.getElementById('ai-analyze-btn');
   btn.disabled=true;
-  area.innerHTML=`<div class="ai-loading-wrap"><div class="ai-spinner"></div><div class="ai-loading-text">GEMINI 2.5 FLASH ANALYZING...</div></div>`;
+  setHTML('ai-response-area',`<div class="ai-loading-wrap"><div class="ai-spinner"></div><div class="ai-loading-text">GEMINI ANALYZING...</div></div>`);
   const ex=EXERCISES[state.exercise]||{};
-  const prompt=`You are an elite AI biomechanical coach and physiotherapist.
-Exercise: ${ex.name||state.exercise}
-Form Score: ${state.formScore}/100
-Reps: ${state.repCount}
-Joint Angles: ${Object.entries(state.lastAngles).map(([k,v])=>`${k.replace(/_/g,' ')}: ${v}°`).join(', ')}
+  const prompt=`You are an elite AI biomechanical coach.
+Exercise: ${ex.name||state.exercise} | Score: ${state.formScore}/100 | Reps: ${state.repCount}
+Joint Angles: ${Object.entries(state.lastAngles).map(([k,v])=>`${k.replace(/_/g,' ')}: ${v}°`).join(', ')||'No data yet'}
 Live Feedback: ${state.lastFeedback.map(f=>f.msg).join(', ')||'None'}
+Session History: ${db.sessions.length} sessions, ${db.totalReps} total reps, ${db.streak} day streak
 
-Respond with:
+Respond concisely:
 **FORM ASSESSMENT** (2 sentences, cite specific angles)
-**TOP 3 CORRECTIONS** (with biomechanical reasoning)
-**MUSCLE ACTIVATION TIP** (one specific cue)
+**TOP 3 CORRECTIONS** (biomechanical reasoning)
+**MUSCLE ACTIVATION TIP** (one cue)
+**PROGRESSIVE OVERLOAD** (one suggestion based on history)
 **MOTIVATIONAL PUSH** (one energetic sentence)
 
-Max 250 words. Use anatomical terms.`;
-  try {
-    const resp=await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
-      {method:'POST',headers:{'Content-Type':'application/json'},
-       body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:512}})}
-    );
+Max 280 words. Use anatomical terms.`;
+  try{
+    const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:600}})});
     if(!resp.ok){const e=await resp.json();throw new Error(e?.error?.message||`HTTP ${resp.status}`);}
     const data=await resp.json();
-    const text=data?.candidates?.[0]?.content?.parts?.[0]?.text||'No response received.';
-    const formatted=text
-      .replace(/\*\*(.*?)\*\*/g,'<strong style="color:#a78bfa;font-family:\'Michroma\',monospace;font-size:11px;letter-spacing:2px;">$1</strong>')
-      .replace(/\n/g,'<br>');
-    area.innerHTML=`<div class="ai-text">${formatted}</div>`;
-    addLog('AI Analysis complete','good');
-  } catch(err){
-    area.innerHTML=`<div class="ai-text" style="color:#f87171;">❌ Gemini Error: ${err.message}</div>`;
-  } finally{btn.disabled=false;}
+    const text=data?.candidates?.[0]?.content?.parts?.[0]?.text||'No response.';
+    const formatted=text.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#a78bfa;font-family:\'Michroma\',monospace;font-size:11px;letter-spacing:2px;">$1</strong>').replace(/\n/g,'<br>');
+    setHTML('ai-response-area',`<div class="ai-text">${formatted}</div>`);
+    addLog('AI Analysis complete','good');playSuccessSound();
+  }catch(err){setHTML('ai-response-area',`<div class="ai-text" style="color:#f87171;">❌ ${err.message}</div>`);}
+  finally{btn.disabled=false;}
 }
 
-// ── Settings ───────────────────────────────────────────────────────
-function toggleSettings(){
-  const m=document.getElementById('settings-modal');
-  m.style.display=m.style.display==='none'?'flex':'none';
-}
+// ── SETTINGS ───────────────────────────────────────────────────────
+function toggleSettings(){const m=document.getElementById('settings-modal');m.style.display=m.style.display==='none'?'flex':'none';}
 function closeSettings(){document.getElementById('settings-modal').style.display='none';}
 function saveSettings(){
   CONFIG.skeletonStyle=document.getElementById('skeleton-style').value;
   CONFIG.showAngles=document.getElementById('show-angles').checked;
   CONFIG.showSkeleton=document.getElementById('show-skeleton').checked;
   CONFIG.voiceFeedback=document.getElementById('voice-feedback').checked;
+  CONFIG.audioCues=document.getElementById('audio-cues').checked;
   const conf=parseInt(document.getElementById('conf-slider').value);
-  CONFIG.minDetectionConf=conf/100; CONFIG.minTrackingConf=conf/100;
-  closeSettings();
-  showToast('Settings Saved ✓');
+  CONFIG.minDetectionConf=conf/100;CONFIG.minTrackingConf=conf/100;
+  closeSettings();showToast('Settings Saved ✓');
 }
 
-// ── Voice ──────────────────────────────────────────────────────────
-function speak(text){
-  if(!window.speechSynthesis) return;
-  const u=new SpeechSynthesisUtterance(text);
-  u.rate=1.1;u.pitch=1;u.volume=0.8;
-  window.speechSynthesis.speak(u);
-}
+// ── VOICE SPEECH OUTPUT ────────────────────────────────────────────
+function speak(text){if(!window.speechSynthesis) return;const u=new SpeechSynthesisUtterance(text);u.rate=1.1;u.pitch=1;u.volume=0.8;window.speechSynthesis.speak(u);}
 
-// ── Activity Log ───────────────────────────────────────────────────
+// ── ACTIVITY LOG ───────────────────────────────────────────────────
 function addLog(msg,type='good'){
-  const log=document.getElementById('log-list');
-  if(!log) return;
-  const empty=log.querySelector('.log-empty');
-  if(empty) log.innerHTML='';
+  const log=document.getElementById('log-list');if(!log) return;
+  const empty=log.querySelector('.log-empty');if(empty) log.innerHTML='';
   const time=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  const item=document.createElement('div');
-  item.className=`log-item ${type}`;
+  const item=document.createElement('div');item.className=`log-item ${type}`;
   item.innerHTML=`<span>${msg}</span><span class="log-time">${time}</span>`;
-  log.prepend(item);
-  if(log.children.length>15) log.removeChild(log.lastChild);
+  log.prepend(item);if(log.children.length>15) log.removeChild(log.lastChild);
 }
 
-// ── Toast ──────────────────────────────────────────────────────────
+// ── TOAST ──────────────────────────────────────────────────────────
 let toastTimer=null;
 function showToast(msg,type='success'){
   const t=document.getElementById('toast');
   t.textContent=msg;
-  t.style.background=type==='error'?'rgba(239,68,68,0.9)':'rgba(16,185,129,0.9)';
-  t.classList.add('show');
-  if(toastTimer) clearTimeout(toastTimer);
+  t.style.background=type==='error'?'rgba(239,68,68,0.9)':type==='info'?'rgba(124,58,237,0.9)':'rgba(16,185,129,0.9)';
+  t.classList.add('show');if(toastTimer) clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>t.classList.remove('show'),2500);
 }
 
-// ── Background Canvas ──────────────────────────────────────────────
+// ── BACKGROUND ─────────────────────────────────────────────────────
 function initBackground(){
-  const canvas=document.getElementById('bg-canvas');
-  if(!canvas) return;
+  const canvas=document.getElementById('bg-canvas');if(!canvas) return;
   const ctx=canvas.getContext('2d');
-  let w=canvas.width=window.innerWidth, h=canvas.height=window.innerHeight;
+  let w=canvas.width=window.innerWidth,h=canvas.height=window.innerHeight;
   window.addEventListener('resize',()=>{w=canvas.width=window.innerWidth;h=canvas.height=window.innerHeight;});
-  const nodes=Array.from({length:60},()=>({
-    x:Math.random()*w,y:Math.random()*h,
-    vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,
-    r:Math.random()*1.5+0.5
-  }));
+  const nodes=Array.from({length:60},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,r:Math.random()*1.5+0.5}));
   function draw(){
     ctx.clearRect(0,0,w,h);
     ctx.strokeStyle='rgba(0,255,204,0.03)';ctx.lineWidth=1;
     for(let x=0;x<w;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
     for(let y=0;y<h;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
     nodes.forEach(n=>{
-      n.x+=n.vx;n.y+=n.vy;
-      if(n.x<0||n.x>w)n.vx*=-1;if(n.y<0||n.y>h)n.vy*=-1;
+      n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>w)n.vx*=-1;if(n.y<0||n.y>h)n.vy*=-1;
       ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fillStyle='rgba(0,255,204,0.4)';ctx.fill();
     });
     ctx.strokeStyle='rgba(0,255,204,0.06)';ctx.lineWidth=1;
-    for(let i=0;i<nodes.length;i++){
-      for(let j=i+1;j<nodes.length;j++){
-        const d=Math.hypot(nodes[i].x-nodes[j].x,nodes[i].y-nodes[j].y);
-        if(d<120){ctx.globalAlpha=(1-d/120)*0.3;ctx.beginPath();ctx.moveTo(nodes[i].x,nodes[i].y);ctx.lineTo(nodes[j].x,nodes[j].y);ctx.stroke();}
-      }
-    }
-    ctx.globalAlpha=1;
-    requestAnimationFrame(draw);
+    for(let i=0;i<nodes.length;i++){for(let j=i+1;j<nodes.length;j++){const d=Math.hypot(nodes[i].x-nodes[j].x,nodes[i].y-nodes[j].y);if(d<120){ctx.globalAlpha=(1-d/120)*0.3;ctx.beginPath();ctx.moveTo(nodes[i].x,nodes[i].y);ctx.lineTo(nodes[j].x,nodes[j].y);ctx.stroke();}}}
+    ctx.globalAlpha=1;requestAnimationFrame(draw);
   }
   draw();
 }
 
-// ── Confidence slider ──────────────────────────────────────────────
+// ── HELPERS ────────────────────────────────────────────────────────
+function setEl(id,val){const e=document.getElementById(id);if(e) e.textContent=val;}
+function setHTML(id,html){const e=document.getElementById(id);if(e) e.innerHTML=html;}
+
+// ── INIT ───────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
   const sl=document.getElementById('conf-slider'),vl=document.getElementById('conf-val');
   if(sl&&vl) sl.addEventListener('input',()=>{vl.textContent=sl.value+'%';});
 });
 
-// ── Splash / Init ──────────────────────────────────────────────────
 async function initApp(){
   initBackground();
-  const fill=document.getElementById('loading-fill');
-  const loadTxt=document.getElementById('loading-text');
-  const ssTf=document.getElementById('ss-tf');
-  const ssMp=document.getElementById('ss-mp');
-  const ssCam=document.getElementById('ss-cam');
+  const fill=document.getElementById('loading-fill'),loadTxt=document.getElementById('loading-text');
+  const ssTf=document.getElementById('ss-tf'),ssMp=document.getElementById('ss-mp'),ssCam=document.getElementById('ss-cam');
 
-  loadTxt.textContent='Loading MediaPipe libraries...';
-  fill.style.width='20%';
-  await sleep(600);
-  ssTf.textContent='✓';
-
-  loadTxt.textContent='Initializing Pose Model...';
-  fill.style.width='45%';
-  await loadGeminiKey();   // ← silent, auto-fetches from /api/config
-  await sleep(500);
-  ssMp.textContent='✓';
-
-  loadTxt.textContent='Checking Camera...';
-  fill.style.width='80%';
-  try{
-    const devices=await navigator.mediaDevices.enumerateDevices();
-    const cams=devices.filter(d=>d.kind==='videoinput');
-    ssCam.textContent=cams.length>0?`${cams.length}✓`:'?';
-  }catch(e){ssCam.textContent='?';}
-  await sleep(500);
-
-  loadTxt.textContent='System Ready. Launching...';
-  fill.style.width='100%';
-  await sleep(600);
-
+  loadTxt.textContent='Loading libraries...';fill.style.width='15%';await sleep(400);ssTf.textContent='✓';
+  loadTxt.textContent='Loading Gemini key...';fill.style.width='35%';
+  await loadGeminiKey();await sleep(300);
+  loadTxt.textContent='Initializing Pose Model...';fill.style.width='55%';await sleep(500);ssMp.textContent='✓';
+  loadTxt.textContent='Loading your data...';fill.style.width='70%';
+  db=getDB();renderAchievements();renderPrograms();renderProfiles();updateStreakUI();
+  updateHeatmap('squat');await sleep(300);
+  loadTxt.textContent='Checking Camera...';fill.style.width='85%';
+  try{const d=await navigator.mediaDevices.enumerateDevices();ssCam.textContent=d.filter(x=>x.kind==='videoinput').length+'✓';}catch(e){ssCam.textContent='?';}
+  await sleep(400);
+  loadTxt.textContent='System Ready!';fill.style.width='100%';await sleep(500);
   document.getElementById('splash').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
 }
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-
-// ── Boot ───────────────────────────────────────────────────────────
 initApp();
