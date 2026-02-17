@@ -1,11 +1,14 @@
 /* ══════════════════════════════════════════════════════════════════
-   BioMech AI v3.0 — Full Feature Engine
+   BioMech AI v3.1 — Full Feature Engine
    © 2026 Krish Joshi · All Rights Reserved
 
-   Features: Google Sign-In · Session History · Achievements
-             Recording · Voice Commands · Metronome · Muscle Heatmap
-             Share Card · Profiles · Programs · Audio Cues
-             Rep Velocity · Progressive Overload Tips · AI Coach
+   v3.1 Changes:
+   - Camera adjustment controls (flip, zoom, brightness guidance)
+   - Maximized camera display area for mobile & laptop
+   - Camera expand/fullscreen toggle
+   - Camera selection (front/back)
+   - Pinch-to-zoom on mobile camera
+   - Resizable camera panel on desktop
 ══════════════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -14,6 +17,8 @@ const CONFIG = {
   minDetectionConf:0.7, minTrackingConf:0.7, modelComplexity:1,
   skeletonStyle:'neon', showAngles:true, showSkeleton:true,
   voiceFeedback:false, audioCues:true,
+  cameraZoom:1.0, cameraMirror:true, cameraExpanded:false,
+  cameraFacing:'user', // 'user' = front, 'environment' = back
 };
 
 // ── EXERCISE DATABASE ──────────────────────────────────────────────
@@ -63,6 +68,9 @@ let state = {
   videoEl:null, canvasEl:null, ctx:null, geminiKey:'',
   scoreBreakdown:{depth:100,alignment:100,balance:100},
   scoreHistory:[], repTimestamps:[], sessionStartReps:0,
+  // Camera state
+  cameraZoom:1.0, cameraMirror:true, cameraStream:null,
+  availableCameras:[], activeCameraId:null,
 };
 
 // ── PERSISTENT DATA (localStorage) ────────────────────────────────
@@ -97,18 +105,175 @@ const SKELETON_STYLES = {
 };
 
 // ══════════════════════════════════════════════════════════════════
-//  GOOGLE SIGN-IN
+//  CAMERA ADJUSTMENT SYSTEM (NEW v3.1)
 // ══════════════════════════════════════════════════════════════════
 
 /**
- * Called by Google Identity Services after the user selects their account.
- * The credential is a JWT containing name, email, picture, sub, etc.
+ * Enumerate available cameras and populate the camera selector
  */
+async function loadAvailableCameras() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    state.availableCameras = devices.filter(d => d.kind === 'videoinput');
+    const sel = document.getElementById('camera-select');
+    if (sel) {
+      sel.innerHTML = state.availableCameras.map((cam, i) => {
+        const label = cam.label || `Camera ${i + 1}`;
+        const isFront = label.toLowerCase().includes('front') || label.toLowerCase().includes('user') || i === 0;
+        return `<option value="${cam.deviceId}">${isFront ? '📸 ' : '🎥 '}${label.length > 22 ? label.substring(0, 22) + '…' : label}</option>`;
+      }).join('');
+      if (state.activeCameraId) {
+        sel.value = state.activeCameraId;
+      }
+    }
+  } catch(e) {
+    console.warn('Could not enumerate cameras:', e);
+  }
+}
+
+/**
+ * Switch to a different camera device
+ */
+async function switchCamera(deviceId) {
+  if (!state.sessionActive) {
+    showToast('Start session first to switch camera', 'info');
+    return;
+  }
+  state.activeCameraId = deviceId;
+  // Restart session with new camera
+  await stopSession();
+  await sleep(300);
+  await startSession(deviceId);
+}
+
+/**
+ * Toggle camera mirror/flip
+ */
+function toggleMirror() {
+  state.cameraMirror = !state.cameraMirror;
+  CONFIG.cameraMirror = state.cameraMirror;
+  const btn = document.getElementById('btn-mirror');
+  if (btn) {
+    btn.classList.toggle('cam-ctrl-active', state.cameraMirror);
+    btn.title = state.cameraMirror ? 'Mirror: ON' : 'Mirror: OFF';
+  }
+  showToast(state.cameraMirror ? '🪞 Mirror ON' : '🪞 Mirror OFF');
+}
+
+/**
+ * Adjust camera zoom (CSS transform on canvas/video)
+ */
+function adjustZoom(delta) {
+  state.cameraZoom = Math.max(0.7, Math.min(2.5, state.cameraZoom + delta));
+  applyZoom();
+  document.getElementById('zoom-level').textContent = Math.round(state.cameraZoom * 100) + '%';
+}
+
+function applyZoom() {
+  const canvas = document.getElementById('output-canvas');
+  const video = document.getElementById('webcam');
+  const z = state.cameraZoom;
+  if (canvas) {
+    canvas.style.transform = `scale(${z})`;
+    canvas.style.transformOrigin = 'center center';
+  }
+  if (video) {
+    video.style.transform = `scale(${z})`;
+    video.style.transformOrigin = 'center center';
+  }
+}
+
+function resetZoom() {
+  state.cameraZoom = 1.0;
+  applyZoom();
+  document.getElementById('zoom-level').textContent = '100%';
+  showToast('Zoom reset');
+}
+
+/**
+ * Toggle camera expand mode — takes over more screen space
+ */
+function toggleCameraExpand() {
+  CONFIG.cameraExpanded = !CONFIG.cameraExpanded;
+  const frame = document.querySelector('.cam-frame');
+  const bodyGrid = document.querySelector('.body-grid');
+  const centerPanel = document.querySelector('.center-panel');
+  const expandBtn = document.getElementById('btn-expand');
+
+  if (CONFIG.cameraExpanded) {
+    // Expand camera to fill more space
+    if (bodyGrid) bodyGrid.classList.add('camera-expanded-mode');
+    if (expandBtn) { expandBtn.textContent = '⊡'; expandBtn.title = 'Collapse Camera'; }
+    showToast('📷 Camera Expanded');
+  } else {
+    if (bodyGrid) bodyGrid.classList.remove('camera-expanded-mode');
+    if (expandBtn) { expandBtn.textContent = '⊞'; expandBtn.title = 'Expand Camera'; }
+    showToast('Camera Normal View');
+  }
+}
+
+/**
+ * Toggle fullscreen on camera frame
+ */
+function toggleFullscreen() {
+  const frame = document.querySelector('.cam-frame');
+  if (!frame) return;
+  if (!document.fullscreenElement) {
+    frame.requestFullscreen().catch(err => showToast('Fullscreen not available', 'error'));
+    showToast('▶ Fullscreen — Press Esc to exit');
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+/**
+ * Setup pinch-to-zoom on mobile
+ */
+function setupPinchZoom() {
+  const frame = document.querySelector('.cam-frame');
+  if (!frame) return;
+  let initialDist = 0;
+  let initialZoom = 1.0;
+
+  frame.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      initialDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      initialZoom = state.cameraZoom;
+    }
+  }, { passive: true });
+
+  frame.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scale = dist / initialDist;
+      state.cameraZoom = Math.max(0.7, Math.min(2.5, initialZoom * scale));
+      applyZoom();
+      const zl = document.getElementById('zoom-level');
+      if (zl) zl.textContent = Math.round(state.cameraZoom * 100) + '%';
+    }
+  }, { passive: true });
+}
+
+/**
+ * Show the camera setup guide popup
+ */
+function showCameraGuide() {
+  const guide = document.getElementById('cam-guide-popup');
+  if (guide) {
+    guide.classList.toggle('show');
+  }
+}
+
+// ── GOOGLE SIGN-IN ─────────────────────────────────────────────────
 function handleGoogleLogin(response) {
   try {
     const payload = parseJwt(response.credential);
-
-    // Build user object
     db.googleUser = {
       name:    payload.name    || 'Athlete',
       email:   payload.email   || '',
@@ -116,19 +281,11 @@ function handleGoogleLogin(response) {
       sub:     payload.sub     || '',
       given:   payload.given_name || payload.name.split(' ')[0],
     };
-
     const profileId = 'google_' + payload.sub;
     db.activeProfile = profileId;
-
-    // Add to profiles list if not already there
     if (!db.profiles.find(p => p.id === profileId)) {
-      db.profiles.push({
-        id: profileId,
-        name: db.googleUser.given,
-        avatar: db.googleUser.picture ? '📷' : '🧑',
-      });
+      db.profiles.push({ id: profileId, name: db.googleUser.given, avatar: db.googleUser.picture ? '📷' : '🧑' });
     }
-
     saveStorage(db);
     dismissLoginScreen();
   } catch(e) {
@@ -137,23 +294,14 @@ function handleGoogleLogin(response) {
   }
 }
 
-/**
- * Decode a JWT without a library (payload only — no signature verification).
- */
 function parseJwt(token) {
   const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
   const json = decodeURIComponent(
-    atob(base64).split('').map(c =>
-      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
-    ).join('')
+    atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join('')
   );
   return JSON.parse(json);
 }
 
-/**
- * Fallback: manually trigger Google's popup flow.
- * Used when the rendered button hasn't appeared yet.
- */
 function triggerGoogleSignIn() {
   if (window.google && google.accounts && google.accounts.id) {
     google.accounts.id.prompt();
@@ -162,9 +310,6 @@ function triggerGoogleSignIn() {
   }
 }
 
-/**
- * Guest mode — skip auth, no data persists to a Google account.
- */
 function continueAsGuest() {
   db.googleUser = null;
   if (!db.profiles.find(p => p.id === 'p1')) {
@@ -175,11 +320,7 @@ function continueAsGuest() {
   dismissLoginScreen();
 }
 
-/**
- * Sign out: clear Google user, show login screen again.
- */
 function signOut() {
-  // Revoke Google session if available
   if (window.google && google.accounts && db.googleUser?.email) {
     try { google.accounts.id.revoke(db.googleUser.email); } catch(e){}
   }
@@ -188,16 +329,10 @@ function signOut() {
   location.reload();
 }
 
-/**
- * Animate login screen out, then show splash → app.
- */
 function dismissLoginScreen() {
   const ls = document.getElementById('login-screen');
   ls.classList.add('hidden');
-  setTimeout(() => {
-    ls.style.display = 'none';
-    launchSplash();
-  }, 750);
+  setTimeout(() => { ls.style.display = 'none'; launchSplash(); }, 750);
 }
 
 function showLoginError(msg) {
@@ -211,15 +346,11 @@ function showLoginError(msg) {
   el.textContent = msg;
 }
 
-/**
- * Update header user pill with signed-in user info.
- */
 function updateUserPill() {
   const pill = document.getElementById('user-pill');
   const nameEl = document.getElementById('hdr-username');
   const avatarImg = document.getElementById('user-avatar-img');
   const avatarFallback = document.getElementById('user-avatar-fallback');
-
   if (db.googleUser) {
     pill.style.display = 'flex';
     nameEl.textContent = db.googleUser.given || db.googleUser.name;
@@ -229,21 +360,20 @@ function updateUserPill() {
       avatarFallback.style.display = 'none';
     }
   } else {
-    // Guest
     pill.style.display = 'flex';
     nameEl.textContent = 'Guest';
     avatarFallback.textContent = '👤';
   }
 }
 
-// ── AUTO-LOAD GEMINI KEY ───────────────────────────────────────────
+// ── GEMINI KEY ─────────────────────────────────────────────────────
 async function loadGeminiKey() {
   try {
     const res = await fetch('/api/config');
     if (!res.ok) throw new Error('no endpoint');
     const data = await res.json();
-    if (data.geminiKey) { state.geminiKey = data.geminiKey; console.log('✅ Gemini key loaded'); }
-  } catch(e) { console.warn('⚠️ /api/config not available'); }
+    if (data.geminiKey) { state.geminiKey = data.geminiKey; }
+  } catch(e) {}
 }
 
 // ── AUDIO ENGINE ───────────────────────────────────────────────────
@@ -296,10 +426,9 @@ function changeBPM(delta) {
 let mediaRecorder=null, recordedChunks=[], isRecording=false;
 
 function toggleRecording() { if (isRecording) stopRecording(); else startRecording(); }
-
 function startRecording() {
   const canvas = document.getElementById('output-canvas');
-  if (!canvas || !state.sessionActive) { showToast('Start a session first!','error'); return; }
+  if (!canvas || !state.sessionActive) { showToast('Start a session first!', 'error'); return; }
   try {
     const stream = canvas.captureStream(30);
     mediaRecorder = new MediaRecorder(stream, {mimeType:'video/webm;codecs=vp8'});
@@ -365,6 +494,11 @@ function handleVoiceCommand(cmd) {
   else if (cmd.includes('record'))   toggleRecording();
   else if (cmd.includes('screenshot')||cmd.includes('capture')) takeScreenshot();
   else if (cmd.includes('ai')||cmd.includes('coach')||cmd.includes('analyze')) openAICoach();
+  else if (cmd.includes('expand')||cmd.includes('big camera')) toggleCameraExpand();
+  else if (cmd.includes('fullscreen')||cmd.includes('full screen')) toggleFullscreen();
+  else if (cmd.includes('flip')||cmd.includes('mirror')) toggleMirror();
+  else if (cmd.includes('zoom in'))  adjustZoom(0.2);
+  else if (cmd.includes('zoom out')) adjustZoom(-0.2);
   else if (cmd.includes('next')) {
     const idx=EXERCISE_KEYS.indexOf(state.exercise);
     selectExercise(EXERCISE_KEYS[(idx+1)%EXERCISE_KEYS.length]);
@@ -579,7 +713,10 @@ function onResults(results){
   if(!canvas||!ctx) return;
   const w=canvas.width=video.videoWidth||canvas.offsetWidth;
   const h=canvas.height=video.videoHeight||canvas.offsetHeight;
-  ctx.clearRect(0,0,w,h);ctx.save();ctx.scale(-1,1);ctx.translate(-w,0);
+  ctx.clearRect(0,0,w,h);
+  ctx.save();
+  // Apply mirror based on CONFIG
+  if (state.cameraMirror) { ctx.scale(-1,1); ctx.translate(-w,0); }
   ctx.drawImage(video,0,0,w,h);
   if(results.poseLandmarks&&state.sessionActive){
     const lms=results.poseLandmarks;
@@ -814,7 +951,6 @@ function downloadShareCard(){
   });
   ctx.fillStyle='rgba(0,255,204,0.15)';ctx.beginPath();ctx.roundRect(180,205,240,36,18);ctx.fill();
   ctx.fillStyle='#00ffcc';ctx.font='13px monospace';ctx.textAlign='center';ctx.fillText('biomech-ai.onrender.com',300,228);
-  // Copyright watermark
   ctx.fillStyle='rgba(0,255,204,0.35)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText('© 2026 Krish Joshi · All Rights Reserved',300,295);
   const link=document.createElement('a');
   link.download=`biomech-share-${Date.now()}.png`;
@@ -835,11 +971,30 @@ function startTimer(){
 function stopTimer(){ if(timerInterval){clearInterval(timerInterval);timerInterval=null;} }
 
 // ── SESSION CONTROL ────────────────────────────────────────────────
-async function startSession(){
-  try{
+async function startSession(preferredDeviceId) {
+  try {
     const video=document.getElementById('webcam'),canvas=document.getElementById('output-canvas');
     state.videoEl=video;state.canvasEl=canvas;state.ctx=canvas.getContext('2d');
-    const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user',frameRate:{ideal:30}},audio:false});
+
+    // Build video constraints — use selected camera or facing mode
+    const videoConstraints = {
+      width:{ideal:1280},height:{ideal:720},
+      frameRate:{ideal:30}
+    };
+    if (preferredDeviceId) {
+      videoConstraints.deviceId = {exact: preferredDeviceId};
+    } else if (state.activeCameraId) {
+      videoConstraints.deviceId = {exact: state.activeCameraId};
+    } else {
+      videoConstraints.facingMode = CONFIG.cameraFacing;
+    }
+
+    const stream=await navigator.mediaDevices.getUserMedia({video:videoConstraints,audio:false});
+    state.cameraStream=stream;
+
+    // After getting stream, enumerate cameras so we have labels
+    await loadAvailableCameras();
+
     video.srcObject=stream;video.style.display='block';
     await new Promise(res=>{video.onloadedmetadata=res;});
     const pose=new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
@@ -853,6 +1008,13 @@ async function startSession(){
     document.getElementById('live-hud').style.display='flex';
     document.getElementById('btn-start').disabled=true;
     document.getElementById('btn-stop').disabled=false;
+
+    // Apply zoom if set
+    applyZoom();
+
+    // Enable camera control buttons
+    document.querySelectorAll('.cam-ctrl-btn').forEach(b => b.disabled = false);
+
     setHTML('log-list','');
     startTimer();addLog('Session started','good');
     showToast('Session Started! 🚀');playSuccessSound();
@@ -862,6 +1024,7 @@ async function startSession(){
     updateAlertBanner([{msg:'Camera access denied — check permissions',severity:'error'}]);
   }
 }
+
 function stopSession(){
   state.sessionActive=false;
   if(isRecording) stopRecording();
@@ -875,6 +1038,10 @@ function stopSession(){
   document.getElementById('live-hud').style.display='none';
   document.getElementById('btn-start').disabled=false;
   document.getElementById('btn-stop').disabled=true;
+
+  // Disable camera controls
+  document.querySelectorAll('.cam-ctrl-btn:not(#btn-expand):not(#btn-fullscreen)').forEach(b => b.disabled = true);
+
   const pd=document.getElementById('pulse-dot');if(pd) pd.className='pulse-dot';
   const pl=document.getElementById('pulse-label');if(pl){pl.textContent='READY';pl.style.color='';}
   stopTimer();saveSession();addLog('Session saved','good');
@@ -1030,16 +1197,50 @@ function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 document.addEventListener('DOMContentLoaded',()=>{
   const sl=document.getElementById('conf-slider'),vl=document.getElementById('conf-val');
   if(sl&&vl) sl.addEventListener('input',()=>{vl.textContent=sl.value+'%';});
+
+  // Camera select change handler
+  const camSel = document.getElementById('camera-select');
+  if (camSel) {
+    camSel.addEventListener('change', (e) => {
+      state.activeCameraId = e.target.value;
+      if (state.sessionActive) switchCamera(e.target.value);
+    });
+  }
+
+  // Close camera guide on outside click
+  document.addEventListener('click', (e) => {
+    const guide = document.getElementById('cam-guide-popup');
+    if (guide && guide.classList.contains('show')) {
+      if (!guide.contains(e.target) && !e.target.closest('#btn-cam-guide')) {
+        guide.classList.remove('show');
+      }
+    }
+  });
+
+  // Setup pinch-to-zoom for mobile
+  setupPinchZoom();
+});
+
+// ── FULLSCREEN CHANGE HANDLER ──────────────────────────────────────
+document.addEventListener('fullscreenchange', () => {
+  const btn = document.getElementById('btn-fullscreen');
+  if (btn) {
+    btn.textContent = document.fullscreenElement ? '⛶' : '⛶';
+    btn.title = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
+  }
+  // When entering fullscreen, hide the browser chrome overlap
+  const frame = document.querySelector('.cam-frame');
+  if (document.fullscreenElement && frame) {
+    frame.style.borderRadius = '0';
+  } else if (frame) {
+    frame.style.borderRadius = '';
+  }
 });
 
 // ══════════════════════════════════════════════════════════════════
 //  APP INIT SEQUENCE
 // ══════════════════════════════════════════════════════════════════
 
-/**
- * Called after login (Google or guest).
- * Shows the splash loading screen, then reveals the app.
- */
 async function launchSplash(){
   const splash=document.getElementById('splash');
   const fill=document.getElementById('loading-fill');
@@ -1058,7 +1259,12 @@ async function launchSplash(){
   db=getDB();renderAchievements();renderPrograms();renderProfiles();updateStreakUI();
   updateHeatmap('squat');await sleep(300);
   loadTxt.textContent='Checking Camera...';fill.style.width='85%';
-  try{const d=await navigator.mediaDevices.enumerateDevices();ssCam.textContent=d.filter(x=>x.kind==='videoinput').length+'✓';}catch(e){ssCam.textContent='?';}
+  try{
+    const d=await navigator.mediaDevices.enumerateDevices();
+    const cams = d.filter(x=>x.kind==='videoinput');
+    ssCam.textContent=cams.length+'✓';
+    state.availableCameras = cams;
+  }catch(e){ssCam.textContent='?';}
   await sleep(400);
   loadTxt.textContent='Welcome, '+(db.googleUser?.given||'Athlete')+'!';fill.style.width='100%';await sleep(600);
 
@@ -1067,17 +1273,14 @@ async function launchSplash(){
 
   document.getElementById('app').classList.remove('hidden');
   updateUserPill();
+
+  // Populate camera selector after app loads
+  await loadAvailableCameras();
 }
 
-/**
- * Entry point — check if user is already signed in from a previous session.
- * If yes: skip login screen and go straight to splash.
- * If no: show login screen (Google Sign-In button).
- */
 async function initApp(){
   initBackground();
 
-  // If Google user already exists in storage, skip login
   if(db.googleUser && db.googleUser.sub){
     document.getElementById('login-screen').classList.add('hidden');
     setTimeout(()=>{ document.getElementById('login-screen').style.display='none'; },0);
@@ -1085,7 +1288,6 @@ async function initApp(){
     return;
   }
 
-  // Wait for Google GSI library to load, then show fallback if needed
   setTimeout(()=>{
     if(!document.querySelector('.g_id_signin iframe')){
       const fb=document.getElementById('google-fallback-btn');
