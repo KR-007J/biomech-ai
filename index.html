@@ -2,32 +2,321 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 <title>BioMech AI — Real-Time Biomechanical Trainer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@100;300;400;600;700;900&family=Share+Tech+Mono&family=Michroma&display=swap" rel="stylesheet"/>
-<link rel="stylesheet" href="static/css/style.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100;0,300;0,400;0,600;0,700;0,900;1,400&family=Share+Tech+Mono&family=Michroma&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   BIOMECH AI — FULLY RESPONSIVE CSS
+   Desktop 3-column | Tablet 1-column | Mobile tab-navigation
+═══════════════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cyan:#00ffcc;--purple:#7c3aed;--purple2:#a78bfa;
+  --red:#ef4444;--green:#10b981;--amber:#f59e0b;
+  --bg:#04060f;--bg2:#080c1a;--bg3:#0d1225;
+  --border:rgba(0,255,204,0.12);--border2:rgba(0,255,204,0.06);
+  --text:#e2e8f0;--text2:#94a3b8;
+  --font-main:'Exo 2',sans-serif;--font-mono:'Share Tech Mono',monospace;--font-hud:'Michroma',monospace;
+  --header-h:56px;--nav-h:60px;
+}
+html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:var(--text);font-family:var(--font-main);-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:rgba(0,255,204,0.3);border-radius:2px}
+#bg-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.scan-line{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,255,204,0.012) 2px,rgba(0,255,204,0.012) 4px);pointer-events:none;z-index:1;animation:scanMove 8s linear infinite}
+@keyframes scanMove{0%{background-position:0 0}100%{background-position:0 100px}}
+
+/* SPLASH */
+.splash{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:opacity 0.8s ease,transform 0.8s ease}
+.splash.hidden{opacity:0;pointer-events:none;transform:scale(1.05)}
+.splash-inner{text-align:center;padding:2rem;max-width:420px;width:100%}
+.splash-hex{position:relative;width:90px;height:104px;margin:0 auto 1.5rem}
+.splash-hex svg{width:100%;height:100%;filter:drop-shadow(0 0 15px rgba(0,255,204,0.5))}
+.splash-icon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:2rem;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.7;transform:scale(0.95)}}
+.splash-title{font-family:var(--font-hud);font-size:clamp(1.8rem,6vw,2.8rem);letter-spacing:4px;color:#fff;text-shadow:0 0 30px rgba(0,255,204,0.6);margin-bottom:0.5rem}
+.splash-title span{color:var(--cyan)}
+.splash-sub{font-size:0.8rem;letter-spacing:3px;color:var(--text2);text-transform:uppercase;margin-bottom:2.5rem}
+.loading-bar{height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;margin-bottom:1rem}
+.loading-fill{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--purple2));border-radius:2px;transition:width 0.5s ease;box-shadow:0 0 10px rgba(0,255,204,0.5)}
+.loading-text{font-family:var(--font-mono);font-size:0.72rem;color:var(--cyan);letter-spacing:1px;margin-bottom:2rem}
+.splash-stats{display:flex;gap:2rem;justify-content:center}
+.ss-item{display:flex;flex-direction:column;align-items:center;gap:0.3rem}
+.ss-item span{font-family:var(--font-mono);font-size:1rem;color:var(--cyan)}
+.ss-item small{font-size:0.65rem;color:var(--text2);letter-spacing:1px}
+
+/* APP SHELL */
+.app{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column}
+.app.hidden{display:none}
+
+/* HEADER */
+.header{height:var(--header-h);display:flex;align-items:center;padding:0 1rem;background:rgba(4,6,15,0.92);border-bottom:1px solid var(--border);backdrop-filter:blur(16px);position:sticky;top:0;z-index:100;gap:0.75rem}
+.header-left{display:flex;align-items:center;gap:0.6rem;flex-shrink:0}
+.logo-mark{font-size:1.4rem;filter:drop-shadow(0 0 8px var(--cyan))}
+.logo-text{display:flex;flex-direction:column}
+.logo-main{font-family:var(--font-hud);font-size:clamp(0.7rem,2.5vw,0.95rem);letter-spacing:2px;color:#fff}
+.logo-main em{color:var(--cyan);font-style:normal}
+.logo-sub{font-size:clamp(0.5rem,1.5vw,0.6rem);color:var(--text2);letter-spacing:1px}
+.header-center{flex:1;display:flex;justify-content:center}
+.pulse-indicator{display:flex;align-items:center;gap:0.5rem;background:rgba(0,255,204,0.06);border:1px solid var(--border);border-radius:20px;padding:0.25rem 0.75rem}
+.pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--text2)}
+.pulse-dot.active{background:var(--cyan);box-shadow:0 0 8px var(--cyan);animation:blink 1.5s ease-in-out infinite}
+.pulse-dot.error{background:var(--red);box-shadow:0 0 8px var(--red);animation:blink 0.7s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+#pulse-label{font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan);letter-spacing:2px}
+.header-right{display:flex;align-items:center;gap:0.4rem;flex-shrink:0}
+.hdr-chip{display:flex;flex-direction:column;align-items:center;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:6px;padding:0.15rem 0.5rem;min-width:44px}
+.hdr-chip.accent{border-color:rgba(0,255,204,0.2)}
+.chip-label{font-size:0.5rem;color:var(--text2);letter-spacing:1px}
+.hdr-chip span:last-child{font-family:var(--font-mono);font-size:0.75rem;color:var(--cyan)}
+.hdr-btn{width:36px;height:36px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:8px;color:var(--text2);cursor:pointer;font-size:1rem;transition:all 0.2s;display:flex;align-items:center;justify-content:center}
+.hdr-btn:hover{background:rgba(0,255,204,0.1);color:var(--cyan)}
+
+/* DESKTOP GRID */
+.body-grid{flex:1;display:grid;grid-template-columns:240px 1fr 220px;min-height:calc(100vh - var(--header-h));overflow:hidden}
+.left-panel,.right-panel{overflow-y:auto;padding:0.75rem;display:flex;flex-direction:column;gap:0.75rem}
+.left-panel{border-right:1px solid var(--border2);background:rgba(4,6,15,0.5)}
+.right-panel{border-left:1px solid var(--border2);background:rgba(4,6,15,0.5)}
+.center-panel{display:flex;flex-direction:column;gap:0.75rem;padding:0.75rem;overflow-y:auto}
+
+/* CARDS */
+.section-card{background:rgba(8,12,26,0.8);border:1px solid var(--border2);border-radius:10px;padding:0.75rem;backdrop-filter:blur(8px);flex-shrink:0}
+.section-card:hover{border-color:rgba(0,255,204,0.15)}
+.card-header{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem}
+.card-title{font-family:var(--font-hud);font-size:0.6rem;letter-spacing:2.5px;color:var(--cyan)}
+.card-line{flex:1;height:1px;background:var(--border2)}
+
+/* EXERCISE LIST */
+.exercise-list{display:flex;flex-direction:column;gap:0.4rem}
+.ex-card{display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.6rem;background:rgba(255,255,255,0.03);border:1px solid var(--border2);border-radius:8px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;text-align:left;width:100%}
+.ex-card:hover{background:rgba(0,255,204,0.06);border-color:rgba(0,255,204,0.2)}
+.ex-card.active{background:rgba(0,255,204,0.08);border-color:rgba(0,255,204,0.35);box-shadow:0 0 12px rgba(0,255,204,0.1)}
+.ex-card-icon{font-size:1.1rem;flex-shrink:0}
+.ex-card-info{display:flex;flex-direction:column;gap:0.1rem}
+.ex-card-name{font-size:0.78rem;font-weight:600;color:var(--text)}
+.ex-card-target{font-family:var(--font-mono);font-size:0.6rem;color:var(--text2)}
+.ex-card.active .ex-card-name{color:var(--cyan)}
+.ex-card-glow{position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,255,204,0.06),transparent);opacity:0;transition:opacity 0.2s}
+.ex-card.active .ex-card-glow{opacity:1}
+.inst-text{font-size:0.75rem;color:var(--text2);line-height:1.5;margin-bottom:0.6rem}
+.inst-tips{display:flex;flex-direction:column;gap:0.3rem}
+.inst-tip{font-size:0.68rem;color:var(--text2);opacity:0.8}
+.formula-block{background:rgba(0,0,0,0.3);border:1px solid var(--border2);border-radius:8px;padding:0.6rem;text-align:center;margin-bottom:0.6rem}
+.formula-eq{font-family:var(--font-mono);font-size:0.75rem;color:var(--cyan);display:flex;align-items:center;justify-content:center;gap:0.3rem}
+.formula-eq sup,.formula-eq sub{font-size:0.6rem}
+.fraction-bar{width:1px;height:18px;background:var(--cyan);opacity:0.5}
+.formula-label{font-size:0.6rem;color:var(--text2);margin-top:0.3rem;letter-spacing:1px}
+.pipeline{display:flex;align-items:center;gap:0.2rem;flex-wrap:wrap;justify-content:center}
+.pip-step{font-family:var(--font-mono);font-size:0.55rem;padding:0.2rem 0.4rem;background:rgba(0,255,204,0.06);border:1px solid var(--border);border-radius:4px;color:var(--text2)}
+.pip-step.active{color:var(--cyan);border-color:rgba(0,255,204,0.2)}
+.pip-arrow{font-size:0.6rem;color:var(--text2)}
+
+/* CAMERA */
+.camera-container{flex:1;min-height:0}
+.cam-frame{position:relative;width:100%;height:100%;min-height:300px;background:rgba(0,0,0,0.5);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.cam-corner{position:absolute;width:20px;height:20px;border-color:var(--cyan);border-style:solid;z-index:5;opacity:0.7}
+.cam-corner.tl{top:8px;left:8px;border-width:2px 0 0 2px;border-radius:4px 0 0 0}
+.cam-corner.tr{top:8px;right:8px;border-width:2px 2px 0 0;border-radius:0 4px 0 0}
+.cam-corner.bl{bottom:8px;left:8px;border-width:0 0 2px 2px;border-radius:0 0 0 4px}
+.cam-corner.br{bottom:8px;right:8px;border-width:0 2px 2px 0;border-radius:0 0 4px 0}
+.cam-scanline{position:absolute;inset:0;z-index:4;pointer-events:none;background:linear-gradient(transparent 50%,rgba(0,255,204,0.015) 50%);background-size:100% 4px}
+#webcam{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#output-canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}
+.cam-overlay{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(4,6,15,0.85);gap:0.5rem;padding:1rem}
+.cam-overlay-icon{font-size:2.5rem;opacity:0.6}
+.cam-overlay h3{font-family:var(--font-hud);font-size:0.9rem;letter-spacing:2px;color:var(--cyan)}
+.cam-overlay p{font-size:0.75rem;color:var(--text2);text-align:center}
+.cam-overlay-sub{font-size:0.65rem!important;opacity:0.6}
+.live-hud{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:1rem;background:rgba(4,6,15,0.75);border:1px solid var(--border);border-radius:20px;padding:0.3rem 1rem;backdrop-filter:blur(8px)}
+.hud-exercise{font-family:var(--font-hud);font-size:0.65rem;letter-spacing:3px;color:var(--cyan)}
+.hud-timer{font-family:var(--font-mono);font-size:0.85rem;color:#fff}
+.hud-quality{display:flex;align-items:center;gap:0.4rem}
+.quality-bar-track{width:60px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px}
+.quality-bar-fill{height:100%;width:100%;background:var(--cyan);border-radius:2px;transition:width 0.3s}
+#quality-pct{font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan)}
+.alert-banner{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:0.5rem;background:rgba(4,6,15,0.85);border:1px solid var(--border);border-radius:20px;padding:0.3rem 1rem;font-size:0.72rem;color:var(--text2);white-space:nowrap;max-width:90%}
+.alert-banner.success{border-color:rgba(16,185,129,0.4);color:var(--green)}
+.alert-banner.warning{border-color:rgba(245,158,11,0.4);color:var(--amber)}
+.alert-banner.error{border-color:rgba(239,68,68,0.4);color:var(--red)}
+
+/* CONTROLS */
+.controls-bar{display:flex;gap:0.5rem;flex-wrap:wrap}
+.ctrl-btn{flex:1;min-width:70px;display:flex;flex-direction:column;align-items:center;gap:0.2rem;padding:0.5rem 0.3rem;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text2);font-family:var(--font-main);transition:all 0.2s;position:relative;overflow:hidden}
+.ctrl-btn:hover{background:rgba(0,255,204,0.08);border-color:rgba(0,255,204,0.25);color:var(--cyan)}
+.ctrl-btn:disabled{opacity:0.4;cursor:not-allowed}
+.ctrl-btn.start{border-color:rgba(0,255,204,0.3);color:var(--cyan)}
+.ctrl-btn.start:not(:disabled):hover{background:rgba(0,255,204,0.15);box-shadow:0 0 15px rgba(0,255,204,0.2)}
+.ctrl-btn.stop{border-color:rgba(239,68,68,0.3);color:var(--red)}
+.ctrl-btn.stop:not(:disabled):hover{background:rgba(239,68,68,0.1)}
+.ctrl-btn.ai{border-color:rgba(167,139,250,0.3);color:var(--purple2)}
+.ctrl-btn.ai:hover{background:rgba(167,139,250,0.1)}
+.ctrl-icon{font-size:1rem}
+.ctrl-label{font-size:0.55rem;letter-spacing:1px;font-weight:600}
+.btn-glow{position:absolute;inset:0;background:radial-gradient(circle at center,rgba(0,255,204,0.1),transparent);opacity:0;transition:opacity 0.3s}
+.ctrl-btn.start:not(:disabled):hover .btn-glow{opacity:1}
+.btn-pulse-ring{position:absolute;inset:0;border-radius:8px;animation:ringPulse 2s ease-in-out infinite}
+@keyframes ringPulse{0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0)}50%{box-shadow:0 0 0 4px rgba(167,139,250,0.15)}}
+
+/* ANGLES STRIP */
+.angles-strip{display:flex;gap:0.4rem;flex-wrap:wrap}
+.angle-chip{flex:1;min-width:70px;display:flex;flex-direction:column;align-items:center;gap:0.15rem;padding:0.4rem 0.3rem;background:rgba(8,12,26,0.8);border:1px solid var(--border2);border-radius:8px}
+.angle-chip.good{border-color:rgba(16,185,129,0.3)}.angle-chip.warn{border-color:rgba(245,158,11,0.3)}.angle-chip.bad{border-color:rgba(239,68,68,0.3)}
+.ac-name{font-size:0.55rem;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+.ac-val{font-family:var(--font-mono);font-size:0.85rem;color:var(--cyan)}
+.angle-chip.good .ac-val{color:var(--green)}.angle-chip.warn .ac-val{color:var(--amber)}.angle-chip.bad .ac-val{color:var(--red)}
+
+/* REP COUNTER */
+.rep-display{text-align:center;padding:0.5rem 0;position:relative}
+.rep-number{font-family:var(--font-hud);font-size:3rem;color:var(--cyan);text-shadow:0 0 20px rgba(0,255,204,0.5);line-height:1;transition:transform 0.15s}
+.rep-number.pop{transform:scale(1.25)}
+.rep-label{font-size:0.58rem;letter-spacing:2px;color:var(--text2);margin-top:0.2rem}
+.rep-rings-wrap{position:absolute;inset:0;pointer-events:none}
+.rep-ring{position:absolute;border-radius:50%;border:1px solid rgba(0,255,204,0.08)}
+.r1{inset:10px}.r2{inset:0}.r3{inset:-8px;opacity:0.4}
+.rep-state-row{display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:0.5rem}
+.rep-state-chip{flex:1;text-align:center;font-family:var(--font-mono);font-size:0.6rem;letter-spacing:2px;padding:0.25rem;border-radius:6px;background:rgba(255,255,255,0.04);border:1px solid var(--border2);color:var(--text2);transition:all 0.2s}
+.rep-state-chip.active{background:rgba(0,255,204,0.1);border-color:rgba(0,255,204,0.3);color:var(--cyan);box-shadow:0 0 8px rgba(0,255,204,0.15)}
+.rep-state-arrow{font-size:0.9rem;color:var(--text2)}
+
+/* SCORE RING */
+.score-ring-wrap{position:relative;display:flex;justify-content:center;margin-bottom:0.6rem}
+.score-svg{width:130px;height:130px}
+.score-track{fill:none;stroke:rgba(255,255,255,0.06);stroke-width:8}
+.score-progress{fill:none;stroke:url(#scoreGrad);stroke-width:8;stroke-linecap:round;transform:rotate(-90deg);transform-origin:70px 70px;transition:stroke-dashoffset 0.5s ease}
+.score-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-pct{font-family:var(--font-hud);font-size:1.6rem;color:#fff;line-height:1}
+.score-unit{font-size:0.6rem;color:var(--text2)}
+.score-grade{font-family:var(--font-hud);font-size:0.8rem;color:var(--cyan);letter-spacing:2px}
+.score-breakdown{display:flex;flex-direction:column;gap:0.4rem}
+.sb-item{display:flex;align-items:center;gap:0.4rem}
+.sb-item span{font-size:0.6rem;color:var(--text2);width:55px;flex-shrink:0}
+.sb-bar{flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.sb-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple2));border-radius:2px;transition:width 0.4s}
+
+/* FEEDBACK */
+.feedback-list{display:flex;flex-direction:column;gap:0.4rem}
+.fb-item{display:flex;align-items:flex-start;gap:0.4rem;padding:0.4rem;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid var(--border2)}
+.fb-item.success{background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.2)}
+.fb-item.warning{background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.2)}
+.fb-item.error{background:rgba(239,68,68,0.06);border-color:rgba(239,68,68,0.2)}
+.fb-icon{font-size:0.75rem;flex-shrink:0;margin-top:1px}
+.fb-text{font-size:0.68rem;color:var(--text2);line-height:1.4}
+.fb-item.error .fb-text{color:#fca5a5}.fb-item.success .fb-text{color:#6ee7b7}
+
+/* STATS GRID */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.4rem}
+.stat-item{text-align:center;padding:0.4rem;background:rgba(255,255,255,0.02);border-radius:6px;border:1px solid var(--border2)}
+.stat-val{font-family:var(--font-mono);font-size:0.9rem;color:var(--cyan)}
+.stat-label{font-size:0.55rem;color:var(--text2);letter-spacing:1px;margin-top:0.1rem}
+
+/* LOG */
+.log-list{display:flex;flex-direction:column;gap:0.3rem;max-height:130px;overflow-y:auto}
+.log-empty{font-size:0.65rem;color:var(--text2);text-align:center;padding:0.5rem}
+.log-item{display:flex;justify-content:space-between;align-items:center;font-size:0.62rem;padding:0.25rem 0.4rem;border-radius:4px;background:rgba(255,255,255,0.02)}
+.log-item.good{color:var(--green)}.log-item.bad{color:var(--amber)}
+.log-time{color:var(--text2);opacity:0.7}
+
+/* MOBILE NAV */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;height:var(--nav-h);background:rgba(4,6,15,0.97);border-top:1px solid var(--border);backdrop-filter:blur(16px)}
+.mobile-nav-inner{display:flex;height:100%}
+.nav-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.2rem;cursor:pointer;border:none;background:transparent;color:var(--text2);transition:all 0.2s;padding:0}
+.nav-tab.active{color:var(--cyan)}
+.nav-tab-icon{font-size:1.2rem}
+.nav-tab-label{font-size:0.55rem;letter-spacing:1px;font-family:var(--font-mono)}
+
+/* MOBILE PANELS */
+.mobile-panel{display:none;flex-direction:column;gap:0.75rem;padding:0.75rem;overflow-y:auto;padding-bottom:calc(var(--nav-h) + 0.75rem)}
+.mobile-panel.active{display:flex}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(4,6,15,0.92);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px);padding:1rem}
+.modal-box{background:var(--bg3);border:1px solid rgba(0,255,204,0.2);border-radius:14px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 0 40px rgba(0,255,204,0.1)}
+.ai-modal-box{max-width:560px}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;border-bottom:1px solid var(--border2);font-family:var(--font-hud);font-size:0.75rem;letter-spacing:2px;color:var(--cyan)}
+.ai-header{flex-direction:row;gap:0}
+.ai-header-left{display:flex;align-items:center;gap:0.75rem}
+.ai-avatar{font-size:1.8rem}
+.ai-title{display:block;font-family:var(--font-hud);font-size:0.7rem;letter-spacing:2px;color:var(--cyan)}
+.ai-subtitle{display:block;font-size:0.6rem;color:var(--text2)}
+.modal-close{background:rgba(255,255,255,0.06);border:1px solid var(--border2);border-radius:6px;width:28px;height:28px;color:var(--text2);cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.modal-close:hover{background:rgba(239,68,68,0.1);color:var(--red)}
+.modal-body{padding:1rem 1.2rem;display:flex;flex-direction:column;gap:1rem}
+.setting-group{display:flex;flex-direction:column;gap:0.4rem}
+.setting-label{font-size:0.7rem;color:var(--text2);letter-spacing:1px}
+.setting-input{background:rgba(0,0,0,0.4);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.75rem;color:var(--text);font-family:var(--font-main);font-size:0.8rem;width:100%;transition:border-color 0.2s}
+.setting-input:focus{outline:none;border-color:rgba(0,255,204,0.4)}
+.setting-input option{background:var(--bg3)}
+.setting-range{width:100%;accent-color:var(--cyan)}
+.toggle-wrap{display:flex;align-items:center}
+.toggle-input{display:none}
+.toggle-label{width:40px;height:22px;border-radius:11px;background:rgba(255,255,255,0.1);border:1px solid var(--border);cursor:pointer;position:relative;transition:all 0.2s}
+.toggle-label::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--text2);transition:all 0.2s}
+.toggle-input:checked+.toggle-label{background:rgba(0,255,204,0.2);border-color:var(--cyan)}
+.toggle-input:checked+.toggle-label::after{left:20px;background:var(--cyan)}
+.modal-footer{display:flex;gap:0.75rem;padding:1rem 1.2rem;border-top:1px solid var(--border2)}
+.ai-footer{justify-content:space-between}
+.modal-save{flex:1;padding:0.65rem;background:rgba(0,255,204,0.1);border:1px solid rgba(0,255,204,0.3);border-radius:8px;color:var(--cyan);font-family:var(--font-hud);font-size:0.65rem;letter-spacing:2px;cursor:pointer;transition:all 0.2s}
+.modal-save:hover{background:rgba(0,255,204,0.2);box-shadow:0 0 12px rgba(0,255,204,0.2)}
+.modal-cancel{padding:0.65rem 1.2rem;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:8px;color:var(--text2);font-family:var(--font-hud);font-size:0.65rem;cursor:pointer;transition:all 0.2s}
+.modal-cancel:hover{background:rgba(255,255,255,0.08)}
+.ai-context-row{display:flex;gap:0.5rem;flex-wrap:wrap}
+.ai-ctx-chip{font-family:var(--font-mono);font-size:0.65rem;padding:0.25rem 0.6rem;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:12px;color:var(--purple2)}
+.ai-response-area{min-height:180px;max-height:320px;overflow-y:auto;background:rgba(0,0,0,0.3);border:1px solid var(--border2);border-radius:8px;padding:0.75rem}
+.ai-welcome{text-align:center;padding:1rem}
+.ai-welcome-icon{font-size:2rem;margin-bottom:0.5rem}
+.ai-welcome p{font-size:0.75rem;color:var(--text2);line-height:1.6}
+.ai-welcome-sub{font-size:0.65rem!important;opacity:0.7;margin-top:0.5rem}
+.ai-text{font-size:0.75rem;color:var(--text);line-height:1.7}
+.ai-loading-wrap{display:flex;flex-direction:column;align-items:center;gap:1rem;padding:2rem}
+.ai-spinner{width:32px;height:32px;border-radius:50%;border:2px solid rgba(167,139,250,0.2);border-top-color:var(--purple2);animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ai-loading-text{font-family:var(--font-mono);font-size:0.65rem;color:var(--purple2);letter-spacing:2px}
+.ai-analyze-btn{display:flex;align-items:center;gap:0.4rem}
+.ai-btn-icon{font-size:0.9rem}
+
+/* TOAST */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);z-index:600;background:rgba(16,185,129,0.9);color:#fff;font-size:0.75rem;font-family:var(--font-mono);padding:0.5rem 1.2rem;border-radius:20px;opacity:0;transition:all 0.3s;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── RESPONSIVE ───────────────────────────────────────────────── */
+@media(max-width:899px){
+  .body-grid{grid-template-columns:1fr;display:block}
+  .left-panel,.right-panel{display:none}
+  .center-panel{min-height:calc(100vh - var(--header-h) - var(--nav-h))}
+  .mobile-nav{display:block}
+  .cam-frame{min-height:240px}
+  .logo-sub{display:none}
+  .toast{bottom:calc(var(--nav-h) + 12px)}
+}
+@media(max-width:399px){
+  .header{padding:0 0.6rem;gap:0.4rem}
+  .hdr-chip{display:none}
+  .hdr-chip.accent{display:flex}
+  .controls-bar{gap:0.3rem}
+  .ctrl-label{display:none}
+  .ctrl-btn{min-width:44px;max-width:56px;padding:0.5rem 0}
+  .live-hud{gap:0.5rem;padding:0.3rem 0.6rem}
+  .hud-quality{display:none}
+}
+@media(min-width:1400px){
+  .body-grid{grid-template-columns:270px 1fr 250px}
+}
+</style>
 </head>
 <body>
-
-<!-- ── Animated Background ─────────────────────────────────────── -->
 <canvas id="bg-canvas"></canvas>
 <div class="scan-line"></div>
 
-<!-- ── Splash Screen ───────────────────────────────────────────── -->
+<!-- SPLASH -->
 <div id="splash" class="splash">
   <div class="splash-inner">
     <div class="splash-logo">
       <div class="splash-hex">
         <svg viewBox="0 0 100 115" fill="none">
           <polygon points="50,5 95,30 95,85 50,110 5,85 5,30" stroke="url(#hexGrad)" stroke-width="2" fill="none"/>
-          <defs>
-            <linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#00ffcc"/>
-              <stop offset="100%" stop-color="#7c3aed"/>
-            </linearGradient>
-          </defs>
+          <defs><linearGradient id="hexGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00ffcc"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient></defs>
         </svg>
         <span class="splash-icon">⚡</span>
       </div>
@@ -36,7 +325,7 @@
     <p class="splash-sub">Real-Time Biomechanical Analysis System</p>
     <div class="splash-loading">
       <div class="loading-bar"><div class="loading-fill" id="loading-fill"></div></div>
-      <div class="loading-text" id="loading-text">Initializing TensorFlow.js...</div>
+      <div class="loading-text" id="loading-text">Initializing systems...</div>
     </div>
     <div class="splash-stats">
       <div class="ss-item"><span id="ss-tf">—</span><small>TF.js</small></div>
@@ -46,10 +335,8 @@
   </div>
 </div>
 
-<!-- ── Main App ─────────────────────────────────────────────────── -->
+<!-- APP -->
 <div id="app" class="app hidden">
-
-  <!-- Header -->
   <header class="header">
     <div class="header-left">
       <div class="logo-mark">⚡</div>
@@ -59,8 +346,8 @@
       </div>
     </div>
     <div class="header-center">
-      <div class="pulse-indicator" id="pulse-indicator">
-        <div class="pulse-dot"></div>
+      <div class="pulse-indicator">
+        <div class="pulse-dot" id="pulse-dot"></div>
         <span id="pulse-label">READY</span>
       </div>
     </div>
@@ -68,60 +355,26 @@
       <div class="hdr-chip"><span class="chip-label">FPS</span><span id="hdr-fps">--</span></div>
       <div class="hdr-chip"><span class="chip-label">REPS</span><span id="hdr-reps">0</span></div>
       <div class="hdr-chip accent"><span class="chip-label">SCORE</span><span id="hdr-score">100%</span></div>
-      <button class="hdr-btn" id="settings-btn" onclick="toggleSettings()">⚙</button>
+      <button class="hdr-btn" onclick="toggleSettings()">⚙</button>
     </div>
   </header>
 
-  <!-- Body -->
   <div class="body-grid">
-
-    <!-- ── LEFT PANEL ─────────────────────────────────────────── -->
+    <!-- LEFT PANEL (desktop only) -->
     <aside class="left-panel">
-
-      <!-- Exercise Selector -->
       <div class="section-card">
         <div class="card-header"><span class="card-title">EXERCISES</span><div class="card-line"></div></div>
-        <div class="exercise-list" id="exercise-list">
-          <button class="ex-card active" data-ex="squat" onclick="selectExercise('squat')">
-            <div class="ex-card-icon">🏋️</div>
-            <div class="ex-card-info"><span class="ex-card-name">Squat</span><span class="ex-card-target">Knee: 90°</span></div>
-            <div class="ex-card-glow"></div>
-          </button>
-          <button class="ex-card" data-ex="pushup" onclick="selectExercise('pushup')">
-            <div class="ex-card-icon">💪</div>
-            <div class="ex-card-info"><span class="ex-card-name">Push-Up</span><span class="ex-card-target">Elbow: 90°</span></div>
-            <div class="ex-card-glow"></div>
-          </button>
-          <button class="ex-card" data-ex="lunge" onclick="selectExercise('lunge')">
-            <div class="ex-card-icon">🦵</div>
-            <div class="ex-card-info"><span class="ex-card-name">Lunge</span><span class="ex-card-target">Both Knees: 90°</span></div>
-            <div class="ex-card-glow"></div>
-          </button>
-          <button class="ex-card" data-ex="plank" onclick="selectExercise('plank')">
-            <div class="ex-card-icon">⚡</div>
-            <div class="ex-card-info"><span class="ex-card-name">Plank</span><span class="ex-card-target">Body: 180°</span></div>
-            <div class="ex-card-glow"></div>
-          </button>
-          <button class="ex-card" data-ex="bicep_curl" onclick="selectExercise('bicep_curl')">
-            <div class="ex-card-icon">🔥</div>
-            <div class="ex-card-info"><span class="ex-card-name">Bicep Curl</span><span class="ex-card-target">Elbow: 45°</span></div>
-            <div class="ex-card-glow"></div>
-          </button>
-          <button class="ex-card" data-ex="shoulder_press" onclick="selectExercise('shoulder_press')">
-            <div class="ex-card-icon">🏆</div>
-            <div class="ex-card-info"><span class="ex-card-name">Shoulder Press</span><span class="ex-card-target">Elbow: 180°</span></div>
-            <div class="ex-card-glow"></div>
-          </button>
-          <button class="ex-card" data-ex="deadlift" onclick="selectExercise('deadlift')">
-            <div class="ex-card-icon">💎</div>
-            <div class="ex-card-info"><span class="ex-card-name">Deadlift</span><span class="ex-card-target">Hip: 180°</span></div>
-            <div class="ex-card-glow"></div>
-          </button>
+        <div class="exercise-list">
+          <button class="ex-card active" data-ex="squat" onclick="selectExercise('squat')"><div class="ex-card-icon">🏋️</div><div class="ex-card-info"><span class="ex-card-name">Squat</span><span class="ex-card-target">Knee: 90°</span></div><div class="ex-card-glow"></div></button>
+          <button class="ex-card" data-ex="pushup" onclick="selectExercise('pushup')"><div class="ex-card-icon">💪</div><div class="ex-card-info"><span class="ex-card-name">Push-Up</span><span class="ex-card-target">Elbow: 90°</span></div><div class="ex-card-glow"></div></button>
+          <button class="ex-card" data-ex="lunge" onclick="selectExercise('lunge')"><div class="ex-card-icon">🦵</div><div class="ex-card-info"><span class="ex-card-name">Lunge</span><span class="ex-card-target">Both Knees: 90°</span></div><div class="ex-card-glow"></div></button>
+          <button class="ex-card" data-ex="plank" onclick="selectExercise('plank')"><div class="ex-card-icon">⚡</div><div class="ex-card-info"><span class="ex-card-name">Plank</span><span class="ex-card-target">Body: 180°</span></div><div class="ex-card-glow"></div></button>
+          <button class="ex-card" data-ex="bicep_curl" onclick="selectExercise('bicep_curl')"><div class="ex-card-icon">🔥</div><div class="ex-card-info"><span class="ex-card-name">Bicep Curl</span><span class="ex-card-target">Elbow: 45°</span></div><div class="ex-card-glow"></div></button>
+          <button class="ex-card" data-ex="shoulder_press" onclick="selectExercise('shoulder_press')"><div class="ex-card-icon">🏆</div><div class="ex-card-info"><span class="ex-card-name">Shoulder Press</span><span class="ex-card-target">Elbow: 180°</span></div><div class="ex-card-glow"></div></button>
+          <button class="ex-card" data-ex="deadlift" onclick="selectExercise('deadlift')"><div class="ex-card-icon">💎</div><div class="ex-card-info"><span class="ex-card-name">Deadlift</span><span class="ex-card-target">Hip: 180°</span></div><div class="ex-card-glow"></div></button>
         </div>
       </div>
-
-      <!-- Instruction Panel -->
-      <div class="section-card inst-card" id="inst-card">
+      <div class="section-card">
         <div class="card-header"><span class="card-title">📋 INSTRUCTIONS</span></div>
         <p class="inst-text" id="inst-text">Stand with feet shoulder-width apart. Bend knees to 90°. Keep torso upright throughout.</p>
         <div class="inst-tips" id="inst-tips">
@@ -129,98 +382,58 @@
           <div class="inst-tip">💡 Good lighting improves accuracy</div>
         </div>
       </div>
-
-      <!-- Formula Display -->
-      <div class="section-card formula-card">
-        <div class="card-header"><span class="card-title">📐 BIOMECHANICS ENGINE</span></div>
+      <div class="section-card">
+        <div class="card-header"><span class="card-title">📐 ENGINE</span></div>
         <div class="formula-block">
-          <div class="formula-eq">cos(θ) = <sup>AB² + BC² − AC²</sup><div class="fraction-bar"></div><sub>2 · AB · BC</sub></div>
-          <div class="formula-label">Law of Cosines — Real-time Joint Angle</div>
+          <div class="formula-eq">cos(θ)=<sup>AB²+BC²−AC²</sup><div class="fraction-bar"></div><sub>2·AB·BC</sub></div>
+          <div class="formula-label">Law of Cosines — Joint Angle</div>
         </div>
         <div class="pipeline">
-          <div class="pip-step active">MediaPipe</div>
-          <div class="pip-arrow">→</div>
-          <div class="pip-step active">Landmarks</div>
-          <div class="pip-arrow">→</div>
-          <div class="pip-step active">Cosine Rule</div>
-          <div class="pip-arrow">→</div>
+          <div class="pip-step active">MediaPipe</div><div class="pip-arrow">→</div>
+          <div class="pip-step active">Landmarks</div><div class="pip-arrow">→</div>
+          <div class="pip-step active">Cosine</div><div class="pip-arrow">→</div>
           <div class="pip-step active">Feedback</div>
         </div>
       </div>
-
     </aside>
 
-    <!-- ── CENTER PANEL ─────────────────────────────────────────── -->
+    <!-- CENTER PANEL -->
     <section class="center-panel">
-
-      <!-- Camera View -->
       <div class="camera-container">
         <div class="cam-frame">
-          <div class="cam-corner tl"></div>
-          <div class="cam-corner tr"></div>
-          <div class="cam-corner bl"></div>
-          <div class="cam-corner br"></div>
+          <div class="cam-corner tl"></div><div class="cam-corner tr"></div>
+          <div class="cam-corner bl"></div><div class="cam-corner br"></div>
           <div class="cam-scanline"></div>
-
           <video id="webcam" autoplay muted playsinline style="display:none;"></video>
           <canvas id="output-canvas"></canvas>
-
-          <!-- Startup Overlay -->
           <div class="cam-overlay" id="cam-overlay">
             <div class="cam-overlay-icon">📷</div>
             <h3>Ready to Train</h3>
             <p>Click <strong>START SESSION</strong> to activate camera</p>
-            <p class="cam-overlay-sub">Stand 2–3 meters away for full body tracking</p>
+            <p class="cam-overlay-sub">Stand 2–3 metres away for full body tracking</p>
           </div>
-
-          <!-- Live HUD overlays -->
           <div class="live-hud" id="live-hud" style="display:none;">
             <div class="hud-exercise" id="hud-exercise">SQUAT</div>
             <div class="hud-timer" id="hud-timer">0:00</div>
-            <div class="hud-quality" id="hud-quality">
-              <div class="quality-bar-track">
-                <div class="quality-bar-fill" id="quality-bar"></div>
-              </div>
+            <div class="hud-quality">
+              <div class="quality-bar-track"><div class="quality-bar-fill" id="quality-bar"></div></div>
               <span id="quality-pct">100%</span>
             </div>
           </div>
-
-          <!-- Alert Banner -->
           <div class="alert-banner" id="alert-banner">
             <span class="alert-icon" id="alert-icon">⚡</span>
             <span id="alert-text">Awaiting pose detection...</span>
           </div>
         </div>
       </div>
-
-      <!-- Controls Bar -->
       <div class="controls-bar">
-        <button class="ctrl-btn start" id="btn-start" onclick="startSession()">
-          <span class="ctrl-icon">▶</span>
-          <span class="ctrl-label">START SESSION</span>
-          <div class="btn-glow"></div>
-        </button>
-        <button class="ctrl-btn stop" id="btn-stop" onclick="stopSession()" disabled>
-          <span class="ctrl-icon">⏹</span>
-          <span class="ctrl-label">STOP</span>
-        </button>
-        <button class="ctrl-btn reset" onclick="resetSession()">
-          <span class="ctrl-icon">↺</span>
-          <span class="ctrl-label">RESET</span>
-        </button>
-        <button class="ctrl-btn screenshot" onclick="takeScreenshot()">
-          <span class="ctrl-icon">📸</span>
-          <span class="ctrl-label">CAPTURE</span>
-        </button>
-        <button class="ctrl-btn ai" onclick="openAICoach()">
-          <span class="ctrl-icon">🤖</span>
-          <span class="ctrl-label">AI COACH</span>
-          <div class="btn-pulse-ring"></div>
-        </button>
+        <button class="ctrl-btn start" id="btn-start" onclick="startSession()"><span class="ctrl-icon">▶</span><span class="ctrl-label">START SESSION</span><div class="btn-glow"></div></button>
+        <button class="ctrl-btn stop" id="btn-stop" onclick="stopSession()" disabled><span class="ctrl-icon">⏹</span><span class="ctrl-label">STOP</span></button>
+        <button class="ctrl-btn reset" onclick="resetSession()"><span class="ctrl-icon">↺</span><span class="ctrl-label">RESET</span></button>
+        <button class="ctrl-btn screenshot" onclick="takeScreenshot()"><span class="ctrl-icon">📸</span><span class="ctrl-label">CAPTURE</span></button>
+        <button class="ctrl-btn ai" onclick="openAICoach()"><span class="ctrl-icon">🤖</span><span class="ctrl-label">AI COACH</span><div class="btn-pulse-ring"></div></button>
       </div>
-
-      <!-- Live Joint Angles Display -->
-      <div class="angles-strip" id="angles-strip">
+      <div class="angles-strip">
         <div class="angle-chip" id="ac-0"><span class="ac-name">—</span><span class="ac-val">—°</span></div>
         <div class="angle-chip" id="ac-1"><span class="ac-name">—</span><span class="ac-val">—°</span></div>
         <div class="angle-chip" id="ac-2"><span class="ac-name">—</span><span class="ac-val">—°</span></div>
@@ -228,20 +441,14 @@
       </div>
     </section>
 
-    <!-- ── RIGHT PANEL ─────────────────────────────────────────── -->
+    <!-- RIGHT PANEL (desktop only) -->
     <aside class="right-panel">
-
-      <!-- Rep Counter -->
-      <div class="section-card rep-section">
+      <div class="section-card">
         <div class="card-header"><span class="card-title">REP COUNTER</span><div class="card-line"></div></div>
         <div class="rep-display">
           <div class="rep-number" id="rep-number">0</div>
           <div class="rep-label">REPS COMPLETED</div>
-          <div class="rep-rings-wrap">
-            <div class="rep-ring r1"></div>
-            <div class="rep-ring r2"></div>
-            <div class="rep-ring r3"></div>
-          </div>
+          <div class="rep-rings-wrap"><div class="rep-ring r1"></div><div class="rep-ring r2"></div><div class="rep-ring r3"></div></div>
         </div>
         <div class="rep-state-row">
           <div class="rep-state-chip" id="chip-down">DOWN</div>
@@ -249,21 +456,13 @@
           <div class="rep-state-chip" id="chip-up">UP</div>
         </div>
       </div>
-
-      <!-- Form Score -->
-      <div class="section-card score-section">
+      <div class="section-card">
         <div class="card-header"><span class="card-title">FORM SCORE</span><div class="card-line"></div></div>
         <div class="score-ring-wrap">
           <svg class="score-svg" viewBox="0 0 140 140">
-            <defs>
-              <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#00ffcc"/>
-                <stop offset="100%" stop-color="#7c3aed"/>
-              </linearGradient>
-            </defs>
+            <defs><linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00ffcc"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient></defs>
             <circle class="score-track" cx="70" cy="70" r="58"/>
-            <circle class="score-progress" id="score-prog" cx="70" cy="70" r="58"
-                    stroke-dasharray="364.4" stroke-dashoffset="0"/>
+            <circle class="score-progress" id="score-prog" cx="70" cy="70" r="58" stroke-dasharray="364.4" stroke-dashoffset="0"/>
           </svg>
           <div class="score-inner">
             <div class="score-pct" id="score-pct">100</div>
@@ -271,79 +470,133 @@
             <div class="score-grade" id="score-grade">A+</div>
           </div>
         </div>
-        <div class="score-breakdown" id="score-breakdown">
+        <div class="score-breakdown">
           <div class="sb-item"><span>Depth</span><div class="sb-bar"><div class="sb-fill" style="width:100%"></div></div></div>
-          <div class="sb-item"><span>Alignment</span><div class="sb-bar"><div class="sb-fill" style="width:100%"></div></div></div>
+          <div class="sb-item"><span>Align</span><div class="sb-bar"><div class="sb-fill" style="width:100%"></div></div></div>
           <div class="sb-item"><span>Balance</span><div class="sb-bar"><div class="sb-fill" style="width:100%"></div></div></div>
         </div>
       </div>
-
-      <!-- Live Feedback -->
-      <div class="section-card feedback-section">
+      <div class="section-card">
         <div class="card-header"><span class="card-title">LIVE FEEDBACK</span><div class="card-line"></div></div>
         <div class="feedback-list" id="feedback-list">
-          <div class="fb-item info">
-            <div class="fb-icon">💡</div>
-            <div class="fb-text">Start session to receive real-time feedback</div>
-          </div>
+          <div class="fb-item info"><div class="fb-icon">💡</div><div class="fb-text">Start session to receive feedback</div></div>
         </div>
       </div>
-
-      <!-- Session Stats -->
-      <div class="section-card stats-section">
+      <div class="section-card">
         <div class="card-header"><span class="card-title">SESSION STATS</span><div class="card-line"></div></div>
         <div class="stats-grid">
-          <div class="stat-item">
-            <div class="stat-val" id="stat-time">0:00</div>
-            <div class="stat-label">Duration</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-val" id="stat-best">100%</div>
-            <div class="stat-label">Best Form</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-val" id="stat-total-reps">0</div>
-            <div class="stat-label">Total Reps</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-val" id="stat-alerts">0</div>
-            <div class="stat-label">Corrections</div>
-          </div>
+          <div class="stat-item"><div class="stat-val" id="stat-time">0:00</div><div class="stat-label">Duration</div></div>
+          <div class="stat-item"><div class="stat-val" id="stat-best">100%</div><div class="stat-label">Best Form</div></div>
+          <div class="stat-item"><div class="stat-val" id="stat-total-reps">0</div><div class="stat-label">Total Reps</div></div>
+          <div class="stat-item"><div class="stat-val" id="stat-alerts">0</div><div class="stat-label">Corrections</div></div>
         </div>
       </div>
-
-      <!-- Activity Log -->
-      <div class="section-card log-section">
+      <div class="section-card">
         <div class="card-header"><span class="card-title">ACTIVITY LOG</span><div class="card-line"></div></div>
-        <div class="log-list" id="log-list">
-          <div class="log-empty">Session not started</div>
+        <div class="log-list" id="log-list"><div class="log-empty">Session not started</div></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- MOBILE BOTTOM NAV -->
+  <nav class="mobile-nav">
+    <div class="mobile-nav-inner">
+      <button class="nav-tab active" id="tab-camera" onclick="showTab('camera')">
+        <span class="nav-tab-icon">📷</span><span class="nav-tab-label">CAMERA</span>
+      </button>
+      <button class="nav-tab" id="tab-exercises" onclick="showTab('exercises')">
+        <span class="nav-tab-icon">🏋️</span><span class="nav-tab-label">EXERCISES</span>
+      </button>
+      <button class="nav-tab" id="tab-stats" onclick="showTab('stats')">
+        <span class="nav-tab-icon">📊</span><span class="nav-tab-label">STATS</span>
+      </button>
+      <button class="nav-tab" id="tab-ai" onclick="openAICoach()">
+        <span class="nav-tab-icon">🤖</span><span class="nav-tab-label">AI COACH</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MOBILE: Exercises Panel -->
+  <div class="mobile-panel" id="mobile-exercises">
+    <div class="section-card">
+      <div class="card-header"><span class="card-title">EXERCISES</span><div class="card-line"></div></div>
+      <div class="exercise-list" id="mobile-ex-list">
+        <button class="ex-card active" data-ex="squat" onclick="selectExercise('squat');showTab('camera')"><div class="ex-card-icon">🏋️</div><div class="ex-card-info"><span class="ex-card-name">Squat</span><span class="ex-card-target">Knee: 90°</span></div><div class="ex-card-glow"></div></button>
+        <button class="ex-card" data-ex="pushup" onclick="selectExercise('pushup');showTab('camera')"><div class="ex-card-icon">💪</div><div class="ex-card-info"><span class="ex-card-name">Push-Up</span><span class="ex-card-target">Elbow: 90°</span></div><div class="ex-card-glow"></div></button>
+        <button class="ex-card" data-ex="lunge" onclick="selectExercise('lunge');showTab('camera')"><div class="ex-card-icon">🦵</div><div class="ex-card-info"><span class="ex-card-name">Lunge</span><span class="ex-card-target">Both Knees: 90°</span></div><div class="ex-card-glow"></div></button>
+        <button class="ex-card" data-ex="plank" onclick="selectExercise('plank');showTab('camera')"><div class="ex-card-icon">⚡</div><div class="ex-card-info"><span class="ex-card-name">Plank</span><span class="ex-card-target">Body: 180°</span></div><div class="ex-card-glow"></div></button>
+        <button class="ex-card" data-ex="bicep_curl" onclick="selectExercise('bicep_curl');showTab('camera')"><div class="ex-card-icon">🔥</div><div class="ex-card-info"><span class="ex-card-name">Bicep Curl</span><span class="ex-card-target">Elbow: 45°</span></div><div class="ex-card-glow"></div></button>
+        <button class="ex-card" data-ex="shoulder_press" onclick="selectExercise('shoulder_press');showTab('camera')"><div class="ex-card-icon">🏆</div><div class="ex-card-info"><span class="ex-card-name">Shoulder Press</span><span class="ex-card-target">Elbow: 180°</span></div><div class="ex-card-glow"></div></button>
+        <button class="ex-card" data-ex="deadlift" onclick="selectExercise('deadlift');showTab('camera')"><div class="ex-card-icon">💎</div><div class="ex-card-info"><span class="ex-card-name">Deadlift</span><span class="ex-card-target">Hip: 180°</span></div><div class="ex-card-glow"></div></button>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="card-header"><span class="card-title">📋 INSTRUCTIONS</span></div>
+      <p class="inst-text" id="inst-text-m">Stand with feet shoulder-width apart. Bend knees to 90°. Keep torso upright throughout.</p>
+      <div class="inst-tips" id="inst-tips-m">
+        <div class="inst-tip">👁 Face camera at full body distance</div>
+        <div class="inst-tip">💡 Good lighting improves accuracy</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE: Stats Panel -->
+  <div class="mobile-panel" id="mobile-stats">
+    <div class="section-card">
+      <div class="card-header"><span class="card-title">REP COUNTER</span><div class="card-line"></div></div>
+      <div class="rep-display">
+        <div class="rep-number" id="rep-number-m">0</div>
+        <div class="rep-label">REPS COMPLETED</div>
+      </div>
+      <div class="rep-state-row">
+        <div class="rep-state-chip" id="chip-down-m">DOWN</div>
+        <div class="rep-state-arrow">↕</div>
+        <div class="rep-state-chip" id="chip-up-m">UP</div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="card-header"><span class="card-title">FORM SCORE</span><div class="card-line"></div></div>
+      <div class="score-ring-wrap">
+        <svg class="score-svg" viewBox="0 0 140 140">
+          <defs><linearGradient id="scoreGrad2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00ffcc"/><stop offset="100%" stop-color="#7c3aed"/></linearGradient></defs>
+          <circle class="score-track" cx="70" cy="70" r="58"/>
+          <circle class="score-progress" id="score-prog-m" cx="70" cy="70" r="58" stroke="url(#scoreGrad2)" stroke-dasharray="364.4" stroke-dashoffset="0"/>
+        </svg>
+        <div class="score-inner">
+          <div class="score-pct" id="score-pct-m">100</div>
+          <div class="score-unit">%</div>
+          <div class="score-grade" id="score-grade-m">A+</div>
         </div>
       </div>
-
-    </aside>
+    </div>
+    <div class="section-card">
+      <div class="card-header"><span class="card-title">SESSION STATS</span><div class="card-line"></div></div>
+      <div class="stats-grid">
+        <div class="stat-item"><div class="stat-val" id="stat-time-m">0:00</div><div class="stat-label">Duration</div></div>
+        <div class="stat-item"><div class="stat-val" id="stat-best-m">100%</div><div class="stat-label">Best Form</div></div>
+        <div class="stat-item"><div class="stat-val" id="stat-reps-m">0</div><div class="stat-label">Total Reps</div></div>
+        <div class="stat-item"><div class="stat-val" id="stat-alerts-m">0</div><div class="stat-label">Corrections</div></div>
+      </div>
+    </div>
+    <div class="section-card">
+      <div class="card-header"><span class="card-title">LIVE FEEDBACK</span><div class="card-line"></div></div>
+      <div class="feedback-list" id="feedback-list-m">
+        <div class="fb-item info"><div class="fb-icon">💡</div><div class="fb-text">Start session to receive feedback</div></div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ── Settings Modal ──────────────────────────────────────────── -->
+<!-- Settings Modal -->
 <div class="modal-overlay" id="settings-modal" style="display:none;" onclick="closeSettings()">
   <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <span>⚙ SETTINGS</span>
-      <button class="modal-close" onclick="closeSettings()">✕</button>
-    </div>
+    <div class="modal-header"><span>⚙ SETTINGS</span><button class="modal-close" onclick="closeSettings()">✕</button></div>
     <div class="modal-body">
-      <div class="setting-group">
-        <label class="setting-label">Gemini API Key (for AI Coach)</label>
-        <input class="setting-input" type="password" id="gemini-key-input" placeholder="AIza...your-key-here"/>
-        <small class="setting-hint">Get free key at <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a></small>
-      </div>
       <div class="setting-group">
         <label class="setting-label">Skeleton Style</label>
         <select class="setting-input" id="skeleton-style">
-          <option value="neon">Neon Cyan</option>
-          <option value="fire">Fire Orange</option>
-          <option value="matrix">Matrix Green</option>
-          <option value="purple">Holographic Purple</option>
+          <option value="neon">Neon Cyan</option><option value="fire">Fire Orange</option>
+          <option value="matrix">Matrix Green</option><option value="purple">Holographic Purple</option>
         </select>
       </div>
       <div class="setting-group">
@@ -353,42 +606,28 @@
       </div>
       <div class="setting-group">
         <label class="setting-label">Show Angle Labels</label>
-        <div class="toggle-wrap">
-          <input type="checkbox" id="show-angles" class="toggle-input" checked/>
-          <label class="toggle-label" for="show-angles"></label>
-        </div>
+        <div class="toggle-wrap"><input type="checkbox" id="show-angles" class="toggle-input" checked/><label class="toggle-label" for="show-angles"></label></div>
       </div>
       <div class="setting-group">
         <label class="setting-label">Show Skeleton</label>
-        <div class="toggle-wrap">
-          <input type="checkbox" id="show-skeleton" class="toggle-input" checked/>
-          <label class="toggle-label" for="show-skeleton"></label>
-        </div>
+        <div class="toggle-wrap"><input type="checkbox" id="show-skeleton" class="toggle-input" checked/><label class="toggle-label" for="show-skeleton"></label></div>
       </div>
       <div class="setting-group">
         <label class="setting-label">Voice Feedback</label>
-        <div class="toggle-wrap">
-          <input type="checkbox" id="voice-feedback" class="toggle-input"/>
-          <label class="toggle-label" for="voice-feedback"></label>
-        </div>
+        <div class="toggle-wrap"><input type="checkbox" id="voice-feedback" class="toggle-input"/><label class="toggle-label" for="voice-feedback"></label></div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="modal-save" onclick="saveSettings()">SAVE SETTINGS</button>
-    </div>
+    <div class="modal-footer"><button class="modal-save" onclick="saveSettings()">SAVE SETTINGS</button></div>
   </div>
 </div>
 
-<!-- ── AI Coach Modal ──────────────────────────────────────────── -->
+<!-- AI Coach Modal -->
 <div class="modal-overlay" id="ai-modal" style="display:none;" onclick="closeAICoach()">
   <div class="modal-box ai-modal-box" onclick="event.stopPropagation()">
     <div class="modal-header ai-header">
       <div class="ai-header-left">
         <div class="ai-avatar">🤖</div>
-        <div>
-          <span class="ai-title">GEMINI 2.5 FLASH COACH</span>
-          <span class="ai-subtitle">Real-time Biomechanical Analysis</span>
-        </div>
+        <div><span class="ai-title">GEMINI 2.5 FLASH COACH</span><span class="ai-subtitle">Real-time Biomechanical Analysis</span></div>
       </div>
       <button class="modal-close" onclick="closeAICoach()">✕</button>
     </div>
@@ -401,25 +640,18 @@
       <div class="ai-response-area" id="ai-response-area">
         <div class="ai-welcome">
           <div class="ai-welcome-icon">🧬</div>
-          <p>Click <strong>Analyze My Form</strong> to receive AI-powered biomechanical coaching from Gemini 2.5 Flash.</p>
-          <p class="ai-welcome-sub">Gemini will analyze your joint angles, form score, and rep count to give personalized coaching.</p>
+          <p>Click <strong>Analyze My Form</strong> for AI-powered biomechanical coaching.</p>
+          <p class="ai-welcome-sub">Gemini analyses your joint angles, form score, and rep count.</p>
         </div>
-      </div>
-      <div class="ai-no-key" id="ai-no-key" style="display:none;">
-        <p>⚠️ No Gemini API key found. Add it in <strong>Settings ⚙</strong>.</p>
-        <p>Get a free key at <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a></p>
       </div>
     </div>
     <div class="modal-footer ai-footer">
-      <button class="modal-save ai-analyze-btn" id="ai-analyze-btn" onclick="runGeminiAnalysis()">
-        <span class="ai-btn-icon">🧬</span> ANALYZE MY FORM
-      </button>
+      <button class="modal-save ai-analyze-btn" id="ai-analyze-btn" onclick="runGeminiAnalysis()"><span class="ai-btn-icon">🧬</span> ANALYZE MY FORM</button>
       <button class="modal-cancel" onclick="closeAICoach()">CLOSE</button>
     </div>
   </div>
 </div>
 
-<!-- ── Screenshot Toast ────────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
