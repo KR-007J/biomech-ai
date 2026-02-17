@@ -3,7 +3,7 @@ BioMech AI — Render Web Server
 Client-side app served via Flask (no OpenCV needed)
 """
 import os
-from flask import Flask, send_from_directory, send_file
+from flask import Flask, send_from_directory, send_file, jsonify
 
 app = Flask(__name__, static_folder='static', template_folder='.')
 
@@ -15,9 +15,15 @@ def index():
 def serve_static(path):
     return send_from_directory('static', path)
 
+@app.route('/api/config')
+def config():
+    return jsonify({
+        'geminiKey': os.environ.get('GEMINI_API_KEY', '')
+    })
+
 @app.route('/health')
 def health():
-    return {'status': 'ok', 'app': 'BioMech AI', 'version': '2.0'}
+    return jsonify({'status': 'ok', 'app': 'BioMech AI', 'version': '2.0'})
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
