@@ -1,8 +1,11 @@
 /* ══════════════════════════════════════════════════════════════════
    BioMech AI v3.0 — Full Feature Engine
-   NEW: Session History · Achievements · Recording · Voice Commands
-        Metronome · Muscle Heatmap · Share Card · Profiles · Programs
-        Audio Cues · Rep Velocity · Progressive Overload Tips
+   © 2026 Krish Joshi · All Rights Reserved
+
+   Features: Google Sign-In · Session History · Achievements
+             Recording · Voice Commands · Metronome · Muscle Heatmap
+             Share Card · Profiles · Programs · Audio Cues
+             Rep Velocity · Progressive Overload Tips · AI Coach
 ══════════════════════════════════════════════════════════════════ */
 'use strict';
 
@@ -64,9 +67,8 @@ let state = {
 
 // ── PERSISTENT DATA (localStorage) ────────────────────────────────
 function loadStorage() {
-  try {
-    return JSON.parse(localStorage.getItem('biomech_v3')||'{}');
-  } catch(e) { return {}; }
+  try { return JSON.parse(localStorage.getItem('biomech_v3')||'{}'); }
+  catch(e) { return {}; }
 }
 function saveStorage(data) {
   try { localStorage.setItem('biomech_v3', JSON.stringify(data)); } catch(e){}
@@ -77,7 +79,8 @@ function getDB() {
     aiCoachUses:0,fastestSet:9999,hasRecorded:false,hasShared:false,
     totalSessions:0,unlockedAchievements:[],
     profiles:[{id:'p1',name:'Athlete 1',avatar:'🧑'}],activeProfile:'p1',
-    activeProgram:null, programProgress:{},
+    activeProgram:null,programProgress:{},
+    googleUser:null,
   };
   const saved = loadStorage();
   return {...defaults,...saved};
@@ -93,6 +96,156 @@ const SKELETON_STYLES = {
   purple:{joint:'#a78bfa',bone:'#a78bfa'},
 };
 
+// ══════════════════════════════════════════════════════════════════
+//  GOOGLE SIGN-IN
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * Called by Google Identity Services after the user selects their account.
+ * The credential is a JWT containing name, email, picture, sub, etc.
+ */
+function handleGoogleLogin(response) {
+  try {
+    const payload = parseJwt(response.credential);
+
+    // Build user object
+    db.googleUser = {
+      name:    payload.name    || 'Athlete',
+      email:   payload.email   || '',
+      picture: payload.picture || '',
+      sub:     payload.sub     || '',
+      given:   payload.given_name || payload.name.split(' ')[0],
+    };
+
+    const profileId = 'google_' + payload.sub;
+    db.activeProfile = profileId;
+
+    // Add to profiles list if not already there
+    if (!db.profiles.find(p => p.id === profileId)) {
+      db.profiles.push({
+        id: profileId,
+        name: db.googleUser.given,
+        avatar: db.googleUser.picture ? '📷' : '🧑',
+      });
+    }
+
+    saveStorage(db);
+    dismissLoginScreen();
+  } catch(e) {
+    console.error('Google login error:', e);
+    showLoginError('Sign-in failed. Please try again.');
+  }
+}
+
+/**
+ * Decode a JWT without a library (payload only — no signature verification).
+ */
+function parseJwt(token) {
+  const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  const json = decodeURIComponent(
+    atob(base64).split('').map(c =>
+      '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join('')
+  );
+  return JSON.parse(json);
+}
+
+/**
+ * Fallback: manually trigger Google's popup flow.
+ * Used when the rendered button hasn't appeared yet.
+ */
+function triggerGoogleSignIn() {
+  if (window.google && google.accounts && google.accounts.id) {
+    google.accounts.id.prompt();
+  } else {
+    showLoginError('Google Sign-In not loaded. Check your internet connection.');
+  }
+}
+
+/**
+ * Guest mode — skip auth, no data persists to a Google account.
+ */
+function continueAsGuest() {
+  db.googleUser = null;
+  if (!db.profiles.find(p => p.id === 'p1')) {
+    db.profiles.push({id:'p1', name:'Guest', avatar:'🧑'});
+  }
+  db.activeProfile = 'p1';
+  saveStorage(db);
+  dismissLoginScreen();
+}
+
+/**
+ * Sign out: clear Google user, show login screen again.
+ */
+function signOut() {
+  // Revoke Google session if available
+  if (window.google && google.accounts && db.googleUser?.email) {
+    try { google.accounts.id.revoke(db.googleUser.email); } catch(e){}
+  }
+  db.googleUser = null;
+  saveStorage(db);
+  location.reload();
+}
+
+/**
+ * Animate login screen out, then show splash → app.
+ */
+function dismissLoginScreen() {
+  const ls = document.getElementById('login-screen');
+  ls.classList.add('hidden');
+  setTimeout(() => {
+    ls.style.display = 'none';
+    launchSplash();
+  }, 750);
+}
+
+function showLoginError(msg) {
+  let el = document.getElementById('login-error');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'login-error';
+    el.style.cssText = 'font-size:0.7rem;color:#ef4444;font-family:var(--font-mono);text-align:center;padding:0.3rem;';
+    document.querySelector('.login-card').appendChild(el);
+  }
+  el.textContent = msg;
+}
+
+/**
+ * Update header user pill with signed-in user info.
+ */
+function updateUserPill() {
+  const pill = document.getElementById('user-pill');
+  const nameEl = document.getElementById('hdr-username');
+  const avatarImg = document.getElementById('user-avatar-img');
+  const avatarFallback = document.getElementById('user-avatar-fallback');
+
+  if (db.googleUser) {
+    pill.style.display = 'flex';
+    nameEl.textContent = db.googleUser.given || db.googleUser.name;
+    if (db.googleUser.picture) {
+      avatarImg.src = db.googleUser.picture;
+      avatarImg.style.display = 'block';
+      avatarFallback.style.display = 'none';
+    }
+  } else {
+    // Guest
+    pill.style.display = 'flex';
+    nameEl.textContent = 'Guest';
+    avatarFallback.textContent = '👤';
+  }
+}
+
+// ── AUTO-LOAD GEMINI KEY ───────────────────────────────────────────
+async function loadGeminiKey() {
+  try {
+    const res = await fetch('/api/config');
+    if (!res.ok) throw new Error('no endpoint');
+    const data = await res.json();
+    if (data.geminiKey) { state.geminiKey = data.geminiKey; console.log('✅ Gemini key loaded'); }
+  } catch(e) { console.warn('⚠️ /api/config not available'); }
+}
+
 // ── AUDIO ENGINE ───────────────────────────────────────────────────
 let audioCtx = null;
 function getAudioCtx() {
@@ -106,180 +259,138 @@ function playBeep(freq=440, dur=0.08, vol=0.3, type='sine') {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
-    osc.frequency.value = freq;
-    osc.type = type;
+    osc.frequency.value = freq; osc.type = type;
     gain.gain.setValueAtTime(vol, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
     osc.start(); osc.stop(ctx.currentTime + dur);
   } catch(e){}
 }
-function playRepSound()   { playBeep(880, 0.06, 0.25, 'triangle'); }
-function playErrorSound() { playBeep(220, 0.15, 0.2,  'sawtooth'); }
-function playSuccessSound(){ playBeep(1047,0.1, 0.2, 'sine'); setTimeout(()=>playBeep(1319,0.15,0.2,'sine'),100); }
+function playRepSound()    { playBeep(880,  0.06, 0.25, 'triangle'); }
+function playErrorSound()  { playBeep(220,  0.15, 0.2,  'sawtooth'); }
+function playSuccessSound(){ playBeep(1047, 0.1,  0.2,  'sine'); setTimeout(()=>playBeep(1319,0.15,0.2,'sine'),100); }
 
 // ── METRONOME ──────────────────────────────────────────────────────
-let metronomeBPM = 60, metronomeActive = false, metronomeInterval = null, metroBeat = 0;
+let metronomeBPM=60, metronomeActive=false, metronomeInterval=null, metroBeat=0;
 
 function toggleMetronome() {
   metronomeActive = !metronomeActive;
   const btn = document.getElementById('metro-toggle');
-  if (metronomeActive) {
-    btn.textContent = '⏸';
-    runMetronome();
-  } else {
-    btn.textContent = '▶';
-    clearInterval(metronomeInterval);
-    document.querySelectorAll('.metro-dot').forEach(d => d.classList.remove('beat'));
-  }
+  if (metronomeActive) { btn.textContent='⏸'; runMetronome(); }
+  else { btn.textContent='▶'; clearInterval(metronomeInterval); document.querySelectorAll('.metro-dot').forEach(d=>d.classList.remove('beat')); }
 }
-
 function runMetronome() {
   clearInterval(metronomeInterval);
-  const interval = 60000 / metronomeBPM;
   metronomeInterval = setInterval(() => {
-    metroBeat = (metroBeat + 1) % 4;
-    document.querySelectorAll('.metro-dot').forEach((d,i) => d.classList.toggle('beat', i === metroBeat));
-    playBeep(metroBeat === 0 ? 880 : 440, 0.05, 0.15, 'square');
-  }, interval);
+    metroBeat = (metroBeat+1)%4;
+    document.querySelectorAll('.metro-dot').forEach((d,i)=>d.classList.toggle('beat',i===metroBeat));
+    playBeep(metroBeat===0?880:440, 0.05, 0.15, 'square');
+  }, 60000/metronomeBPM);
 }
-
 function changeBPM(delta) {
-  metronomeBPM = Math.max(30, Math.min(180, metronomeBPM + delta));
+  metronomeBPM = Math.max(30, Math.min(180, metronomeBPM+delta));
   document.getElementById('metro-bpm').textContent = `${metronomeBPM} BPM`;
   if (metronomeActive) runMetronome();
 }
 
 // ── RECORDING ──────────────────────────────────────────────────────
-let mediaRecorder = null, recordedChunks = [], isRecording = false;
+let mediaRecorder=null, recordedChunks=[], isRecording=false;
 
-function toggleRecording() {
-  if (isRecording) stopRecording();
-  else startRecording();
-}
+function toggleRecording() { if (isRecording) stopRecording(); else startRecording(); }
 
 function startRecording() {
   const canvas = document.getElementById('output-canvas');
-  if (!canvas || !state.sessionActive) { showToast('Start a session first!', 'error'); return; }
+  if (!canvas || !state.sessionActive) { showToast('Start a session first!','error'); return; }
   try {
     const stream = canvas.captureStream(30);
     mediaRecorder = new MediaRecorder(stream, {mimeType:'video/webm;codecs=vp8'});
     recordedChunks = [];
-    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.ondataavailable = e => { if (e.data.size>0) recordedChunks.push(e.data); };
     mediaRecorder.onstop = saveRecording;
     mediaRecorder.start(100);
     isRecording = true;
     document.getElementById('btn-record').classList.add('rec-active');
-    document.getElementById('btn-record').querySelector('.ctrl-icon').textContent = '⏹';
-    document.getElementById('rec-indicator').style.display = 'flex';
-    db.hasRecorded = true; saveStorage(db);
-    checkAchievements();
-    showToast('Recording started 🎬');
-    addLog('Recording started', 'good');
-  } catch(e) { showToast('Recording not supported on this browser', 'error'); }
+    document.getElementById('btn-record').querySelector('.ctrl-icon').textContent='⏹';
+    document.getElementById('rec-indicator').style.display='flex';
+    db.hasRecorded=true; saveStorage(db); checkAchievements();
+    showToast('Recording started 🎬'); addLog('Recording started','good');
+  } catch(e) { showToast('Recording not supported on this browser','error'); }
 }
-
 function stopRecording() {
-  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-  isRecording = false;
+  if (mediaRecorder && mediaRecorder.state!=='inactive') mediaRecorder.stop();
+  isRecording=false;
   document.getElementById('btn-record').classList.remove('rec-active');
-  document.getElementById('btn-record').querySelector('.ctrl-icon').textContent = '⏺';
-  document.getElementById('rec-indicator').style.display = 'none';
-  addLog('Recording saved', 'good');
+  document.getElementById('btn-record').querySelector('.ctrl-icon').textContent='⏺';
+  document.getElementById('rec-indicator').style.display='none';
+  addLog('Recording saved','good');
 }
-
 function saveRecording() {
   const blob = new Blob(recordedChunks, {type:'video/webm'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `biomech-session-${Date.now()}.webm`;
-  a.click();
+  a.href=url; a.download=`biomech-session-${Date.now()}.webm`; a.click();
   URL.revokeObjectURL(url);
   showToast('Video downloaded! 🎬');
 }
 
 // ── VOICE COMMANDS ──────────────────────────────────────────────────
-let voiceRecognition = null, voiceActive = false;
+let voiceRecognition=null, voiceActive=false;
 const EXERCISE_KEYS = Object.keys(EXERCISES);
 
-function toggleVoiceCommands() {
-  if (voiceActive) stopVoiceCommands();
-  else startVoiceCommands();
-}
-
+function toggleVoiceCommands() { if (voiceActive) stopVoiceCommands(); else startVoiceCommands(); }
 function startVoiceCommands() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) { showToast('Voice commands not supported', 'error'); return; }
-  voiceRecognition = new SpeechRecognition();
-  voiceRecognition.continuous = true;
-  voiceRecognition.interimResults = false;
-  voiceRecognition.lang = 'en-US';
-  voiceRecognition.onresult = e => {
-    const cmd = e.results[e.results.length-1][0].transcript.toLowerCase().trim();
-    handleVoiceCommand(cmd);
-  };
-  voiceRecognition.onerror = () => {};
-  voiceRecognition.onend = () => { if (voiceActive) voiceRecognition.start(); };
-  voiceRecognition.start();
-  voiceActive = true;
+  const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+  if (!SR) { showToast('Voice commands not supported','error'); return; }
+  voiceRecognition = new SR();
+  voiceRecognition.continuous=true; voiceRecognition.interimResults=false; voiceRecognition.lang='en-US';
+  voiceRecognition.onresult = e => handleVoiceCommand(e.results[e.results.length-1][0].transcript.toLowerCase().trim());
+  voiceRecognition.onerror = ()=>{};
+  voiceRecognition.onend = ()=>{ if(voiceActive) voiceRecognition.start(); };
+  voiceRecognition.start(); voiceActive=true;
   document.getElementById('btn-voice').classList.add('voice-active');
-  document.getElementById('voice-status').style.display = 'flex';
+  document.getElementById('voice-status').style.display='flex';
   showToast('🎙 Voice commands active!');
 }
-
 function stopVoiceCommands() {
-  if (voiceRecognition) { voiceRecognition.stop(); voiceRecognition = null; }
-  voiceActive = false;
+  if (voiceRecognition) { voiceRecognition.stop(); voiceRecognition=null; }
+  voiceActive=false;
   document.getElementById('btn-voice').classList.remove('voice-active');
-  document.getElementById('voice-status').style.display = 'none';
+  document.getElementById('voice-status').style.display='none';
   showToast('Voice commands off');
 }
-
 function handleVoiceCommand(cmd) {
   showToast(`🎙 "${cmd}"`, 'info');
-  if (cmd.includes('start'))  { if (!state.sessionActive) startSession(); }
-  else if (cmd.includes('stop') || cmd.includes('pause')) { if (state.sessionActive) stopSession(); }
-  else if (cmd.includes('reset')) resetSession();
-  else if (cmd.includes('record')) toggleRecording();
-  else if (cmd.includes('screenshot') || cmd.includes('capture')) takeScreenshot();
-  else if (cmd.includes('ai') || cmd.includes('coach') || cmd.includes('analyze')) openAICoach();
+  if (cmd.includes('start'))        { if (!state.sessionActive) startSession(); }
+  else if (cmd.includes('stop')||cmd.includes('pause')) { if (state.sessionActive) stopSession(); }
+  else if (cmd.includes('reset'))    resetSession();
+  else if (cmd.includes('record'))   toggleRecording();
+  else if (cmd.includes('screenshot')||cmd.includes('capture')) takeScreenshot();
+  else if (cmd.includes('ai')||cmd.includes('coach')||cmd.includes('analyze')) openAICoach();
   else if (cmd.includes('next')) {
-    const idx = EXERCISE_KEYS.indexOf(state.exercise);
-    selectExercise(EXERCISE_KEYS[(idx+1) % EXERCISE_KEYS.length]);
+    const idx=EXERCISE_KEYS.indexOf(state.exercise);
+    selectExercise(EXERCISE_KEYS[(idx+1)%EXERCISE_KEYS.length]);
   } else {
-    EXERCISE_KEYS.forEach(k => {
-      if (cmd.includes(EXERCISES[k].name.toLowerCase())) selectExercise(k);
-    });
+    EXERCISE_KEYS.forEach(k=>{ if(cmd.includes(EXERCISES[k].name.toLowerCase())) selectExercise(k); });
   }
 }
 
 // ── MOBILE TAB NAV ─────────────────────────────────────────────────
-let currentTab = 'camera';
+let currentTab='camera';
 function showTab(tab) {
-  currentTab = tab;
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  const tabEl = document.getElementById(`tab-${tab}`);
-  if (tabEl) tabEl.classList.add('active');
-  document.querySelectorAll('.mobile-panel').forEach(p => p.classList.remove('active'));
-  const cp = document.querySelector('.center-panel');
-  if (tab === 'exercises') { document.getElementById('mobile-exercises').classList.add('active'); if(cp) cp.style.display='none'; }
-  else if (tab === 'stats')   { document.getElementById('mobile-stats').classList.add('active');     if(cp) cp.style.display='none'; }
-  else if (tab === 'progress'){ document.getElementById('mobile-progress').classList.add('active');  if(cp) cp.style.display='none'; renderHistoryChart('history-chart-m'); }
+  currentTab=tab;
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  const tabEl=document.getElementById(`tab-${tab}`);
+  if(tabEl) tabEl.classList.add('active');
+  document.querySelectorAll('.mobile-panel').forEach(p=>p.classList.remove('active'));
+  const cp=document.querySelector('.center-panel');
+  if (tab==='exercises') { document.getElementById('mobile-exercises').classList.add('active'); if(cp) cp.style.display='none'; }
+  else if (tab==='stats') { document.getElementById('mobile-stats').classList.add('active'); if(cp) cp.style.display='none'; }
+  else if (tab==='progress') { document.getElementById('mobile-progress').classList.add('active'); if(cp) cp.style.display='none'; renderHistoryChart('history-chart-m'); }
   else { if(cp) cp.style.display=''; }
-}
-
-// ── AUTO-LOAD GEMINI KEY ───────────────────────────────────────────
-async function loadGeminiKey() {
-  try {
-    const res = await fetch('/api/config');
-    if (!res.ok) throw new Error('no endpoint');
-    const data = await res.json();
-    if (data.geminiKey) { state.geminiKey = data.geminiKey; console.log('✅ Gemini key loaded'); }
-  } catch(e) { console.warn('⚠️ /api/config not available'); }
 }
 
 // ── ANGLE CALC ─────────────────────────────────────────────────────
 function calculateAngle(A,B,C) {
-  const AB=Math.hypot(B[0]-A[0],B[1]-A[1]),BC=Math.hypot(C[0]-B[0],C[1]-B[1]),AC=Math.hypot(C[0]-A[0],C[1]-A[1]);
+  const AB=Math.hypot(B[0]-A[0],B[1]-A[1]), BC=Math.hypot(C[0]-B[0],C[1]-B[1]), AC=Math.hypot(C[0]-A[0],C[1]-A[1]);
   if(AB===0||BC===0) return 0;
   return Math.round(Math.acos(Math.max(-1,Math.min(1,(AB*AB+BC*BC-AC*AC)/(2*AB*BC))))*(180/Math.PI));
 }
@@ -300,7 +411,7 @@ function analyzeSquat(lms,w,h){
     else if(avg>=72&&avg<=108){feedback.push({msg:'🎯 Perfect Squat Depth!',severity:'success'});}
     else if(avg<60){feedback.push({msg:'⬆ Too Deep — Rise Slightly',severity:'warning'});depthScore=70;}
     else{depthScore=85;}
-    if(lH<45){feedback.push({msg:"❌ Keep Torso Upright",severity:'error'});alignScore=40;}
+    if(lH<45){feedback.push({msg:'❌ Keep Torso Upright',severity:'error'});alignScore=40;}
     else if(lH<65){feedback.push({msg:'⚠ Less Forward Lean',severity:'warning'});alignScore=70;}
     if(diff>20){feedback.push({msg:'⚖ Balance Both Sides',severity:'warning'});balScore=Math.max(0,100-diff*2);}
   }catch(e){feedback.push({msg:'📷 Show Full Body',severity:'info'});return{angles,feedback,score:0,breakdown:{depth:0,alignment:0,balance:0}};}
@@ -381,7 +492,7 @@ const ANGLE_JOINTS={left_knee:[23,25,27],right_knee:[24,26,28],left_elbow:[11,13
 function drawSkeleton(ctx,lms,w,h,feedback){
   if(!CONFIG.showSkeleton) return;
   const style=SKELETON_STYLES[CONFIG.skeletonStyle]||SKELETON_STYLES.neon;
-  const hasError=feedback.some(f=>f.severity==='error'),hasSuccess=feedback.some(f=>f.severity==='success');
+  const hasError=feedback.some(f=>f.severity==='error'), hasSuccess=feedback.some(f=>f.severity==='success');
   let color=style.joint;
   if(hasError) color='#ef4444';
   else if(hasSuccess) color='#10b981';
@@ -429,22 +540,19 @@ function countRep(angles,exercise){
   if(exercise==='bicep_curl'){
     if(angle<ex.repUpThreshold&&state.repState==='up'){state.repState='down';updateRepStateUI('down');}
     if(angle>ex.repDownThreshold&&state.repState==='down'){state.repState='up';updateRepStateUI('up');triggerRep();}
-  } else {
+  }else{
     if(angle<ex.repDownThreshold&&state.repState==='up'){state.repState='down';updateRepStateUI('down');}
     if(angle>ex.repUpThreshold&&state.repState==='down'){state.repState='up';updateRepStateUI('up');triggerRep();}
   }
 }
-
 function triggerRep(){
   state.repCount++;state.totalReps++;
   state.repTimestamps.push(Date.now());
-  // Check fastest set of 10
   if(state.repTimestamps.length>=10){
     const t=state.repTimestamps;
     const setTime=(t[t.length-1]-t[t.length-10])/1000;
     if(setTime<db.fastestSet){db.fastestSet=setTime;saveStorage(db);}
   }
-  // Desktop
   const el=document.getElementById('rep-number');
   if(el){el.textContent=state.repCount;el.classList.add('pop');setTimeout(()=>el.classList.remove('pop'),250);}
   const elm=document.getElementById('rep-number-m');
@@ -455,11 +563,9 @@ function triggerRep(){
   if(CONFIG.voiceFeedback) speak(`${state.repCount}`);
   addLog(`Rep ${state.repCount}`,state.formScore>70?'good':'bad');
   showToast(`Rep ${state.repCount} ✓`);
-  // Update db total reps
   db.totalReps=state.totalReps;
   checkAchievements();
 }
-
 function updateRepStateUI(s){
   document.getElementById('chip-down')?.classList.toggle('active',s==='down');
   document.getElementById('chip-up')?.classList.toggle('active',s==='up');
@@ -481,20 +587,16 @@ function onResults(results){
     state.lastAngles=analysis.angles;state.lastFeedback=analysis.feedback;
     state.formScore=analysis.score;state.scoreBreakdown=analysis.breakdown;
     if(analysis.score>state.bestScore){state.bestScore=analysis.score;}
-    // Score history (every 30 frames)
     if(state.frameCount%30===0){state.scoreHistory.push(analysis.score);if(state.scoreHistory.length>20) state.scoreHistory.shift();}
     countRep(analysis.angles,state.exercise);
     drawSkeleton(ctx,lms,w,h,analysis.feedback);
     ctx.restore();
-    updateFeedbackUI(analysis.feedback);
-    updateAnglesStrip(analysis.angles);
-    updateFormScore(analysis.score,analysis.breakdown);
-    updateAlertBanner(analysis.feedback);
+    updateFeedbackUI(analysis.feedback);updateAnglesStrip(analysis.angles);
+    updateFormScore(analysis.score,analysis.breakdown);updateAlertBanner(analysis.feedback);
     updatePulse(analysis.feedback);
-    // Audio error cue (throttled)
     if(analysis.feedback.some(f=>f.severity==='error')&&state.frameCount%60===0) playErrorSound();
     if(analysis.feedback.some(f=>f.severity==='success')&&state.frameCount%90===0) playSuccessSound();
-  } else {
+  }else{
     ctx.restore();
     if(state.sessionActive) updateAlertBanner([{msg:'No Pose Detected — Step Back',severity:'info'}]);
   }
@@ -508,9 +610,7 @@ function updateFeedbackUI(feedback){
   const icons={success:'✅',warning:'⚠️',error:'❌',info:'💡'};
   const html=feedback.length?feedback.slice(0,4).map(fb=>`<div class="fb-item ${fb.severity}"><div class="fb-icon">${icons[fb.severity]||'•'}</div><div class="fb-text">${fb.msg}</div></div>`).join(''):'<div class="fb-item info"><div class="fb-icon">💡</div><div class="fb-text">Analyzing pose...</div></div>';
   setHTML('feedback-list',html);setHTML('feedback-list-m',html);
-  if(feedback.some(f=>f.severity==='error')){
-    state.corrections++;setEl('stat-alerts',state.corrections);setEl('stat-alerts-m',state.corrections);
-  }
+  if(feedback.some(f=>f.severity==='error')){state.corrections++;setEl('stat-alerts',state.corrections);setEl('stat-alerts-m',state.corrections);}
 }
 function updateAnglesStrip(angles){
   const entries=Object.entries(angles).slice(0,4);
@@ -543,7 +643,7 @@ function updateFormScore(score,breakdown){
   const sba=document.getElementById('sb-balance');if(sba) sba.style.width=Math.round(d.balance)+'%';
 }
 function updateAlertBanner(feedback){
-  const banner=document.getElementById('alert-banner');const text=document.getElementById('alert-text');const icon=document.getElementById('alert-icon');
+  const banner=document.getElementById('alert-banner'),text=document.getElementById('alert-text'),icon=document.getElementById('alert-icon');
   if(!feedback.length||!banner) return;
   const top=feedback[0];const icons={success:'✅',warning:'⚠️',error:'🚨',info:'⚡'};
   text.textContent=top.msg;icon.textContent=icons[top.severity]||'⚡';banner.className='alert-banner '+top.severity;
@@ -578,20 +678,15 @@ function saveSession(){
   const session={id:Date.now(),exercise:state.exercise,exerciseName:EXERCISES[state.exercise]?.name||state.exercise,score:state.bestScore,reps:state.repCount,duration:elapsed,date:new Date().toLocaleDateString(),time:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})};
   db.sessions.unshift(session);if(db.sessions.length>50) db.sessions.pop();
   db.totalSessions++;db.totalReps=Math.max(db.totalReps,state.totalReps);
-  // Streak
   const today=new Date().toDateString();
   if(db.lastDate!==today){
     const yesterday=new Date(Date.now()-86400000).toDateString();
     db.streak=db.lastDate===yesterday?db.streak+1:1;
     db.lastDate=today;
   }
-  // Exercise tried
   if(!db.exercisesTried.includes(state.exercise)){db.exercisesTried.push(state.exercise);}
-  saveStorage(db);
-  updateStreakUI();
-  checkAchievements();
+  saveStorage(db);updateStreakUI();checkAchievements();
 }
-
 function renderHistoryList(targetId){
   const el=document.getElementById(targetId);if(!el) return;
   if(!db.sessions.length){el.innerHTML='<div class="log-empty">No sessions yet</div>';return;}
@@ -602,7 +697,6 @@ function renderHistoryList(targetId){
     return`<div class="history-item"><div class="hist-icon">${icons[s.exercise]||'🏋️'}</div><div class="hist-info"><div class="hist-exercise">${s.exerciseName}</div><div class="hist-meta">${s.date} · ${s.time} · ${s.reps} reps · ${m}:${String(sec).padStart(2,'0')}</div></div><div style="text-align:right"><div class="hist-score">${s.score}%</div><div class="hist-grade">${grade}</div></div></div>`;
   }).join('');
 }
-
 function renderHistoryChart(canvasId){
   const canvas=document.getElementById(canvasId);if(!canvas) return;
   const scores=db.sessions.slice(0,10).reverse().map(s=>s.score);
@@ -614,36 +708,27 @@ function renderHistoryChart(canvasId){
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},y:{min:0,max:100,ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}}}}
   });
 }
-
-function openHistory(){
-  renderHistoryList('history-list');
-  renderHistoryChart('history-chart');
-  document.getElementById('history-modal').style.display='flex';
-}
-function closeHistory(){document.getElementById('history-modal').style.display='none';}
-function clearHistory(){if(confirm('Clear all session history?')){db.sessions=[];saveStorage(db);renderHistoryList('history-list');showToast('History cleared');}}
+function openHistory(){ renderHistoryList('history-list'); renderHistoryChart('history-chart'); document.getElementById('history-modal').style.display='flex'; }
+function closeHistory(){ document.getElementById('history-modal').style.display='none'; }
+function clearHistory(){ if(confirm('Clear all session history?')){ db.sessions=[]; saveStorage(db); renderHistoryList('history-list'); showToast('History cleared'); } }
 
 // ── ACHIEVEMENTS ───────────────────────────────────────────────────
 function checkAchievements(){
   const stats={totalReps:db.totalReps,bestScore:state.bestScore,streak:db.streak,fastestSet:db.fastestSet,exercisesTried:db.exercisesTried.length,aiCoachUses:db.aiCoachUses,hasRecorded:db.hasRecorded,hasShared:db.hasShared,totalSessions:db.totalSessions};
   ACHIEVEMENTS_DEF.forEach(ach=>{
     if(!db.unlockedAchievements.includes(ach.id)&&ach.check(stats)){
-      db.unlockedAchievements.push(ach.id);saveStorage(db);
-      showAchievementPopup(ach);
+      db.unlockedAchievements.push(ach.id);saveStorage(db);showAchievementPopup(ach);
     }
   });
   renderAchievements();
 }
-
 function showAchievementPopup(ach){
   const popup=document.getElementById('ach-popup');
   document.getElementById('ach-pop-icon').textContent=ach.icon;
   document.getElementById('ach-pop-name').textContent=ach.name;
-  popup.classList.add('show');
-  playSuccessSound();
+  popup.classList.add('show');playSuccessSound();
   setTimeout(()=>popup.classList.remove('show'),3500);
 }
-
 function renderAchievements(){
   ['achievements-grid','achievements-grid-m'].forEach(id=>{
     const el=document.getElementById(id);if(!el) return;
@@ -662,15 +747,10 @@ function renderPrograms(){
       const prog=db.programProgress[p.id]||0;
       const pct=Math.round((prog/(p.weeks*7))*100);
       const isActive=db.activeProgram===p.id;
-      return`<div class="prog-card${isActive?' active-prog':''}" onclick="selectProgram('${p.id}')">
-        <div class="prog-header"><span class="prog-name" style="color:${p.color}">${p.name}</span><span class="prog-week">${p.weeks}wk</span></div>
-        <div class="prog-desc">${p.desc}</div>
-        <div class="prog-progress"><div class="prog-progress-fill" style="width:${pct}%;background:${p.color}"></div></div>
-      </div>`;
+      return`<div class="prog-card${isActive?' active-prog':''}" onclick="selectProgram('${p.id}')"><div class="prog-header"><span class="prog-name" style="color:${p.color}">${p.name}</span><span class="prog-week">${p.weeks}wk</span></div><div class="prog-desc">${p.desc}</div><div class="prog-progress"><div class="prog-progress-fill" style="width:${pct}%;background:${p.color}"></div></div></div>`;
     }).join('');
   });
 }
-
 function selectProgram(id){
   db.activeProgram=db.activeProgram===id?null:id;
   saveStorage(db);renderPrograms();
@@ -688,7 +768,7 @@ function renderProfiles(){
     el.innerHTML=db.profiles.map(p=>`<div class="profile-chip${p.id===db.activeProfile?' active-profile':''}" onclick="switchProfile('${p.id}')"><span class="profile-avatar">${p.avatar}</span><span>${p.name}</span></div>`).join('');
   });
 }
-function switchProfile(id){db.activeProfile=id;saveStorage(db);renderProfiles();showToast(`Profile: ${db.profiles.find(p=>p.id===id)?.name}`);}
+function switchProfile(id){ db.activeProfile=id; saveStorage(db); renderProfiles(); showToast(`Profile: ${db.profiles.find(p=>p.id===id)?.name}`); }
 function addProfile(){
   const name=document.getElementById('new-profile-name').value.trim();
   const avatar=document.getElementById('new-profile-avatar').value;
@@ -698,12 +778,9 @@ function addProfile(){
   document.getElementById('new-profile-name').value='';
   showToast(`Profile "${name}" created!`);
 }
-function openProfiles(){renderProfiles();document.getElementById('profiles-modal').style.display='flex';}
-function closeProfiles(){document.getElementById('profiles-modal').style.display='none';}
-
-function updateStreakUI(){
-  setEl('streak-desktop',db.streak+'🔥');
-}
+function openProfiles(){ renderProfiles(); document.getElementById('profiles-modal').style.display='flex'; }
+function closeProfiles(){ document.getElementById('profiles-modal').style.display='none'; }
+function updateStreakUI(){ setEl('streak-desktop',db.streak+'🔥'); }
 
 // ── SHARE CARD ─────────────────────────────────────────────────────
 function openShareCard(){
@@ -717,32 +794,28 @@ function openShareCard(){
   document.getElementById('share-modal').style.display='flex';
   db.hasShared=true;saveStorage(db);checkAchievements();
 }
-function closeShareCard(){document.getElementById('share-modal').style.display='none';}
+function closeShareCard(){ document.getElementById('share-modal').style.display='none'; }
 
 function downloadShareCard(){
-  const card=document.getElementById('share-card');
   const canvas=document.createElement('canvas');
-  canvas.width=600;canvas.height=300;
+  canvas.width=600;canvas.height=320;
   const ctx=canvas.getContext('2d');
-  // Background
-  ctx.fillStyle='#04060f';ctx.fillRect(0,0,600,300);
-  // Grid pattern
+  ctx.fillStyle='#04060f';ctx.fillRect(0,0,600,320);
   ctx.strokeStyle='rgba(0,255,204,0.04)';ctx.lineWidth=1;
-  for(let x=0;x<600;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,300);ctx.stroke();}
-  for(let y=0;y<300;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(600,y);ctx.stroke();}
-  // Border
-  ctx.strokeStyle='rgba(0,255,204,0.3)';ctx.lineWidth=2;ctx.strokeRect(1,1,598,298);
-  // Title
+  for(let x=0;x<600;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,320);ctx.stroke();}
+  for(let y=0;y<320;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(600,y);ctx.stroke();}
+  ctx.strokeStyle='rgba(0,255,204,0.3)';ctx.lineWidth=2;ctx.strokeRect(1,1,598,318);
   ctx.fillStyle='#00ffcc';ctx.font='bold 28px monospace';ctx.textAlign='center';ctx.fillText('⚡ BIOMECH AI',300,60);
-  // Stats
   const stats=[['FORM SCORE',state.bestScore+'%'],[EXERCISES[state.exercise]?.name||'EXERCISE',state.repCount+' REPS'],['DURATION',`${Math.floor((state.startTime?(Date.now()-state.startTime)/1000:0)/60)}m`]];
   stats.forEach(([label,val],i)=>{
     const x=100+i*200;
     ctx.fillStyle='#00ffcc';ctx.font='bold 40px monospace';ctx.textAlign='center';ctx.fillText(val,x,160);
     ctx.fillStyle='#94a3b8';ctx.font='12px monospace';ctx.fillText(label,x,185);
   });
-  ctx.fillStyle='rgba(0,255,204,0.15)';ctx.beginPath();ctx.roundRect(200,210,200,40,20);ctx.fill();
-  ctx.fillStyle='#00ffcc';ctx.font='14px monospace';ctx.textAlign='center';ctx.fillText('biomech-ai.onrender.com',300,235);
+  ctx.fillStyle='rgba(0,255,204,0.15)';ctx.beginPath();ctx.roundRect(180,205,240,36,18);ctx.fill();
+  ctx.fillStyle='#00ffcc';ctx.font='13px monospace';ctx.textAlign='center';ctx.fillText('biomech-ai.onrender.com',300,228);
+  // Copyright watermark
+  ctx.fillStyle='rgba(0,255,204,0.35)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText('© 2026 Krish Joshi · All Rights Reserved',300,295);
   const link=document.createElement('a');
   link.download=`biomech-share-${Date.now()}.png`;
   link.href=canvas.toDataURL('image/png');link.click();
@@ -759,7 +832,7 @@ function startTimer(){
     setEl('hud-timer',t);setEl('stat-time',t);setEl('stat-time-m',t);
   },1000);
 }
-function stopTimer(){if(timerInterval){clearInterval(timerInterval);timerInterval=null;}}
+function stopTimer(){ if(timerInterval){clearInterval(timerInterval);timerInterval=null;} }
 
 // ── SESSION CONTROL ────────────────────────────────────────────────
 async function startSession(){
@@ -781,18 +854,14 @@ async function startSession(){
     document.getElementById('btn-start').disabled=true;
     document.getElementById('btn-stop').disabled=false;
     setHTML('log-list','');
-    startTimer();
-    addLog('Session started','good');
-    showToast('Session Started! 🚀');
-    playSuccessSound();
-    // Update program progress
+    startTimer();addLog('Session started','good');
+    showToast('Session Started! 🚀');playSuccessSound();
     if(db.activeProgram){db.programProgress[db.activeProgram]=(db.programProgress[db.activeProgram]||0)+1;saveStorage(db);renderPrograms();}
   }catch(err){
     showToast('Camera error: '+err.message,'error');
     updateAlertBanner([{msg:'Camera access denied — check permissions',severity:'error'}]);
   }
 }
-
 function stopSession(){
   state.sessionActive=false;
   if(isRecording) stopRecording();
@@ -808,13 +877,9 @@ function stopSession(){
   document.getElementById('btn-stop').disabled=true;
   const pd=document.getElementById('pulse-dot');if(pd) pd.className='pulse-dot';
   const pl=document.getElementById('pulse-label');if(pl){pl.textContent='READY';pl.style.color='';}
-  stopTimer();
-  saveSession();
-  addLog('Session saved','good');
-  // AI summary prompt
+  stopTimer();saveSession();addLog('Session saved','good');
   if(state.repCount>0) showToast(`Session saved! ${state.repCount} reps · ${state.bestScore}% best`);
 }
-
 function resetSession(){
   state.repCount=0;state.repState='up';state.bestScore=100;state.corrections=0;state.formScore=100;
   ['rep-number','rep-number-m'].forEach(id=>setEl(id,'0'));
@@ -838,8 +903,7 @@ function selectExercise(key){
   setEl('hud-exercise',ex.name.toUpperCase());
   ['rep-number','rep-number-m'].forEach(id=>setEl(id,'0'));
   document.getElementById('hdr-reps').textContent='0';
-  updateRepStateUI('up');
-  updateHeatmap(key);
+  updateRepStateUI('up');updateHeatmap(key);
   addLog(`Exercise: ${ex.name}`,'good');
   if(!db.exercisesTried.includes(key)){db.exercisesTried.push(key);saveStorage(db);}
 }
@@ -858,7 +922,7 @@ function openAICoach(){
   setEl('ai-rep-chip',`Reps: ${state.repCount}`);
   document.getElementById('ai-modal').style.display='flex';
 }
-function closeAICoach(){document.getElementById('ai-modal').style.display='none';}
+function closeAICoach(){ document.getElementById('ai-modal').style.display='none'; }
 
 async function runGeminiAnalysis(){
   db.aiCoachUses++;saveStorage(db);checkAchievements();
@@ -898,8 +962,8 @@ Max 280 words. Use anatomical terms.`;
 }
 
 // ── SETTINGS ───────────────────────────────────────────────────────
-function toggleSettings(){const m=document.getElementById('settings-modal');m.style.display=m.style.display==='none'?'flex':'none';}
-function closeSettings(){document.getElementById('settings-modal').style.display='none';}
+function toggleSettings(){ const m=document.getElementById('settings-modal');m.style.display=m.style.display==='none'?'flex':'none'; }
+function closeSettings(){ document.getElementById('settings-modal').style.display='none'; }
 function saveSettings(){
   CONFIG.skeletonStyle=document.getElementById('skeleton-style').value;
   CONFIG.showAngles=document.getElementById('show-angles').checked;
@@ -912,7 +976,7 @@ function saveSettings(){
 }
 
 // ── VOICE SPEECH OUTPUT ────────────────────────────────────────────
-function speak(text){if(!window.speechSynthesis) return;const u=new SpeechSynthesisUtterance(text);u.rate=1.1;u.pitch=1;u.volume=0.8;window.speechSynthesis.speak(u);}
+function speak(text){ if(!window.speechSynthesis) return; const u=new SpeechSynthesisUtterance(text);u.rate=1.1;u.pitch=1;u.volume=0.8;window.speechSynthesis.speak(u); }
 
 // ── ACTIVITY LOG ───────────────────────────────────────────────────
 function addLog(msg,type='good'){
@@ -958,19 +1022,33 @@ function initBackground(){
 }
 
 // ── HELPERS ────────────────────────────────────────────────────────
-function setEl(id,val){const e=document.getElementById(id);if(e) e.textContent=val;}
-function setHTML(id,html){const e=document.getElementById(id);if(e) e.innerHTML=html;}
+function setEl(id,val){ const e=document.getElementById(id);if(e) e.textContent=val; }
+function setHTML(id,html){ const e=document.getElementById(id);if(e) e.innerHTML=html; }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-// ── INIT ───────────────────────────────────────────────────────────
+// ── SETTINGS SLIDER INIT ───────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
   const sl=document.getElementById('conf-slider'),vl=document.getElementById('conf-val');
   if(sl&&vl) sl.addEventListener('input',()=>{vl.textContent=sl.value+'%';});
 });
 
-async function initApp(){
-  initBackground();
-  const fill=document.getElementById('loading-fill'),loadTxt=document.getElementById('loading-text');
-  const ssTf=document.getElementById('ss-tf'),ssMp=document.getElementById('ss-mp'),ssCam=document.getElementById('ss-cam');
+// ══════════════════════════════════════════════════════════════════
+//  APP INIT SEQUENCE
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * Called after login (Google or guest).
+ * Shows the splash loading screen, then reveals the app.
+ */
+async function launchSplash(){
+  const splash=document.getElementById('splash');
+  const fill=document.getElementById('loading-fill');
+  const loadTxt=document.getElementById('loading-text');
+  const ssTf=document.getElementById('ss-tf');
+  const ssMp=document.getElementById('ss-mp');
+  const ssCam=document.getElementById('ss-cam');
+
+  splash.style.display='flex';
 
   loadTxt.textContent='Loading libraries...';fill.style.width='15%';await sleep(400);ssTf.textContent='✓';
   loadTxt.textContent='Loading Gemini key...';fill.style.width='35%';
@@ -982,10 +1060,39 @@ async function initApp(){
   loadTxt.textContent='Checking Camera...';fill.style.width='85%';
   try{const d=await navigator.mediaDevices.enumerateDevices();ssCam.textContent=d.filter(x=>x.kind==='videoinput').length+'✓';}catch(e){ssCam.textContent='?';}
   await sleep(400);
-  loadTxt.textContent='System Ready!';fill.style.width='100%';await sleep(500);
-  document.getElementById('splash').classList.add('hidden');
+  loadTxt.textContent='Welcome, '+(db.googleUser?.given||'Athlete')+'!';fill.style.width='100%';await sleep(600);
+
+  splash.classList.add('hidden');
+  setTimeout(()=>{ splash.style.display='none'; },800);
+
   document.getElementById('app').classList.remove('hidden');
+  updateUserPill();
 }
 
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+/**
+ * Entry point — check if user is already signed in from a previous session.
+ * If yes: skip login screen and go straight to splash.
+ * If no: show login screen (Google Sign-In button).
+ */
+async function initApp(){
+  initBackground();
+
+  // If Google user already exists in storage, skip login
+  if(db.googleUser && db.googleUser.sub){
+    document.getElementById('login-screen').classList.add('hidden');
+    setTimeout(()=>{ document.getElementById('login-screen').style.display='none'; },0);
+    await launchSplash();
+    return;
+  }
+
+  // Wait for Google GSI library to load, then show fallback if needed
+  setTimeout(()=>{
+    if(!document.querySelector('.g_id_signin iframe')){
+      const fb=document.getElementById('google-fallback-btn');
+      if(fb) fb.style.display='flex';
+    }
+  }, 3000);
+}
+
+// Kick everything off
 initApp();
