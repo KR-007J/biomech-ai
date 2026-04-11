@@ -104,7 +104,8 @@ let state = {
   formScore:100, bestScore:100, totalReps:0, corrections:0,
   startTime:null, lastAngles:{}, lastFeedback:[], frameCount:0,
   lastFpsTime:Date.now(), fps:0, pose:null, camera:null,
-  videoEl:null, canvasEl:null, ctx:null, geminiKey:'',
+  videoEl:null, canvasEl:null, ctx:null, 
+  geminiKey:'AIzaSyA5SJlaYS1PNy0B9DLKi5hcLWrTxzm_XWI', // Hardcoded personal key for college project
   scoreBreakdown:{depth:100,alignment:100,balance:100},
   scoreHistory:[], repTimestamps:[], sessionStartReps:0,
   // Camera state
@@ -1130,18 +1131,23 @@ function takeScreenshot(){
 
 // ── AI COACH ───────────────────────────────────────────────────────
 function openAICoach(){
-  setEl('ai-ex-chip',`Exercise: ${EXERCISES[state.exercise]?.name||'—'}`);
-  setEl('ai-score-chip',`Score: ${state.formScore}%`);
-  setEl('ai-rep-chip',`Reps: ${state.repCount}`);
-  document.getElementById('ai-modal').style.display='flex';
+  const m=document.getElementById('ai-modal');
+  if(!m) return;
+  m.style.display='flex';
+  const ex = EXERCISES[state.exercise]||{name:state.exercise};
+  setHTML('ai-ex-chip', `Exercise: ${ex.name}`);
+  setHTML('ai-score-chip', `Score: ${state.formScore}%`);
+  setHTML('ai-rep-chip', `Reps: ${state.repCount}`);
 }
 function closeAICoach(){ document.getElementById('ai-modal').style.display='none'; }
+
 
 async function runGeminiAnalysis(){
   db.aiCoachUses++;saveStorage(db);checkAchievements();
   const area=document.getElementById('ai-response-area'),btn=document.getElementById('ai-analyze-btn');
   btn.disabled=true;
-  setHTML('ai-response-area',`<div class="ai-loading-wrap"><div class="ai-spinner"></div><div class="ai-loading-text">GEMINI ANALYZING...</div></div>`);
+  setHTML('ai-response-area',`<div class="ai-loading-wrap" style="text-align:center;padding:40px;"><div class="ai-spinner" style="border:3px solid rgba(255,255,255,0.1);border-top:3px solid var(--cyan);border-radius:50%;width:30px;height:30px;animation:spin 1s linear infinite;margin:0 auto 10px;"></div><div class="ai-loading-text" style="color:var(--cyan);font-family:'Michroma',sans-serif;font-size:0.7rem;">GEMINI ANALYZING...</div></div>`);
+  
   const ex=EXERCISES[state.exercise]||{};
   const prompt=`You are an elite AI biomechanical coach.
 Exercise: ${ex.name||state.exercise} | Score: ${state.formScore}/100 | Reps: ${state.repCount}
@@ -1157,9 +1163,22 @@ Respond concisely:
 **MOTIVATIONAL PUSH** (one energetic sentence)
 
 Max 280 words. Use anatomical terms.`;
+
   try{
-    const resp=await fetch('https://ezpduovdfwccncobomlw.supabase.co/functions/v1/gemini-proxy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
-    if(!resp.ok){const e=await resp.json();throw new Error(e?.error?.message||e?.error||`HTTP ${resp.status}`);}
+    // Using direct Google Gemini API with the hardcoded key
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiKey}`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+
+    if(!resp.ok){
+      const e=await resp.json();
+      throw new Error(e?.error?.message||e?.error||`HTTP ${resp.status}`);
+    }
     const data=await resp.json();
     const text=data?.candidates?.[0]?.content?.parts?.[0]?.text||'No response.';
     
@@ -1173,13 +1192,61 @@ Max 280 words. Use anatomical terms.`;
     }
 
     const formatted=text.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#a78bfa;font-family:\'Michroma\',monospace;font-size:11px;letter-spacing:2px;">$1</strong>').replace(/\n/g,'<br>');
-    setHTML('ai-response-area',`<div class="ai-text">${formatted}</div>`);
+    setHTML('ai-response-area',`<div class="ai-text" style="animation:fadeIn 0.5s ease-out;">${formatted}</div>`);
     addLog('AI Analysis complete','good');playSuccessSound();
   }catch(err){
-    setHTML('ai-response-area',`<div class="ai-text" style="color:#f87171;">❌ ${err.message}</div>`);
+    setHTML('ai-response-area',`<div class="ai-text" style="color:#f87171;padding:20px;text-align:center;">❌ ${err.message}<br><small style="opacity:0.6;font-size:0.6rem;">Double check the hardcoded Gemini API key is active.</small></div>`);
     showToast('AI Error: ' + err.message, 'error');
   }
   finally{btn.disabled=false;}
+}
+
+async function generatePerformanceReport() {
+  const btn = document.getElementById('ai-report-btn');
+  btn.disabled = true;
+  setHTML('ai-response-area', `<div class="ai-loading-wrap" style="text-align:center;padding:40px;"><div class="ai-spinner" style="border:3px solid rgba(255,255,255,0.1);border-top:3px solid var(--purple);border-radius:50%;width:30px;height:30px;animation:spin 1s linear infinite;margin:0 auto 10px;"></div><div class="ai-loading-text" style="color:var(--purple);font-family:'Michroma',sans-serif;font-size:0.7rem;">GENERATING PERFORMANCE AUDIT...</div></div>`);
+
+  const summaryData = {
+    totalReps: db.totalReps,
+    totalSessions: db.sessions.length,
+    streak: db.streak,
+    topExercise: Object.entries(db.programProgress).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'None',
+    recentScores: db.sessions.slice(-5).map(s=>s.score),
+    unlockedAchievements: db.unlockedAchievements.length
+  };
+
+  const prompt = `Generate a high-level Athletic Performance Report for the user.
+Data: ${JSON.stringify(summaryData)}
+User Identity: ${db.googleUser ? db.googleUser.name : 'Guest'}
+
+Structure:
+**ATHLETIC AUDIT SUMMARY** (Professional analysis of their effort)
+**KEY STRENGTHS** (Based on streaks/reps)
+**AREAS FOR IMPROVEMENT** (Constructive)
+**NEXT 7-DAY GOAL** (Specific, challenging)
+**COACH'S VERDICT** (One powerful concluding sentence)
+
+Keep it elite, motivational, and technical.`;
+
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiKey}`;
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    
+    const data = await resp.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate report.';
+    const formatted = text.replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--purple);font-family:\'Michroma\',monospace;font-size:11px;">$1</strong>').replace(/\n/g,'<br>');
+    
+    setHTML('ai-response-area', `<div class="ai-report-wrap" style="color:#e2e8f0;padding:5px;">${formatted}</div>`);
+    showToast('Performance Report Generated! 📈');
+  } catch(err) {
+    setHTML('ai-response-area', `<div style="color:#f87171;text-align:center;padding:20px;">Failed to generate report: ${err.message}</div>`);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ── SETTINGS ───────────────────────────────────────────────────────
@@ -1213,13 +1280,6 @@ function saveSettings(){
   CONFIG.audioCues=document.getElementById('audio-cues').checked;
   const conf=parseInt(document.getElementById('conf-slider').value);
   CONFIG.minDetectionConf=conf/100;CONFIG.minTrackingConf=conf/100;
-  
-  // Save Gemini key
-  const keyInput = document.getElementById('gemini-key');
-  if (keyInput) {
-    state.geminiKey = keyInput.value.trim();
-    db.geminiKey = state.geminiKey; // Persist in db
-  }
   
   saveStorage(db);
   closeSettings();

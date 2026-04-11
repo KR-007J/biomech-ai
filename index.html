@@ -837,26 +837,24 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
       <!-- Consolidating Camera HUD into Action Dock -->
       <div class="action-dock">
         <button class="dock-btn start" id="btn-start" onclick="startSession()">
-          <span class="ctrl-icon">▶</span> START
-        </button>
-        <button class="dock-btn stop" id="btn-stop" onclick="stopSession()" disabled style="display:none;">
-          <span class="ctrl-icon">⏹</span> STOP
-        </button>
-        <div class="dock-divider"></div>
-        
-        <!-- Integrated Camera HUD -->
-        <button class="dock-btn-icon" id="btn-mirror" onclick="toggleMirror()" title="Flip Camera">🪞</button>
-        <button class="dock-btn-icon" id="btn-expand" onclick="toggleCameraExpand()" title="Expand Display">⊞</button>
-        <button class="dock-btn-icon" id="btn-guide" onclick="toggleHelp()" title="Setup Guide">❓</button>
-        <div class="dock-divider"></div>
-        <button class="dock-btn-icon" onclick="adjustZoom(0.1)" title="Zoom In">➕</button>
-        <button class="dock-btn-icon" onclick="adjustZoom(-0.1)" title="Zoom Out">➖</button>
+      <div class="action-dock">
+        <div class="dock-group">
+          <button id="btn-start" class="dock-btn primary" onclick="startSession()">
+            <span class="ctrl-icon">▶</span> START
+          </button>
+          <button id="btn-stop" class="dock-btn danger" onclick="stopSession()" disabled>
+            <span class="ctrl-icon">⏹</span> STOP
+          </button>
+        </div>
         
         <div class="dock-divider"></div>
-        <button class="dock-btn-icon ai" onclick="runGeminiAnalysis()" title="AI Form Coach">🤖</button>
-        <button class="dock-btn-icon" id="btn-voice" onclick="toggleVoiceCommands()" title="Voice Commands">🎙</button>
-        <button class="dock-btn-icon" id="btn-record" onclick="toggleRecording()" title="Record Video">⏺</button>
-        <button class="dock-btn-icon" onclick="toggleSettings()" title="Settings">⚙</button>
+        
+        <div class="dock-group">
+          <button class="dock-btn-icon" onclick="adjustZoom(0.1)" title="Zoom In">🔍+</button>
+          <button class="dock-btn-icon" onclick="adjustZoom(-0.1)" title="Zoom Out">🔍-</button>
+          <button class="dock-btn-icon ai" onclick="openAICoach()" title="AI Form Coach">🤖</button>
+          <button class="dock-btn-icon" onclick="toggleSettings()" title="Settings">⚙</button>
+        </div>
       </div>
 
       <!-- Voice status -->
@@ -1058,7 +1056,7 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
 
   <!-- FOOTER -->
   <footer class="app-footer">
-    <div class="footer-brand">⚡ BIOMECH AI v3.1</div>
+    <div class="footer-brand">⚡ BIOMECH AI v3.2.0</div>
     <div class="footer-copy">© 2026 <span>Krish Joshi & Omrajsinh Sisodiya</span> · All Rights Reserved</div>
     <div class="footer-links">
       <a class="footer-link" href="#">Privacy</a>
@@ -1068,6 +1066,37 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
       <a class="footer-link" href="#">Support</a>
     </div>
   </footer>
+
+  <!-- AI COACH MODAL -->
+  <div id="ai-modal" class="modal-overlay" style="display:none;" onclick="closeAICoach()">
+    <div class="modal-box ai-coach-card" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title"><span>✨ AI FORM COACH</span></div>
+        <button class="modal-close" onclick="closeAICoach()">✕</button>
+      </div>
+      
+      <div class="ai-stats-bar" style="display:flex;gap:10px;margin-bottom:15px;">
+        <div id="ai-ex-chip" class="ai-chip" style="background:rgba(0,255,204,0.1);padding:5px 10px;border-radius:15px;font-size:0.7rem;border:1px solid var(--cyan)">Exercise: -</div>
+        <div id="ai-score-chip" class="ai-chip" style="background:rgba(167,139,250,0.1);padding:5px 10px;border-radius:15px;font-size:0.7rem;border:1px solid #a78bfa">Score: 0%</div>
+        <div id="ai-rep-chip" class="ai-chip" style="background:rgba(255,107,53,0.1);padding:5px 10px;border-radius:15px;font-size:0.7rem;border:1px solid #ff6b35">Reps: 0</div>
+      </div>
+
+      <div id="ai-response-area" class="ai-response-area" style="min-height:200px;background:rgba(0,0,0,0.3);border-radius:10px;padding:15px;overflow-y:auto;font-size:0.85rem;line-height:1.5;">
+        <div class="ai-placeholder-text" style="color:rgba(255,255,255,0.4);text-align:center;margin-top:80px;">
+          Ready to analyze your last set. Click the button below for biomechanical insights.
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display:flex;gap:10px;margin-top:20px;">
+        <button id="ai-analyze-btn" class="modal-save" onclick="runGeminiAnalysis()" style="flex:1;">
+           RUN ANALYSIS
+        </button>
+        <button id="ai-report-btn" class="modal-save" onclick="generatePerformanceReport()" style="flex:1;background:var(--purple);">
+           GENERATE REPORT
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- SETTINGS MODAL -->
@@ -1081,11 +1110,6 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
       <div class="setting-group"><label class="setting-label">Show Skeleton</label><div class="toggle-wrap"><input type="checkbox" id="show-skeleton" class="toggle-input" checked/><label class="toggle-label" for="show-skeleton"></label></div></div>
       <div class="setting-group"><label class="setting-label">Voice Feedback (rep counting)</label><div class="toggle-wrap"><input type="checkbox" id="voice-feedback" class="toggle-input"/><label class="toggle-label" for="voice-feedback"></label></div></div>
       <div class="setting-group"><label class="setting-label">Audio Cues (beep on rep/error)</label><div class="toggle-wrap"><input type="checkbox" id="audio-cues" class="toggle-input" checked/><label class="toggle-label" for="audio-cues"></label></div></div>
-      <div class="setting-group" style="flex-direction:column;align-items:flex-start;gap:0.5rem">
-        <label class="setting-label">Gemini AI API Key</label>
-        <input type="password" class="setting-input" id="gemini-key" placeholder="Enter Gemini Pro API Key..." style="width:100%;font-size:0.7rem"/>
-        <p style="font-size:0.55rem;color:rgba(255,255,255,0.4);margin:0">Key is stored locally in your browser only.</p>
-      </div>
     </div>
     <div class="modal-footer"><button class="modal-save" onclick="saveSettings()">SAVE SETTINGS</button></div>
   </div>
@@ -1143,6 +1167,6 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-<script src="static/js/biomech.js?v=3.1.5"></script>
+<script src="static/js/biomech.js?v=3.2.0"></script>
 </body>
 </html>
