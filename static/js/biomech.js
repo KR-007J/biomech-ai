@@ -105,7 +105,7 @@ let state = {
   startTime:null, lastAngles:{}, lastFeedback:[], frameCount:0,
   lastFpsTime:Date.now(), fps:0, pose:null, camera:null,
   videoEl:null, canvasEl:null, ctx:null, 
-  geminiKey:'AIzaSyAaDWwOUB-8IJ8lxuydM-qegzUywyUyoTA', // Hardcoded personal key for college project
+  geminiKey: window.BIOMECH_CONFIG?.GEMINI_KEY || '', // Loaded from secrets.js (ignored by git)
   scoreBreakdown:{depth:100,alignment:100,balance:100},
   scoreHistory:[], repTimestamps:[], sessionStartReps:0,
   // Camera state

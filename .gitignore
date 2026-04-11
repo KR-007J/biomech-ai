@@ -3,3 +3,4 @@ node_modules/
 .firebaserc
 package-lock.json
 *.log
+static/js/secrets.js
