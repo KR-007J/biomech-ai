@@ -10,16 +10,15 @@ Works in any browser. Fully hosted on **Firebase** — **no server-side webcam p
 | Feature | Details |
 |---------|---------|
 | 🦴 **Skeleton Tracking** | MediaPipe Pose — 33 body landmarks at 30fps |
-| 📐 **Cosine Rule Engine** | Real-time joint angle calculation via Law of Cosines |
+| 📐 **Cosine Rule Engine** | Real-time joint angle calculation |
 | 🎯 **7 Exercises** | Squat, Push-Up, Lunge, Plank, Bicep Curl, Shoulder Press, Deadlift |
-| 🔢 **Rep Counter** | Auto-counting with state detection (up/down) |
-| 🔍 **Digital Zoom** | Manual +/- zoom and pinch-to-zoom support for better tracking |
-| 📊 **Form Score** | Weighted multi-checkpoint scoring with letter grade |
-| 🎨 **4 Skeleton Styles** | Neon Teal, Fire Orange, Matrix Green, Holographic Purple |
-| 🤖 **Gemini AI** | Real-time AI biomechanical coaching analysis |
+| 🔢 **Rep Counter** | Auto-counting with state detection |
+| 🔍 **Digital Zoom** | manual +/- and pinch-to-zoom support |
+| 📊 **AI Audit Report** | **[NEW]** Generate full performance audit reports using Gemini AI |
+| 🤖 **Hardcoded AI** | Seamless experience — Gemini key integrated for project demo |
 | 📸 **Screenshot** | Capture annotated pose snapshot |
 | 🔊 **Voice Feedback** | Hands-free commands and optional rep counting |
-| 💾 **Cloud Sync** | Profile and session history synced via Supabase |
+| 💾 **Cloud Sync** | Session history synced via Supabase |
 
 ---
 
@@ -42,12 +41,12 @@ npx serve . -p 5000
 
 ---
 
-## 🤖 Gemini AI Setup
+## 🤖 Gemini AI Integration
 
-1. Go to **https://aistudio.google.com**
-2. Click **"Get API Key"** → Create free key
-3. In the app, click **⚙ Settings** → paste your key
-4. Key is stored locally in your browser's `localStorage` and is never sent to any server except Google's AI endpoint.
+The system is now pre-configured for **BioMech AI 3.2.0**.
+- **Internal Key Management:** Gemini API key is hardcoded into the build for the personal project demo.
+- **Form Analysis:** Real-time form assessment with anatomical reasoning.
+- **Performance Audit:** Click the `GENERATE REPORT` button in the AI modal for a deep-dive analysis of your entire session history.
 
 ---
 
@@ -68,7 +67,7 @@ The project is optimized for **Firebase Hosting**.
 
 ---
 
-## 📐 Mathematical Engine — Law of Cosines
+## 📏 Mathematical Engine — Law of Cosines
 
 For three body landmarks A, B, C:
 `B = arccos((AB² + BC² - AC²) / (2 · AB · BC))`
@@ -104,4 +103,4 @@ MIT License — free to use, modify, and distribute.
 
 ---
 
-*Built with ❤️ | BioMech AI v3.1 | Science-Based Training*
+*Built with ❤️ | BioMech AI v3.2.0 | Science-Based Training*
