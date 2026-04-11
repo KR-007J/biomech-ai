@@ -105,7 +105,7 @@ let state = {
   startTime:null, lastAngles:{}, lastFeedback:[], frameCount:0,
   lastFpsTime:Date.now(), fps:0, pose:null, camera:null,
   videoEl:null, canvasEl:null, ctx:null, 
-  geminiKey:'AIzaSyA5SJlaYS1PNy0B9DLKi5hcLWrTxzm_XWI', // Hardcoded personal key for college project
+  geminiKey:'AIzaSyAE7FGde0OUDMhrp421-u4XtBPyzRxq_CI', // Hardcoded personal key for college project
   scoreBreakdown:{depth:100,alignment:100,balance:100},
   scoreHistory:[], repTimestamps:[], sessionStartReps:0,
   // Camera state
