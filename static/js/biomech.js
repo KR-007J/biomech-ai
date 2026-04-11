@@ -967,7 +967,7 @@ function downloadShareCard(){
     ctx.fillStyle='#94a3b8';ctx.font='12px monospace';ctx.fillText(label,x,185);
   });
   ctx.fillStyle='rgba(0,255,204,0.15)';ctx.beginPath();ctx.roundRect(180,205,240,36,18);ctx.fill();
-  ctx.fillStyle='#00ffcc';ctx.font='13px monospace';ctx.textAlign='center';ctx.fillText('abyssal-mobile.web.app',300,228);
+  ctx.fillStyle='#00ffcc';ctx.font='13px monospace';ctx.textAlign='center';ctx.fillText('ai-biomech.web.app',300,228);
   ctx.fillStyle='rgba(0,255,204,0.35)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText('© 2026 Krish Joshi · All Rights Reserved',300,295);
   const link=document.createElement('a');
   link.download=`biomech-share-${Date.now()}.png`;
