@@ -4,7 +4,7 @@ import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.1/firebase
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBJOJIOpr7Eydqf644R3e8YxiFbSmpbm7Q",
+  apiKey: "AIzaSyAaDWwOUB-8IJ8lxuydM-qegzUywyUyoTA",
   authDomain: "ai-biomech.firebaseapp.com",
   projectId: "ai-biomech",
   storageBucket: "ai-biomech.firebasestorage.app",
