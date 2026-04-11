@@ -1,0 +1,23 @@
+{
+  "name": "ai-biomech",
+  "version": "1.0.0",
+  "description": "**Client-side** AI fitness coach powered by **MediaPipe Pose** + **Gemini 2.5 Flash**. \r Works in any browser. Deployable on Render, GitHub Pages, Netlify — **no server-side webcam processing needed**.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KR-007J/biomech-ai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KR-007J/biomech-ai/issues"
+  },
+  "homepage": "https://github.com/KR-007J/biomech-ai#readme",
+  "dependencies": {
+    "firebase": "^12.12.0"
+  }
+}

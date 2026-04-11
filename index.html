@@ -9,6 +9,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,100;0,300;0,400;0,600;0,700;0,900;1,400&family=Share+Tech+Mono&family=Michroma&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module" src="static/js/firebase-init.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -315,43 +317,82 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
 .dist-line{width:16px;height:1px;background:var(--cyan)}
 .dist-label{font-family:var(--font-mono);font-size:0.5rem;color:var(--cyan)}
 
-/* ══ CONTROLS BAR ══ */
-.controls-bar{display:flex;gap:0.4rem;flex-wrap:wrap}
-.ctrl-btn{flex:1;min-width:60px;display:flex;flex-direction:column;align-items:center;gap:0.2rem;padding:0.5rem 0.3rem;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:8px;cursor:pointer;color:var(--text2);font-family:var(--font-main);transition:all 0.2s;position:relative;overflow:hidden}
-.ctrl-btn:hover{background:rgba(0,255,204,0.08);border-color:rgba(0,255,204,0.25);color:var(--cyan)}
-.ctrl-btn:disabled{opacity:0.4;cursor:not-allowed}
-.ctrl-btn.start{border-color:rgba(0,255,204,0.3);color:var(--cyan)}
-.ctrl-btn.start:not(:disabled):hover{background:rgba(0,255,204,0.15);box-shadow:0 0 15px rgba(0,255,204,0.2)}
-.ctrl-btn.stop{border-color:rgba(239,68,68,0.3);color:var(--red)}
-.ctrl-btn.stop:not(:disabled):hover{background:rgba(239,68,68,0.1)}
-.ctrl-btn.ai{border-color:rgba(167,139,250,0.3);color:var(--purple2)}
-.ctrl-btn.ai:hover{background:rgba(167,139,250,0.1)}
-.ctrl-btn.rec-active{border-color:rgba(239,68,68,0.5);color:var(--red);background:rgba(239,68,68,0.08)}
-.ctrl-btn.voice-active{border-color:rgba(16,185,129,0.5);color:var(--green);background:rgba(16,185,129,0.08)}
-.ctrl-icon{font-size:1rem}
-.ctrl-label{font-size:0.5rem;letter-spacing:1px;font-weight:600}
-.btn-glow{position:absolute;inset:0;background:radial-gradient(circle at center,rgba(0,255,204,0.1),transparent);opacity:0;transition:opacity 0.3s}
-.ctrl-btn.start:not(:disabled):hover .btn-glow{opacity:1}
-.btn-pulse-ring{position:absolute;inset:0;border-radius:8px;animation:ringPulse 2s ease-in-out infinite}
-@keyframes ringPulse{0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0)}50%{box-shadow:0 0 0 4px rgba(167,139,250,0.15)}}
-
-/* ══ ANGLES ══ */
-.angles-strip{display:flex;gap:0.35rem;flex-wrap:wrap}
-.angle-chip{flex:1;min-width:70px;display:flex;flex-direction:column;align-items:center;gap:0.15rem;padding:0.35rem 0.3rem;background:rgba(8,12,26,0.8);border:1px solid var(--border2);border-radius:8px}
-.angle-chip.good{border-color:rgba(16,185,129,0.3)}.angle-chip.warn{border-color:rgba(245,158,11,0.3)}.angle-chip.bad{border-color:rgba(239,68,68,0.3)}
-.ac-name{font-size:0.55rem;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
-.ac-val{font-family:var(--font-mono);font-size:0.85rem;color:var(--cyan)}
-.angle-chip.good .ac-val{color:var(--green)}.angle-chip.warn .ac-val{color:var(--amber)}.angle-chip.bad .ac-val{color:var(--red)}
-
-/* ══ METRONOME ══ */
-.metronome-bar{display:flex;align-items:center;gap:0.5rem;background:rgba(0,0,0,0.2);border:1px solid var(--border2);border-radius:8px;padding:0.35rem 0.6rem}
-.metro-label{font-family:var(--font-mono);font-size:0.6rem;color:var(--text2)}
-.metro-beat{display:flex;gap:0.2rem}
-.metro-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.1);transition:all 0.1s}
-.metro-dot.beat{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
-.metro-bpm{font-family:var(--font-mono);font-size:0.65rem;color:var(--cyan)}
-.metro-btn{background:none;border:none;cursor:pointer;font-size:0.9rem;color:var(--text2);transition:color 0.2s}
-.metro-btn:hover{color:var(--cyan)}
+/* ══ ACTION DOCK ══ */
+.action-dock {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(8,12,26,0.85);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0.5rem;
+  margin: 0.5rem auto 0;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  width: max-content;
+}
+.dock-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.2rem;
+  border-radius: 14px;
+  font-family: var(--font-hud);
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+.dock-btn.start {
+  background: rgba(0,255,204,0.1);
+  border-color: rgba(0,255,204,0.3);
+  color: var(--cyan);
+}
+.dock-btn.start:hover {
+  background: rgba(0,255,204,0.2);
+  box-shadow: 0 0 15px rgba(0,255,204,0.2);
+}
+.dock-btn.stop {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.3);
+  color: var(--red);
+}
+.dock-btn.stop:hover {
+  background: rgba(239,68,68,0.2);
+  box-shadow: 0 0 15px rgba(239,68,68,0.2);
+}
+.dock-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border2);
+  margin: 0 0.2rem;
+}
+.dock-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.dock-btn-icon:hover {
+  background: rgba(255,255,255,0.08);border-color: rgba(255,255,255,0.2);color: #fff;
+}
+.dock-btn-icon.ai {
+  color: var(--purple2);border-color: rgba(167,139,250,0.3);
+}
+.dock-btn-icon.ai:hover {
+  background: rgba(167,139,250,0.15);box-shadow: 0 0 12px rgba(167,139,250,0.3);
+}
+.dock-btn-icon.rec-active{border-color:rgba(239,68,68,0.5);color:var(--red);background:rgba(239,68,68,0.08)}
+.dock-btn-icon.voice-active{border-color:rgba(16,185,129,0.5);color:var(--green);background:rgba(16,185,129,0.08)}
 
 /* ══ HEATMAP ══ */
 .heatmap-wrap{position:relative;display:flex;justify-content:center}
@@ -436,11 +477,7 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
 /* ══ CHART ══ */
 .chart-wrap{position:relative;height:120px}
 
-/* ══ PROFILE ══ */
-.profile-list{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem}
-.profile-chip{display:flex;align-items:center;gap:0.3rem;padding:0.3rem 0.6rem;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:20px;cursor:pointer;transition:all 0.2s;font-size:0.7rem;color:var(--text2)}
-.profile-chip.active-profile{background:rgba(0,255,204,0.1);border-color:rgba(0,255,204,0.3);color:var(--cyan)}
-.profile-avatar{font-size:1rem}
+/* Profile system removed in favor of unified Cloud Sync */
 
 /* ══ MOBILE NAV ══ */
 .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;height:var(--nav-h);background:rgba(4,6,15,0.97);border-top:1px solid var(--border);backdrop-filter:blur(16px)}
@@ -709,7 +746,6 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
       <div class="hdr-chip"><span class="chip-label">REPS</span><span id="hdr-reps">0</span></div>
       <div class="hdr-chip accent"><span class="chip-label">SCORE</span><span id="hdr-score">100%</span></div>
       <button class="hdr-btn" onclick="openHistory()" title="Session History">📈</button>
-      <button class="hdr-btn" onclick="openProfiles()" title="Profiles">👤</button>
       <button class="hdr-btn" onclick="toggleSettings()" title="Settings">⚙</button>
     </div>
   </header>
@@ -717,11 +753,6 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
   <div class="body-grid">
     <!-- LEFT PANEL -->
     <aside class="left-panel">
-      <div class="section-card">
-        <div class="card-header"><span class="card-title">👤 PROFILE</span><div class="card-line"></div></div>
-        <div class="profile-list" id="profile-list-desktop"></div>
-        <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--text2)">Streak: <span id="streak-desktop" style="color:var(--amber)">0🔥</span></div>
-      </div>
       <div class="section-card">
         <div class="card-header"><span class="card-title">EXERCISES</span><div class="card-line"></div></div>
         <div class="exercise-list">
@@ -772,6 +803,12 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
           <div class="rec-indicator" id="rec-indicator" style="display:none;">
             <div class="rec-dot"></div><span class="rec-text">REC</span>
           </div>
+
+          <!-- AI Contextual Toast Overlay -->
+          <div class="cam-ai-toast" id="cam-ai-toast" style="display:none; position:absolute; top: 60px; left: 50%; transform: translateX(-50%); z-index: 7; background: rgba(124, 58, 237, 0.85); backdrop-filter: blur(10px); border: 1px solid rgba(124, 58, 237, 0.4); border-radius: 12px; padding: 0.5rem 1rem; color: #fff; font-family: var(--font-main); font-size: 0.75rem; box-shadow: 0 4px 20px rgba(124, 58, 237, 0.3); display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1rem;">🤖</span>
+            <span id="ai-toast-text">Analyzing your form...</span>
+          </div>
           <!-- Alert banner -->
           <div class="alert-banner" id="alert-banner">
             <span class="alert-icon" id="alert-icon">⚡</span>
@@ -785,90 +822,26 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
         </div>
       </div>
 
-      <!-- ══ CAMERA CONTROLS BAR (NEW) ══ -->
-      <div class="cam-controls-bar" style="position:relative;">
-        <!-- Camera select -->
-        <div class="cam-ctrl-group">
-          <select class="cam-select" id="camera-select" title="Select Camera">
-            <option>📷 Default Camera</option>
-          </select>
-        </div>
-
-        <div class="cam-ctrl-divider"></div>
-
-        <!-- Mirror / Flip -->
-        <div class="cam-ctrl-group">
-          <button class="cam-ctrl-btn cam-ctrl-active" id="btn-mirror" onclick="toggleMirror()" title="Mirror: ON">
-            <span class="cc-icon">🪞</span> FLIP
-          </button>
-        </div>
-
-        <!-- Zoom controls -->
-        <div class="cam-ctrl-group">
-          <button class="cam-ctrl-btn cam-ctrl-btn" onclick="adjustZoom(-0.1)" title="Zoom Out">
-            <span class="cc-icon">🔍−</span>
-          </button>
-          <div class="zoom-display" id="zoom-level">100%</div>
-          <button class="cam-ctrl-btn" onclick="adjustZoom(0.1)" title="Zoom In">
-            <span class="cc-icon">🔍+</span>
-          </button>
-          <button class="cam-ctrl-btn" onclick="resetZoom()" title="Reset Zoom" style="font-size:0.55rem;padding:0.3rem 0.4rem;">1:1</button>
-        </div>
-
-        <div class="cam-ctrl-divider"></div>
-
-        <!-- Expand / Fullscreen -->
-        <div class="cam-ctrl-group">
-          <button class="cam-ctrl-btn" id="btn-expand" onclick="toggleCameraExpand()" title="Expand Camera">
-            <span class="cc-icon">⊞</span> EXPAND
-          </button>
-          <button class="cam-ctrl-btn" id="btn-fullscreen" onclick="toggleFullscreen()" title="Fullscreen">
-            <span class="cc-icon">⛶</span> FULL
-          </button>
-        </div>
-
-        <div class="cam-ctrl-divider"></div>
-
-        <!-- Setup guide -->
-        <div class="cam-ctrl-group">
-          <button class="cam-ctrl-btn" id="btn-cam-guide" onclick="showCameraGuide()" title="Camera Setup Guide">
-            <span class="cc-icon">❓</span> GUIDE
-          </button>
-        </div>
-
-        <!-- Camera Setup Guide Popup -->
-        <div class="cam-guide-popup" id="cam-guide-popup">
-          <div class="cam-guide-title">📷 CAMERA SETUP GUIDE</div>
-          <div class="cam-guide-item"><span class="cam-guide-icon">📏</span><span>Stand <strong style="color:var(--cyan)">2–3 metres</strong> from camera so your full body is visible</span></div>
-          <div class="cam-guide-item"><span class="cam-guide-icon">💡</span><span>Ensure good lighting — face a window or bright room light</span></div>
-          <div class="cam-guide-item"><span class="cam-guide-icon">📐</span><span>Camera at <strong style="color:var(--cyan)">chest/waist height</strong> gives best pose angle</span></div>
-          <div class="cam-guide-item"><span class="cam-guide-icon">🔄</span><span>Use <strong style="color:var(--cyan)">FLIP</strong> to mirror if camera is reversed</span></div>
-          <div class="cam-guide-item"><span class="cam-guide-icon">🔍</span><span>Use <strong style="color:var(--cyan)">zoom</strong> or <strong style="color:var(--cyan)">EXPAND</strong> to see yourself better</span></div>
-          <div class="cam-guide-item"><span class="cam-guide-icon">👕</span><span>Wear form-fitting clothes; avoid loose tops that hide joints</span></div>
-          <div class="cam-guide-item"><span class="cam-guide-icon">🎙</span><span>Voice commands: say <em style="color:var(--cyan)">"zoom in"</em>, <em style="color:var(--cyan)">"flip"</em>, <em style="color:var(--cyan)">"expand"</em></span></div>
-        </div>
-      </div>
-
-      <!-- Metronome -->
-      <div class="metronome-bar" id="metronome-bar">
-        <span class="metro-label">TEMPO</span>
-        <div class="metro-beat"><div class="metro-dot" id="mb0"></div><div class="metro-dot" id="mb1"></div><div class="metro-dot" id="mb2"></div><div class="metro-dot" id="mb3"></div></div>
-        <span class="metro-bpm" id="metro-bpm">60 BPM</span>
-        <button class="metro-btn" onclick="changeBPM(-10)">−</button>
-        <button class="metro-btn" onclick="changeBPM(10)">+</button>
-        <button class="metro-btn" id="metro-toggle" onclick="toggleMetronome()">▶</button>
-      </div>
-
-      <!-- Controls -->
-      <div class="controls-bar">
-        <button class="ctrl-btn start" id="btn-start" onclick="startSession()"><span class="ctrl-icon">▶</span><span class="ctrl-label">START SESSION</span><div class="btn-glow"></div></button>
-        <button class="ctrl-btn stop" id="btn-stop" onclick="stopSession()" disabled><span class="ctrl-icon">⏹</span><span class="ctrl-label">STOP</span></button>
-        <button class="ctrl-btn reset" onclick="resetSession()"><span class="ctrl-icon">↺</span><span class="ctrl-label">RESET</span></button>
-        <button class="ctrl-btn screenshot" onclick="takeScreenshot()"><span class="ctrl-icon">📸</span><span class="ctrl-label">CAPTURE</span></button>
-        <button class="ctrl-btn" id="btn-record" onclick="toggleRecording()"><span class="ctrl-icon">⏺</span><span class="ctrl-label">RECORD</span></button>
-        <button class="ctrl-btn" id="btn-voice" onclick="toggleVoiceCommands()"><span class="ctrl-icon">🎙</span><span class="ctrl-label">VOICE</span></button>
-        <button class="ctrl-btn ai" onclick="openAICoach()"><span class="ctrl-icon">🤖</span><span class="ctrl-label">AI COACH</span><div class="btn-pulse-ring"></div></button>
-        <button class="ctrl-btn" style="border-color:rgba(236,72,153,0.3);color:#ec4899" onclick="openShareCard()"><span class="ctrl-icon">🔗</span><span class="ctrl-label">SHARE</span></button>
+      <!-- Consolidating Camera HUD into Action Dock -->
+      <div class="action-dock">
+        <button class="dock-btn start" id="btn-start" onclick="startSession()">
+          <span class="ctrl-icon">▶</span> START
+        </button>
+        <button class="dock-btn stop" id="btn-stop" onclick="stopSession()" disabled style="display:none;">
+          <span class="ctrl-icon">⏹</span> STOP
+        </button>
+        <div class="dock-divider"></div>
+        
+        <!-- Integrated Camera HUD -->
+        <button class="dock-btn-icon" id="btn-mirror" onclick="toggleMirror()" title="Flip Camera">🪞</button>
+        <button class="dock-btn-icon" id="btn-expand" onclick="toggleCameraExpand()" title="Expand Display">⊞</button>
+        <button class="dock-btn-icon" id="btn-guide" onclick="toggleHelp()" title="Setup Guide">❓</button>
+        
+        <div class="dock-divider"></div>
+        <button class="dock-btn-icon ai" onclick="runGeminiAnalysis()" title="AI Form Coach">🤖</button>
+        <button class="dock-btn-icon" id="btn-voice" onclick="toggleVoiceCommands()" title="Voice Commands">🎙</button>
+        <button class="dock-btn-icon" id="btn-record" onclick="toggleRecording()" title="Record Video">⏺</button>
+        <button class="dock-btn-icon" onclick="toggleSettings()" title="Settings">⚙</button>
       </div>
 
       <!-- Voice status -->
@@ -1098,63 +1071,6 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
   </div>
 </div>
 
-<!-- AI COACH MODAL -->
-<div class="modal-overlay" id="ai-modal" style="display:none;" onclick="closeAICoach()">
-  <div class="modal-box ai-modal-box" onclick="event.stopPropagation()">
-    <div class="modal-header ai-header">
-      <div class="ai-header-left"><div class="ai-avatar">🤖</div><div><span class="ai-title">GEMINI 2.5 FLASH COACH</span><span class="ai-subtitle">Real-time Biomechanical Analysis</span></div></div>
-      <button class="modal-close" onclick="closeAICoach()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="ai-context-row">
-        <div class="ai-ctx-chip" id="ai-ex-chip">Exercise: —</div>
-        <div class="ai-ctx-chip" id="ai-score-chip">Score: —</div>
-        <div class="ai-ctx-chip" id="ai-rep-chip">Reps: —</div>
-      </div>
-      <div class="ai-response-area" id="ai-response-area">
-        <div class="ai-welcome"><div class="ai-welcome-icon">🧬</div><p>Click <strong>Analyze My Form</strong> for AI-powered coaching.</p><p class="ai-welcome-sub">Gemini analyses your angles, form score, and rep count.</p></div>
-      </div>
-    </div>
-    <div class="modal-footer ai-footer">
-      <button class="modal-save ai-analyze-btn" id="ai-analyze-btn" onclick="runGeminiAnalysis()">🧬 ANALYZE MY FORM</button>
-      <button class="modal-cancel" onclick="closeAICoach()">CLOSE</button>
-    </div>
-  </div>
-</div>
-
-<!-- HISTORY MODAL -->
-<div class="modal-overlay" id="history-modal" style="display:none;" onclick="closeHistory()">
-  <div class="modal-box history-modal-box" onclick="event.stopPropagation()">
-    <div class="modal-header"><span>📈 SESSION HISTORY</span><button class="modal-close" onclick="closeHistory()">✕</button></div>
-    <div class="modal-body">
-      <div class="chart-wrap" style="height:160px"><canvas id="history-chart"></canvas></div>
-      <div class="history-list" id="history-list"></div>
-    </div>
-    <div class="modal-footer"><button class="modal-save" onclick="clearHistory()">CLEAR HISTORY</button><button class="modal-cancel" onclick="closeHistory()">CLOSE</button></div>
-  </div>
-</div>
-
-<!-- PROFILES MODAL -->
-<div class="modal-overlay" id="profiles-modal" style="display:none;" onclick="closeProfiles()">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-header"><span>👤 USER PROFILES</span><button class="modal-close" onclick="closeProfiles()">✕</button></div>
-    <div class="modal-body">
-      <div class="profile-list" id="profile-list-modal" style="gap:0.5rem;flex-wrap:wrap"></div>
-      <div class="setting-group">
-        <label class="setting-label">Add New Profile</label>
-        <div style="display:flex;gap:0.5rem">
-          <input class="setting-input" type="text" id="new-profile-name" placeholder="Name..." style="flex:1"/>
-          <select class="setting-input" id="new-profile-avatar" style="width:70px">
-            <option>🧑</option><option>👩</option><option>👦</option><option>👧</option><option>🏋️</option><option>🦸</option>
-          </select>
-          <button class="modal-save" style="flex:0;padding:0.5rem 0.75rem;font-size:0.65rem" onclick="addProfile()">ADD</button>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer"><button class="modal-cancel" onclick="closeProfiles()">CLOSE</button></div>
-  </div>
-</div>
-
 <!-- SHARE CARD MODAL -->
 <div class="modal-overlay" id="share-modal" style="display:none;" onclick="closeShareCard()">
   <div class="modal-box share-modal-box" onclick="event.stopPropagation()">
@@ -1176,6 +1092,21 @@ html,body{width:100%;height:100%;overflow-x:hidden;background:var(--bg);color:va
         <button class="modal-cancel" onclick="closeShareCard()">CLOSE</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- HELP / GUIDE MODAL -->
+<div class="modal-overlay" id="help-modal" style="display:none;" onclick="toggleHelp()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-header"><span>❓ CAMERA SETUP GUIDE</span><button class="modal-close" onclick="toggleHelp()">✕</button></div>
+    <div class="modal-body">
+      <div class="cam-guide-item"><span class="cam-guide-icon">📏</span><span>Stand <strong style="color:var(--cyan)">2–3 metres</strong> from camera so your full body is visible</span></div>
+      <div class="cam-guide-item"><span class="cam-guide-icon">💡</span><span>Ensure good lighting — face a window or bright room light</span></div>
+      <div class="cam-guide-item"><span class="cam-guide-icon">📐</span><span>Camera at <strong style="color:var(--cyan)">chest/waist height</strong> gives best pose angle</span></div>
+      <div class="cam-guide-item"><span class="cam-guide-icon">👕</span><span>Wear form-fitting clothes; avoid loose tops that hide joints</span></div>
+      <div class="cam-guide-item"><span class="cam-guide-icon">🎙</span><span>Voice commands: say <em style="color:var(--cyan)">"start"</em>, <em style="color:var(--cyan)">"stop"</em>, <em style="color:var(--cyan)">"screenshot"</em></span></div>
+    </div>
+    <div class="modal-footer"><button class="modal-save" onclick="toggleHelp()">GOT IT</button></div>
   </div>
 </div>
 

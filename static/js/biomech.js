@@ -12,6 +12,12 @@
 ══════════════════════════════════════════════════════════════════ */
 'use strict';
 
+// ── SUPABASE INITIALIZATION ──────────────────────────────────────
+const SUPABASE_URL = 'https://ezpduovdfwccncobomlw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_-YdDaDb10urzMbB46Upg9w_QWyowVZy';
+const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+
 // ── CONFIG ─────────────────────────────────────────────────────────
 const CONFIG = {
   minDetectionConf:0.7, minTrackingConf:0.7, modelComplexity:1,
@@ -83,11 +89,10 @@ function saveStorage(data) {
 }
 function getDB() {
   const defaults = {
-    sessions:[],totalReps:0,streak:0,lastDate:'',exercisesTried:[],
-    aiCoachUses:0,fastestSet:9999,hasRecorded:false,hasShared:false,
-    totalSessions:0,unlockedAchievements:[],
-    profiles:[{id:'p1',name:'Athlete 1',avatar:'🧑'}],activeProfile:'p1',
-    activeProgram:null,programProgress:{},
+    sessions:[], totalReps:0, streak:0, lastDate:'', exercisesTried:[],
+    aiCoachUses:0, fastestSet:9999, hasRecorded:false, hasShared:false,
+    totalSessions:0, unlockedAchievements:[],
+    activeProgram:null, programProgress:{},
     googleUser:null,
   };
   const saved = loadStorage();
@@ -95,6 +100,56 @@ function getDB() {
 }
 
 let db = getDB();
+
+// ── CLOUD SYNC logic ─────────────────────────────────────────────
+async function syncProfile() {
+  if (!supabase || !db.googleUser) return;
+  try {
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .upsert({
+        id: db.googleUser.sub,
+        name: db.googleUser.name,
+        email: db.googleUser.email,
+        picture: db.googleUser.picture,
+        stats: {
+          totalReps: db.totalReps,
+          totalSessions: db.totalSessions,
+          streak: db.streak,
+          fastestSet: db.fastestSet,
+          exercisesTried: db.exercisesTried,
+          unlockedAchievements: db.unlockedAchievements
+        }
+      });
+    if (error) throw error;
+  } catch (e) {
+    console.error('Cloud Sync Error:', e);
+  }
+}
+
+async function syncSession(session) {
+  if (!supabase || !db.googleUser) return;
+  try {
+    const { error } = await supabase
+      .from('sessions')
+      .insert({
+        user_id: db.googleUser.sub,
+        exercise: session.exercise,
+        score: session.score,
+        reps: session.reps,
+        duration: session.duration,
+        metrics: {
+          timestamp: session.id,
+          date: session.date,
+          time: session.time
+        }
+      });
+    if (error) throw error;
+  } catch (e) {
+    console.error('Session Sync Error:', e);
+  }
+}
+
 
 // ── SKELETON STYLES ────────────────────────────────────────────────
 const SKELETON_STYLES = {
@@ -281,12 +336,8 @@ function handleGoogleLogin(response) {
       sub:     payload.sub     || '',
       given:   payload.given_name || payload.name.split(' ')[0],
     };
-    const profileId = 'google_' + payload.sub;
-    db.activeProfile = profileId;
-    if (!db.profiles.find(p => p.id === profileId)) {
-      db.profiles.push({ id: profileId, name: db.googleUser.given, avatar: db.googleUser.picture ? '📷' : '🧑' });
-    }
     saveStorage(db);
+    syncProfile(); // Sync to Supabase cloud
     dismissLoginScreen();
   } catch(e) {
     console.error('Google login error:', e);
@@ -325,7 +376,8 @@ function signOut() {
     try { google.accounts.id.revoke(db.googleUser.email); } catch(e){}
   }
   db.googleUser = null;
-  saveStorage(db);
+  // Clear local storage on signout to ensure fresh session on next login
+  localStorage.removeItem('biomech_v3');
   location.reload();
 }
 
@@ -399,28 +451,7 @@ function playRepSound()    { playBeep(880,  0.06, 0.25, 'triangle'); }
 function playErrorSound()  { playBeep(220,  0.15, 0.2,  'sawtooth'); }
 function playSuccessSound(){ playBeep(1047, 0.1,  0.2,  'sine'); setTimeout(()=>playBeep(1319,0.15,0.2,'sine'),100); }
 
-// ── METRONOME ──────────────────────────────────────────────────────
-let metronomeBPM=60, metronomeActive=false, metronomeInterval=null, metroBeat=0;
-
-function toggleMetronome() {
-  metronomeActive = !metronomeActive;
-  const btn = document.getElementById('metro-toggle');
-  if (metronomeActive) { btn.textContent='⏸'; runMetronome(); }
-  else { btn.textContent='▶'; clearInterval(metronomeInterval); document.querySelectorAll('.metro-dot').forEach(d=>d.classList.remove('beat')); }
-}
-function runMetronome() {
-  clearInterval(metronomeInterval);
-  metronomeInterval = setInterval(() => {
-    metroBeat = (metroBeat+1)%4;
-    document.querySelectorAll('.metro-dot').forEach((d,i)=>d.classList.toggle('beat',i===metroBeat));
-    playBeep(metroBeat===0?880:440, 0.05, 0.15, 'square');
-  }, 60000/metronomeBPM);
-}
-function changeBPM(delta) {
-  metronomeBPM = Math.max(30, Math.min(180, metronomeBPM+delta));
-  document.getElementById('metro-bpm').textContent = `${metronomeBPM} BPM`;
-  if (metronomeActive) runMetronome();
-}
+// Legacy Metronome System Removed as per decluttering request
 
 // ── RECORDING ──────────────────────────────────────────────────────
 let mediaRecorder=null, recordedChunks=[], isRecording=false;
@@ -822,7 +853,10 @@ function saveSession(){
     db.lastDate=today;
   }
   if(!db.exercisesTried.includes(state.exercise)){db.exercisesTried.push(state.exercise);}
-  saveStorage(db);updateStreakUI();checkAchievements();
+  saveStorage(db);
+  syncSession(session); // Sync session to Supabase
+  syncProfile(); // Update profile stats in cloud
+  updateStreakUI(); checkAchievements();
 }
 function renderHistoryList(targetId){
   const el=document.getElementById(targetId);if(!el) return;
@@ -898,26 +932,9 @@ function selectProgram(id){
   }
 }
 
-// ── PROFILES ───────────────────────────────────────────────────────
-function renderProfiles(){
-  ['profile-list-desktop','profile-list-mobile','profile-list-modal'].forEach(id=>{
-    const el=document.getElementById(id);if(!el) return;
-    el.innerHTML=db.profiles.map(p=>`<div class="profile-chip${p.id===db.activeProfile?' active-profile':''}" onclick="switchProfile('${p.id}')"><span class="profile-avatar">${p.avatar}</span><span>${p.name}</span></div>`).join('');
-  });
-}
-function switchProfile(id){ db.activeProfile=id; saveStorage(db); renderProfiles(); showToast(`Profile: ${db.profiles.find(p=>p.id===id)?.name}`); }
-function addProfile(){
-  const name=document.getElementById('new-profile-name').value.trim();
-  const avatar=document.getElementById('new-profile-avatar').value;
-  if(!name){showToast('Enter a name','error');return;}
-  db.profiles.push({id:'p'+Date.now(),name,avatar});
-  saveStorage(db);renderProfiles();
-  document.getElementById('new-profile-name').value='';
-  showToast(`Profile "${name}" created!`);
-}
-function openProfiles(){ renderProfiles(); document.getElementById('profiles-modal').style.display='flex'; }
-function closeProfiles(){ document.getElementById('profiles-modal').style.display='none'; }
+// Profile switching replaced by unified Cloud Sync (Google-based)
 function updateStreakUI(){ setEl('streak-desktop',db.streak+'🔥'); }
+
 
 // ── SHARE CARD ─────────────────────────────────────────────────────
 function openShareCard(){
@@ -950,7 +967,7 @@ function downloadShareCard(){
     ctx.fillStyle='#94a3b8';ctx.font='12px monospace';ctx.fillText(label,x,185);
   });
   ctx.fillStyle='rgba(0,255,204,0.15)';ctx.beginPath();ctx.roundRect(180,205,240,36,18);ctx.fill();
-  ctx.fillStyle='#00ffcc';ctx.font='13px monospace';ctx.textAlign='center';ctx.fillText('biomech-ai.onrender.com',300,228);
+  ctx.fillStyle='#00ffcc';ctx.font='13px monospace';ctx.textAlign='center';ctx.fillText('abyssal-mobile.web.app',300,228);
   ctx.fillStyle='rgba(0,255,204,0.35)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText('© 2026 Krish Joshi · All Rights Reserved',300,295);
   const link=document.createElement('a');
   link.download=`biomech-share-${Date.now()}.png`;
@@ -1093,11 +1110,6 @@ function closeAICoach(){ document.getElementById('ai-modal').style.display='none
 
 async function runGeminiAnalysis(){
   db.aiCoachUses++;saveStorage(db);checkAchievements();
-  const key=state.geminiKey;
-  if(!key){
-    setHTML('ai-response-area',`<div class="ai-text" style="color:#f87171;">⚠️ AI Coach unavailable — GEMINI_API_KEY not set on server.</div>`);
-    return;
-  }
   const area=document.getElementById('ai-response-area'),btn=document.getElementById('ai-analyze-btn');
   btn.disabled=true;
   setHTML('ai-response-area',`<div class="ai-loading-wrap"><div class="ai-spinner"></div><div class="ai-loading-text">GEMINI ANALYZING...</div></div>`);
@@ -1117,20 +1129,34 @@ Respond concisely:
 
 Max 280 words. Use anatomical terms.`;
   try{
-    const resp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:600}})});
-    if(!resp.ok){const e=await resp.json();throw new Error(e?.error?.message||`HTTP ${resp.status}`);}
+    const resp=await fetch('https://ezpduovdfwccncobomlw.supabase.co/functions/v1/gemini-proxy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
+    if(!resp.ok){const e=await resp.json();throw new Error(e?.error?.message||e?.error||`HTTP ${resp.status}`);}
     const data=await resp.json();
     const text=data?.candidates?.[0]?.content?.parts?.[0]?.text||'No response.';
+    
+    // Update live toast summary
+    const toastText = document.getElementById('ai-toast-text');
+    const toastWrap = document.getElementById('cam-ai-toast');
+    if(toastText && toastWrap) {
+      toastText.textContent = text.split('\n')[0].replace(/\*\*/g, ''); 
+      toastWrap.style.display = 'flex';
+      setTimeout(() => { toastWrap.style.display = 'none'; }, 8000);
+    }
+
     const formatted=text.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#a78bfa;font-family:\'Michroma\',monospace;font-size:11px;letter-spacing:2px;">$1</strong>').replace(/\n/g,'<br>');
     setHTML('ai-response-area',`<div class="ai-text">${formatted}</div>`);
     addLog('AI Analysis complete','good');playSuccessSound();
-  }catch(err){setHTML('ai-response-area',`<div class="ai-text" style="color:#f87171;">❌ ${err.message}</div>`);}
+  }catch(err){
+    setHTML('ai-response-area',`<div class="ai-text" style="color:#f87171;">❌ ${err.message}</div>`);
+    showToast('AI Error: ' + err.message, 'error');
+  }
   finally{btn.disabled=false;}
 }
 
 // ── SETTINGS ───────────────────────────────────────────────────────
 function toggleSettings(){ const m=document.getElementById('settings-modal');m.style.display=m.style.display==='none'?'flex':'none'; }
 function closeSettings(){ document.getElementById('settings-modal').style.display='none'; }
+function toggleHelp(){ const m=document.getElementById('help-modal');m.style.display=m.style.display==='none'?'flex':'none'; }
 function saveSettings(){
   CONFIG.skeletonStyle=document.getElementById('skeleton-style').value;
   CONFIG.showAngles=document.getElementById('show-angles').checked;
@@ -1237,6 +1263,91 @@ document.addEventListener('fullscreenchange', () => {
   }
 });
 
+// ── DYNAMIC BACKGROUND ─────────────────────────────────────────────
+function initBackground() {
+  const canvas = document.getElementById('bg-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let width = canvas.width = window.innerWidth;
+  let height = canvas.height = window.innerHeight;
+  
+  const particles = [];
+  const numParticles = Math.floor((width * height) / 15000);
+  
+  for(let i = 0; i < numParticles; i++) {
+    particles.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      r: Math.random() * 2 + 0.5,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      color: Math.random() < 0.5 ? 'rgba(0, 255, 204, 0.4)' : 'rgba(124, 58, 237, 0.4)'
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+    
+    // Subtle Cyberpunk Grid
+    ctx.strokeStyle = 'rgba(0, 255, 204, 0.02)';
+    ctx.lineWidth = 1;
+    const gridSize = 60;
+    const offsetX = (Date.now() / 60) % gridSize;
+    const offsetY = (Date.now() / 60) % gridSize;
+    
+    ctx.beginPath();
+    for (let x = -gridSize; x < width + gridSize; x += gridSize) {
+      ctx.moveTo(x + offsetX, 0);
+      ctx.lineTo(x + offsetX, height);
+    }
+    for (let y = -gridSize; y < height + gridSize; y += gridSize) {
+      ctx.moveTo(0, y + offsetY);
+      ctx.lineTo(width, y + offsetY);
+    }
+    ctx.stroke();
+
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = width;
+      if (p.x > width) p.x = 0;
+      if (p.y < 0) p.y = height;
+      if (p.y > height) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.fill();
+    });
+
+    particles.forEach((p1, i) => {
+      for(let j = i + 1; j < particles.length; j++) {
+        const p2 = particles[j];
+        const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        if (dist < 130) {
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          let op = (1 - dist / 130) * 0.35;
+          ctx.strokeStyle = p1.color.replace('0.4', op.toFixed(2));
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+        }
+      }
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  draw();
+
+  window.addEventListener('resize', () => {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+    // Optionally update numParticles if resize is significant
+  });
+}
+
 // ══════════════════════════════════════════════════════════════════
 //  APP INIT SEQUENCE
 // ══════════════════════════════════════════════════════════════════
@@ -1256,7 +1367,7 @@ async function launchSplash(){
   await loadGeminiKey();await sleep(300);
   loadTxt.textContent='Initializing Pose Model...';fill.style.width='55%';await sleep(500);ssMp.textContent='✓';
   loadTxt.textContent='Loading your data...';fill.style.width='70%';
-  db=getDB();renderAchievements();renderPrograms();renderProfiles();updateStreakUI();
+  db=getDB();renderAchievements();renderPrograms();updateStreakUI();
   updateHeatmap('squat');await sleep(300);
   loadTxt.textContent='Checking Camera...';fill.style.width='85%';
   try{
