@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    BioMech AI v3.1 — Full Feature Engine
-   © 2026 Krish Joshi · All Rights Reserved
+   © 2026 Krish Joshi & Omrajsinh Sisodiya · All Rights Reserved
 
    v3.1 Changes:
    - Camera adjustment controls (flip, zoom, brightness guidance)
@@ -12,11 +12,44 @@
 ══════════════════════════════════════════════════════════════════ */
 'use strict';
 
+// Global database reference (var so it's accessible as window.db)
+var db = null;
+
+// ── GLOBAL EXPORTS (IMMEDIATE) ───────────────────────────────────
+console.log("BioMech AI: Binding Core Handlers...");
+window.continueAsGuest = function() {
+  console.log("Guest Login Initiated");
+  try {
+    // Ensure db is initialized immediately
+    if (typeof getDB === 'function') {
+      db = getDB();
+    } else {
+      db = db || { googleUser: null, sessions: [], totalReps: 0, streak: 0 };
+    }
+    
+    db.googleUser = { guest: true, name: 'Guest Athlete', sub: 'guest_' + Date.now() };
+    if (typeof saveStorage === 'function') saveStorage(db);
+    if (typeof dismissLoginScreen === 'function') {
+      dismissLoginScreen();
+    } else {
+      // Emergency DOM bypass
+      var ls = document.getElementById('login-screen');
+      if (ls) { ls.classList.add('hidden'); ls.style.display = 'none'; }
+      if (typeof launchSplash === 'function') launchSplash();
+    }
+  } catch(e) { console.error("Guest login failed:", e); }
+};
+window.startSession = startSession;
+window.stopSession = stopSession;
+window.signOut = signOut;
+window.triggerGoogleSignIn = triggerGoogleSignIn;
+
 // ── SUPABASE INITIALIZATION ──────────────────────────────────────
 const SUPABASE_URL = 'https://ezpduovdfwccncobomlw.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_-YdDaDb10urzMbB46Upg9w_QWyowVZy';
-const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
+// Configuration settings for AI and UI
 
 // ── CONFIG ─────────────────────────────────────────────────────────
 const CONFIG = {
@@ -94,61 +127,15 @@ function getDB() {
     totalSessions:0, unlockedAchievements:[],
     activeProgram:null, programProgress:{},
     googleUser:null,
+    profiles: [], activeProfile: null // Added for compatibility with any legacy filters
   };
   const saved = loadStorage();
   return {...defaults,...saved};
 }
 
-let db = getDB();
+if (!db) db = getDB();
 
-// ── CLOUD SYNC logic ─────────────────────────────────────────────
-async function syncProfile() {
-  if (!supabase || !db.googleUser) return;
-  try {
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .upsert({
-        id: db.googleUser.sub,
-        name: db.googleUser.name,
-        email: db.googleUser.email,
-        picture: db.googleUser.picture,
-        stats: {
-          totalReps: db.totalReps,
-          totalSessions: db.totalSessions,
-          streak: db.streak,
-          fastestSet: db.fastestSet,
-          exercisesTried: db.exercisesTried,
-          unlockedAchievements: db.unlockedAchievements
-        }
-      });
-    if (error) throw error;
-  } catch (e) {
-    console.error('Cloud Sync Error:', e);
-  }
-}
 
-async function syncSession(session) {
-  if (!supabase || !db.googleUser) return;
-  try {
-    const { error } = await supabase
-      .from('sessions')
-      .insert({
-        user_id: db.googleUser.sub,
-        exercise: session.exercise,
-        score: session.score,
-        reps: session.reps,
-        duration: session.duration,
-        metrics: {
-          timestamp: session.id,
-          date: session.date,
-          time: session.time
-        }
-      });
-    if (error) throw error;
-  } catch (e) {
-    console.error('Session Sync Error:', e);
-  }
-}
 
 
 // ── SKELETON STYLES ────────────────────────────────────────────────
@@ -326,7 +313,7 @@ function showCameraGuide() {
 }
 
 // ── GOOGLE SIGN-IN ─────────────────────────────────────────────────
-function handleGoogleLogin(response) {
+function handleGoogleLoginCallback(response) {
   try {
     const payload = parseJwt(response.credential);
     db.googleUser = {
@@ -334,7 +321,7 @@ function handleGoogleLogin(response) {
       email:   payload.email   || '',
       picture: payload.picture || '',
       sub:     payload.sub     || '',
-      given:   payload.given_name || payload.name.split(' ')[0],
+      given:   payload.given_name || (payload.name ? payload.name.split(' ')[0] : 'Athlete'),
     };
     saveStorage(db);
     syncProfile(); // Sync to Supabase cloud
@@ -343,6 +330,45 @@ function handleGoogleLogin(response) {
     console.error('Google login error:', e);
     showLoginError('Sign-in failed. Please try again.');
   }
+}
+window.handleGoogleLoginCallback = handleGoogleLoginCallback;
+
+/**
+ * Cloud Synchronization logic
+ */
+async function syncProfile() {
+  if (!supabaseClient || !db.googleUser) return;
+  const { error } = await supabaseClient
+    .from('profiles')
+    .upsert({
+      id: db.googleUser.sub,
+      name: db.googleUser.name,
+      email: db.googleUser.email,
+      picture: db.googleUser.picture,
+      stats: {
+        totalReps: db.totalReps,
+        streak: db.streak,
+        totalSessions: db.totalSessions,
+        unlockedAchievements: db.unlockedAchievements
+      },
+      updated_at: new Date()
+    });
+  if (error) console.error('Cloud Sync (Profile) Error:', error);
+}
+
+async function syncSession(sessionData) {
+  if (!supabaseClient || !db.googleUser) return;
+  const { error } = await supabaseClient
+    .from('sessions')
+    .insert({
+      user_id: db.googleUser.sub,
+      exercise: sessionData.exercise,
+      reps: sessionData.reps,
+      score: sessionData.score,
+      duration: sessionData.duration,
+      date: new Date()
+    });
+  if (error) console.error('Cloud Sync (Session) Error:', error);
 }
 
 function parseJwt(token) {
@@ -361,15 +387,7 @@ function triggerGoogleSignIn() {
   }
 }
 
-function continueAsGuest() {
-  db.googleUser = null;
-  if (!db.profiles.find(p => p.id === 'p1')) {
-    db.profiles.push({id:'p1', name:'Guest', avatar:'🧑'});
-  }
-  db.activeProfile = 'p1';
-  saveStorage(db);
-  dismissLoginScreen();
-}
+// Legacy functions removed - now handled by global window bindings at top of script
 
 function signOut() {
   if (window.google && google.accounts && db.googleUser?.email) {
@@ -1192,27 +1210,7 @@ function showToast(msg,type='success'){
 }
 
 // ── BACKGROUND ─────────────────────────────────────────────────────
-function initBackground(){
-  const canvas=document.getElementById('bg-canvas');if(!canvas) return;
-  const ctx=canvas.getContext('2d');
-  let w=canvas.width=window.innerWidth,h=canvas.height=window.innerHeight;
-  window.addEventListener('resize',()=>{w=canvas.width=window.innerWidth;h=canvas.height=window.innerHeight;});
-  const nodes=Array.from({length:60},()=>({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-0.5)*0.3,vy:(Math.random()-0.5)*0.3,r:Math.random()*1.5+0.5}));
-  function draw(){
-    ctx.clearRect(0,0,w,h);
-    ctx.strokeStyle='rgba(0,255,204,0.03)';ctx.lineWidth=1;
-    for(let x=0;x<w;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
-    for(let y=0;y<h;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
-    nodes.forEach(n=>{
-      n.x+=n.vx;n.y+=n.vy;if(n.x<0||n.x>w)n.vx*=-1;if(n.y<0||n.y>h)n.vy*=-1;
-      ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fillStyle='rgba(0,255,204,0.4)';ctx.fill();
-    });
-    ctx.strokeStyle='rgba(0,255,204,0.06)';ctx.lineWidth=1;
-    for(let i=0;i<nodes.length;i++){for(let j=i+1;j<nodes.length;j++){const d=Math.hypot(nodes[i].x-nodes[j].x,nodes[i].y-nodes[j].y);if(d<120){ctx.globalAlpha=(1-d/120)*0.3;ctx.beginPath();ctx.moveTo(nodes[i].x,nodes[i].y);ctx.lineTo(nodes[j].x,nodes[j].y);ctx.stroke();}}}
-    ctx.globalAlpha=1;requestAnimationFrame(draw);
-  }
-  draw();
-}
+
 
 // ── HELPERS ────────────────────────────────────────────────────────
 function setEl(id,val){ const e=document.getElementById(id);if(e) e.textContent=val; }
@@ -1390,15 +1388,14 @@ async function launchSplash(){
 }
 
 async function initApp(){
+  console.log("BioMech AI Initializing App...");
   initBackground();
-
-  if(db.googleUser && db.googleUser.sub){
+  if(db && db.googleUser && db.googleUser.sub){
     document.getElementById('login-screen').classList.add('hidden');
     setTimeout(()=>{ document.getElementById('login-screen').style.display='none'; },0);
     await launchSplash();
     return;
   }
-
   setTimeout(()=>{
     if(!document.querySelector('.g_id_signin iframe')){
       const fb=document.getElementById('google-fallback-btn');

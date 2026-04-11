@@ -182,6 +182,11 @@ Change in Settings ⚙:
 - **Matrix Green** — `#00ff41` classic terminal
 - **Holographic Purple** — `#a78bfa` sci-fi
 
+## 👥 Developers
+
+- **Krish Joshi** — Lead Developer & Architect
+- **Omrajsinh Sisodiya** — Core Developer
+
 ---
 
 ## 📝 License
@@ -190,4 +195,4 @@ MIT License — free to use, modify, distribute.
 
 ---
 
-*Built with ❤️ | BioMech AI v2.0 | Client-side Biomechanical Analysis*
+*Built with ❤️ | BioMech AI v3.1 | Client-side Biomechanical Analysis*
