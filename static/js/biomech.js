@@ -390,13 +390,24 @@ function triggerGoogleSignIn() {
 // Legacy functions removed - now handled by global window bindings at top of script
 
 function signOut() {
-  if (window.google && google.accounts && db.googleUser?.email) {
-    try { google.accounts.id.revoke(db.googleUser.email); } catch(e){}
-  }
-  db.googleUser = null;
-  // Clear local storage on signout to ensure fresh session on next login
+  console.log("BioMech AI: Sign Out initiated...");
+  try {
+    if (window.google && google.accounts && db?.googleUser?.email) {
+      google.accounts.id.revoke(db.googleUser.email, () => {
+        console.log('Google Auth Revoked');
+      });
+    }
+  } catch(e) { console.error("SignOut Revoke failed:", e); }
+  
+  // Clear all persistent data
+  db = null;
   localStorage.removeItem('biomech_v3');
-  location.reload();
+  sessionStorage.clear();
+  
+  console.log("Session cleared. Reloading...");
+  setTimeout(() => {
+    window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+  }, 100);
 }
 
 function dismissLoginScreen() {
@@ -1172,7 +1183,26 @@ Max 280 words. Use anatomical terms.`;
 }
 
 // ── SETTINGS ───────────────────────────────────────────────────────
-function toggleSettings(){ const m=document.getElementById('settings-modal');m.style.display=m.style.display==='none'?'flex':'none'; }
+function toggleSettings(){ 
+  const m=document.getElementById('settings-modal');
+  const isOpening = m.style.display==='none';
+  m.style.display=isOpening?'flex':'none'; 
+  
+  if (isOpening) {
+    // Populate current values
+    document.getElementById('skeleton-style').value = CONFIG.skeletonStyle;
+    document.getElementById('show-angles').checked = CONFIG.showAngles;
+    document.getElementById('show-skeleton').checked = CONFIG.showSkeleton;
+    document.getElementById('voice-feedback').checked = CONFIG.voiceFeedback;
+    document.getElementById('audio-cues').checked = CONFIG.audioCues;
+    document.getElementById('conf-slider').value = Math.round(CONFIG.minDetectionConf * 100);
+    document.getElementById('conf-val').textContent = Math.round(CONFIG.minDetectionConf * 100) + '%';
+    
+    // Load Gemini key if available
+    const keyInput = document.getElementById('gemini-key');
+    if (keyInput) keyInput.value = state.geminiKey || '';
+  }
+}
 function closeSettings(){ document.getElementById('settings-modal').style.display='none'; }
 function toggleHelp(){ const m=document.getElementById('help-modal');m.style.display=m.style.display==='none'?'flex':'none'; }
 function saveSettings(){
@@ -1183,7 +1213,17 @@ function saveSettings(){
   CONFIG.audioCues=document.getElementById('audio-cues').checked;
   const conf=parseInt(document.getElementById('conf-slider').value);
   CONFIG.minDetectionConf=conf/100;CONFIG.minTrackingConf=conf/100;
-  closeSettings();showToast('Settings Saved ✓');
+  
+  // Save Gemini key
+  const keyInput = document.getElementById('gemini-key');
+  if (keyInput) {
+    state.geminiKey = keyInput.value.trim();
+    db.geminiKey = state.geminiKey; // Persist in db
+  }
+  
+  saveStorage(db);
+  closeSettings();
+  showToast('Settings Saved ✓');
 }
 
 // ── VOICE SPEECH OUTPUT ────────────────────────────────────────────
