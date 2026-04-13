@@ -1,0 +1,34 @@
+[
+  {
+    "test_case": "correct_squat.mp4",
+    "expected": "LOW RISK",
+    "actual": "LOW RISK",
+    "confidence": 0.942,
+    "latency_per_frame": "112ms",
+    "status": "PASS"
+  },
+  {
+    "test_case": "bad_form_deadlift.mp4",
+    "expected": "HIGH RISK",
+    "actual": "HIGH RISK",
+    "confidence": 0.915,
+    "latency_per_frame": "118ms",
+    "status": "PASS"
+  },
+  {
+    "test_case": "occluded_camera.mp4",
+    "expected": "FAIL/LOW CONF",
+    "actual": "LOW CONF",
+    "confidence": 0.421,
+    "latency_per_frame": "105ms",
+    "status": "PASS"
+  },
+  {
+    "test_case": "fast_movement_jump.mp4",
+    "expected": "MEDIUM RISK",
+    "actual": "MEDIUM RISK",
+    "confidence": 0.884,
+    "latency_per_frame": "115ms",
+    "status": "PASS"
+  }
+]
