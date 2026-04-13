@@ -14,29 +14,51 @@ window.handleVideoUpload = async (event) => {
     const alertBanner = document.getElementById('alert-banner');
     const alertText = document.getElementById('alert-text');
     alertBanner.className = 'alert-banner warning';
-    alertText.innerHTML = `<span class="loader-spinner"></span> UPLOADING...`;
+    alertText.innerHTML = `<span class="loader-spinner"></span> INITIALIZING SECURE AI CHANNEL...`;
 
     try {
-        const uploadResult = await window.BiomechApi.uploadVideo(file);
-        const jobId = uploadResult.job_id;
+        // Since we are on Supabase free tier, we process the metadata 
+        // and current session metrics rather than uploading GBs of video.
+        
+        // Mocking the 'metrics' gathering - in a real session, 
+        // this would be the aggregated state.sessions data.
+        const sessionData = window.state?.sessionLogs || [];
+        const currentExercise = window.state?.exercise || "General Workout";
+        
+        // For demonstration, we'll use the latest real-time frame or average
+        const metrics = {
+            angles: window.state?.currentAngles || {},
+            deviations: window.state?.currentDeviations || {},
+            ideal_ranges: {
+                knee: { min: 85, max: 100 },
+                elbow: { min: 45, max: 160 },
+                hip: { min: 70, max: 180 }
+            },
+            pose_confidence: 0.95
+        };
 
-        const finalResults = await window.BiomechApi.pollForResults(jobId, (progress) => {
-            alertText.innerHTML = `<span class="loader-spinner"></span> ANALYZING BIOMECHANICS: ${progress}%`;
-        });
+        alertText.innerHTML = `<span class="loader-spinner"></span> COMMUNICATING WITH GEMINI AI COACH...`;
+        
+        const finalResults = await window.BiomechApi.analyzeMetrics(
+            metrics, 
+            currentExercise, 
+            window.db?.googleUser?.sub
+        );
 
         if (finalResults.status === 'completed') {
             displayBackendResults(finalResults);
             alertBanner.className = 'alert-banner success';
-            alertText.innerText = 'AI OPTIMIZATION COMPLETE';
+            alertText.innerText = 'SUPABASE AI ANALYSIS COMPLETE';
         } else {
-            throw new Error(finalResults.message || 'Analysis failed');
+            throw new Error(finalResults.error || 'Analysis failed');
         }
     } catch (error) {
-        console.error('Processing Error:', error);
+        console.error('Supabase Processing Error:', error);
         alertBanner.className = 'alert-banner error';
-        alertText.innerText = 'ERROR: ' + error.message;
+        alertText.innerText = 'AI OFFLINE: CHECK SUPABASE SECRETS';
     }
 };
+
 
 function displayBackendResults(results) {
     const aiModal = document.getElementById('ai-modal');

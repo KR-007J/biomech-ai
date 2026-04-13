@@ -45,9 +45,8 @@ window.signOut = signOut;
 window.triggerGoogleSignIn = triggerGoogleSignIn;
 
 // ── SUPABASE INITIALIZATION ──────────────────────────────────────
-const SUPABASE_URL = 'https://ezpduovdfwccncobomlw.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_-YdDaDb10urzMbB46Upg9w_QWyowVZy';
-const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+// Supabase direct access removed for hardening. 
+// All sync operations now proxied through the backend.
 
 // Configuration settings for AI and UI
 
@@ -105,7 +104,6 @@ let state = {
   startTime:null, lastAngles:{}, lastFeedback:[], frameCount:0,
   lastFpsTime:Date.now(), fps:0, pose:null, camera:null,
   videoEl:null, canvasEl:null, ctx:null, 
-  geminiKey: window.BIOMECH_CONFIG?.GEMINI_KEY || '', // Loaded from secrets.js (ignored by git)
   scoreBreakdown:{depth:100,alignment:100,balance:100},
   scoreHistory:[], repTimestamps:[], sessionStartReps:0,
   // Camera state
@@ -338,38 +336,42 @@ window.handleGoogleLoginCallback = handleGoogleLoginCallback;
  * Cloud Synchronization logic
  */
 async function syncProfile() {
-  if (!supabaseClient || !db.googleUser) return;
-  const { error } = await supabaseClient
-    .from('profiles')
-    .upsert({
-      id: db.googleUser.sub,
-      name: db.googleUser.name,
-      email: db.googleUser.email,
-      picture: db.googleUser.picture,
-      stats: {
-        totalReps: db.totalReps,
-        streak: db.streak,
-        totalSessions: db.totalSessions,
-        unlockedAchievements: db.unlockedAchievements
-      },
-      updated_at: new Date()
+  if (!db.googleUser || !window.BIOMECH_CONFIG?.BACKEND_URL) return;
+  try {
+    await fetch(`${window.BIOMECH_CONFIG.BACKEND_URL}/sync-profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: db.googleUser.sub,
+        name: db.googleUser.name,
+        email: db.googleUser.email,
+        picture: db.googleUser.picture,
+        stats: {
+          totalReps: db.totalReps,
+          streak: db.streak,
+          totalSessions: db.totalSessions,
+          unlockedAchievements: db.unlockedAchievements
+        }
+      })
     });
-  if (error) console.error('Cloud Sync (Profile) Error:', error);
+  } catch(e) { console.error('Secure Profile Sync Error:', e); }
 }
 
 async function syncSession(sessionData) {
-  if (!supabaseClient || !db.googleUser) return;
-  const { error } = await supabaseClient
-    .from('sessions')
-    .insert({
-      user_id: db.googleUser.sub,
-      exercise: sessionData.exercise,
-      reps: sessionData.reps,
-      score: sessionData.score,
-      duration: sessionData.duration,
-      date: new Date()
+  if (!db.googleUser || !window.BIOMECH_CONFIG?.BACKEND_URL) return;
+  try {
+    await fetch(`${window.BIOMECH_CONFIG.BACKEND_URL}/sync-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: db.googleUser.sub,
+        exercise: sessionData.exercise,
+        reps: sessionData.reps,
+        score: sessionData.score,
+        duration: sessionData.duration
+      })
     });
-  if (error) console.error('Cloud Sync (Session) Error:', error);
+  } catch(e) { console.error('Secure Session Sync Error:', e); }
 }
 
 function parseJwt(token) {
