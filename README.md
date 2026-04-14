@@ -1,6 +1,6 @@
 # BIOMECH AI – Intelligent Human Movement Analysis Platform
 
-[![Google Solution Challenge 2024](https://img.shields.io/badge/Google-Solution_Challenge_2024-4285F4?logo=google)](https://developers.google.com/community/solutions-challenge)
+[![Google Solution Challenge 2026](https://img.shields.io/badge/Google-Solution_Challenge_2024-4285F4?logo=google)](https://developers.google.com/community/solutions-challenge)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![MediaPipe](https://img.shields.io/badge/MediaPipe-Pose-00CCFF?logo=google)](https://developers.google.com/mediapipe)
 [![Explainable AI](https://img.shields.io/badge/AI-Explainable_AI-FF6F00?logo=google-cloud)](https://cloud.google.com/explainable-ai)
