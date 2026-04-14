@@ -123,5 +123,5 @@ graph TD
 
 ---
 
-Developed for the **Google Solution Challenge 2024**.
+Developed for the **Google Solution Challenge 2026**.
 *Empowering movement through Data Science and Explainable AI.*
