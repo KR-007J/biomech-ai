@@ -453,11 +453,16 @@ function updateUserPill() {
 // ── GEMINI KEY ─────────────────────────────────────────────────────
 async function loadGeminiKey() {
   try {
+    // Attempt to load from secure backend config if available
     const res = await fetch('/api/config');
-    if (!res.ok) throw new Error('no endpoint');
-    const data = await res.json();
-    if (data.geminiKey) { state.geminiKey = data.geminiKey; }
+    if (res.ok) {
+        const data = await res.json();
+        if (data.geminiKey) { state.geminiKey = data.geminiKey; return; }
+    }
   } catch(e) {}
+  
+  // Fallback to local secrets.js config
+  state.geminiKey = window.BIOMECH_CONFIG?.GEMINI_KEY || '';
 }
 
 // ── AUDIO ENGINE ───────────────────────────────────────────────────
@@ -1167,32 +1172,19 @@ Respond concisely:
 Max 280 words. Use anatomical terms.`;
 
   try{
-    // Using direct Google Gemini API with the hardcoded key
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${state.geminiKey}`;
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    });
+    const ex=EXERCISES[state.exercise]||{};
+    const metrics = {
+      score: state.formScore,
+      reps: state.repCount,
+      angles: state.lastAngles,
+      feedback: state.lastFeedback
+    };
 
-    if(!resp.ok){
-      const e=await resp.json();
-      throw new Error(e?.error?.message||e?.error||`HTTP ${resp.status}`);
-    }
-    const data=await resp.json();
-    const text=data?.candidates?.[0]?.content?.parts?.[0]?.text||'No response.';
-    
-    // Update live toast summary
-    const toastText = document.getElementById('ai-toast-text');
-    const toastWrap = document.getElementById('cam-ai-toast');
-    if(toastText && toastWrap) {
-      toastText.textContent = text.split('\n')[0].replace(/\*\*/g, ''); 
-      toastWrap.style.display = 'flex';
-      setTimeout(() => { toastWrap.style.display = 'none'; }, 8000);
-    }
+    // Use our professional API which handles Backend Proxy + Local Fallback
+    const result = await BiomechApi.analyzeMetrics(metrics, ex.name || state.exercise, db.googleUser?.uid);
+    const text = result.raw_response || result.coach_feedback?.issue || "Analysis Complete.";
 
+    // Update UI
     const formatted=text.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#a78bfa;font-family:\'Michroma\',monospace;font-size:11px;letter-spacing:2px;">$1</strong>').replace(/\n/g,'<br>');
     setHTML('ai-response-area',`<div class="ai-text" style="animation:fadeIn 0.5s ease-out;">${formatted}</div>`);
     addLog('AI Analysis complete','good');playSuccessSound();
@@ -1231,15 +1223,14 @@ Structure:
 Keep it elite, motivational, and technical.`;
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${state.geminiKey}`;
-    const resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-    });
-    
-    const data = await resp.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Unable to generate report.';
+    const summaryData = {
+        totalReps: db.totalReps,
+        sessions: db.sessions.length,
+        achievements: db.unlockedAchievements.length
+    };
+
+    const result = await BiomechApi.analyzeMetrics(summaryData, "Performance Audit", db.googleUser?.uid);
+    const text = result.raw_response || "Audit Complete.";
     const formatted = text.replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--purple);font-family:\'Michroma\',monospace;font-size:11px;">$1</strong>').replace(/\n/g,'<br>');
     
     setHTML('ai-response-area', `<div class="ai-report-wrap" style="color:#e2e8f0;padding:5px;">${formatted}</div>`);

@@ -103,25 +103,23 @@ The system is continuously validated using the `/backend/validate.py` suite. The
 
 ```mermaid
 graph TD
-    A[Frontend Dashboard - Vite/JS] -->|Video Upload| B[FastAPI Backend - Cloud Run]
-    B --> C[Pose Engine - MediaPipe]
-    C --> D[Biomechanics Engine - NumPy]
-    D --> E[Risk Engine - Weighted Scoring]
-    E --> F[Gemini 1.5 Flash]
-    F -->|Structured JSON| G[Frontend Visualizer]
-    G -->|Radar Chart| H[Joint Kinematics]
-    G -->|Timeline| I[Movement Progression]
+    A[Frontend Dashboard - Vanilla JS] -->|Session Metadata| B[Supabase Edge Function]
+    A -->|Static Assets| C[Firebase Hosting]
+    B -->|Analysis Inference| D[Gemini 1.5 Flash]
+    D -->|Structured Coaching| B
+    B -->|Biomechanical Insights| A
+    A -->|Visuals| E[Chart.js / Canvas]
 ```
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Computer Vision**: MediaPipe (Pose), OpenCV.
-- **Backend Infrastructure**: Python 3.10, **FastAPI**, Cloud Run.
-- **AI/LLM Logic**: Google Gemini API (Vertex AI).
-- **Frontend Experience**: Vanilla JS, Chart.js, Firebase Hosting.
-- **Data Model**: NumPy-based vector kinematics.
+- **Computer Vision**: MediaPipe (Pose), TensorFlow.js.
+- **Backend Infrastructure**: **Supabase Edge Functions** (TypeScript/Deno).
+- **AI/LLM Logic**: Google Gemini API (Flash).
+- **Frontend Experience**: Vanilla JS, **Firebase Hosting**, Chart.js.
+- **Data Model**: Rule-based kinematics + LLM synthesis.
 
 ---
 

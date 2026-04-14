@@ -4,3 +4,7 @@ node_modules/
 package-lock.json
 *.log
 static/js/secrets.js
+.env
+backend/.env
+supabase/.temp/
+.firebaserc
