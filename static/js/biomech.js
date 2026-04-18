@@ -1289,9 +1289,7 @@ function toggleSettings(){
     document.getElementById('conf-slider').value = Math.round(CONFIG.minDetectionConf * 100);
     document.getElementById('conf-val').textContent = Math.round(CONFIG.minDetectionConf * 100) + '%';
     
-    // Load Gemini key if available
-    const keyInput = document.getElementById('gemini-key');
-    if (keyInput) keyInput.value = state.geminiKey || '';
+    // Removed user-facing key config as per security request
   }
 }
 function closeSettings(){ document.getElementById('settings-modal').style.display='none'; }
@@ -1304,12 +1302,6 @@ function saveSettings(){
   CONFIG.audioCues=document.getElementById('audio-cues').checked;
   const conf=parseInt(document.getElementById('conf-slider').value);
   CONFIG.minDetectionConf=conf/100;CONFIG.minTrackingConf=conf/100;
-  
-  const keyInput = document.getElementById('gemini-key');
-  if (keyInput) {
-    state.geminiKey = keyInput.value;
-    if (window.BIOMECH_CONFIG) window.BIOMECH_CONFIG.GEMINI_KEY = keyInput.value;
-  }
   
   saveStorage(db);
   closeSettings();
