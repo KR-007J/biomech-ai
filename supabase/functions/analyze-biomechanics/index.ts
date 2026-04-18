@@ -78,7 +78,7 @@ serve(async (req) => {
     )
     
     if (user_id) {
-        await supabase.from('ai_analysis_reports').insert({
+        await supabase.from('analyses').insert({
             user_id,
             exercise_type,
             summary: report.summary,
