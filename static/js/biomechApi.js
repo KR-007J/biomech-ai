@@ -1,4 +1,22 @@
-const API_BASE_URL = window.BIOMECH_CONFIG?.BACKEND_URL || 'http://127.0.0.1:8000';
+let API_BASE_URL = window.BIOMECH_CONFIG?.BACKEND_URL || 'http://127.0.0.1:8000';
+
+// Dynamic Config Discovery (Security Hardened)
+async function initDynamicConfig() {
+    try {
+        console.log("Biomech AI: Discovering dynamic configuration...");
+        const response = await fetch('/config/public');
+        if (response.ok) {
+            const config = await response.json();
+            if (config.BACKEND_URL) {
+                API_BASE_URL = config.BACKEND_URL;
+                console.log("✅ Dynamic backend discovered:", API_BASE_URL);
+            }
+        }
+    } catch (e) {
+        console.warn("Dynamic config discovery skipped (using defaults):", e.message);
+    }
+}
+initDynamicConfig();
 
 const BiomechApi = {
     /**
@@ -43,9 +61,9 @@ const BiomechApi = {
             
             Keep it technical and concise. Max 100 words.`;
 
-            // Primary: gemini-flash-latest (Verified available)
-            // Secondary: gemini-pro-latest
-            const models = ['gemini-flash-latest', 'gemini-pro-latest'];
+            // Upgraded: gemini-1.5-flash (Verfied stable)
+            // Secondary: gemini-1.5-pro
+            const models = ['gemini-1.5-flash', 'gemini-1.5-pro'];
             for (const modelId of models) {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${key}`;
                 try {

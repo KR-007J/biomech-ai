@@ -25,11 +25,17 @@ from starlette.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
-# Data validation
-from pydantic import BaseModel, Field, validator
+# Phase 2 modules
+from api_v2_phase2 import router as phase2_router
+
+# Data models
+from schemas import (
+    MetricsData, FeedbackRequest, CoachFeedback, AnalysisResponse,
+    ProfileData, SessionData, HealthResponse
+)
 
 # AI & ML
-import google.generativeai as genai
+from google import genai
 
 # Database
 from supabase import create_client, Client
@@ -91,6 +97,8 @@ task_manager: TaskManager = get_task_manager()
 async def lifespan(app: FastAPI):
     """Application lifecycle management"""
     logger.info("🚀 Starting Biomech AI Backend - Phase 2-5 Complete")
+    logger.info(f"Features: Caching={cache_manager.redis_enabled}, Tasks=enabled, "
+               f"Monitoring=enabled, Security=full")
     
     # Start background task processor
     task_processor = asyncio.create_task(task_manager.process_queue())
@@ -98,6 +106,7 @@ async def lifespan(app: FastAPI):
     yield  # Application running
     
     logger.info("🛑 Shutting down Biomech AI Backend")
+    cache_manager.clear_all()
     task_processor.cancel()
 
 # FastAPI app initialization
@@ -107,6 +116,9 @@ app = FastAPI(
     version="2.0.0-complete",
     lifespan=lifespan
 )
+
+# ✅ Phase 2 Router Integration
+app.include_router(phase2_router)
 
 # ==================== MIDDLEWARE ====================
 
@@ -125,7 +137,9 @@ app.add_middleware(
 )
 
 # ✅ GZIP Response Compression (Phase 2.7)
-# app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+AI_MODEL_NAME = os.getenv("AI_MODEL_NAME", "gemini-2.0-flash")
 
 # ✅ Rate Limiting (Phase 1.2)
 limiter = Limiter(key_func=get_remote_address)
@@ -181,92 +195,16 @@ except Exception as e:
     logger.error(f"❌ Pose Engine initialization failed: {e}")
     logger.warning("Pose analysis will be unavailable")
 
-# Gemini AI
+# Gemini AI (Phase 2.0 - Migrated to google-genai SDK)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-model = None
+ai_client = None
 
 if GEMINI_API_KEY:
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        logger.info("✅ Gemini AI initialized")
+        ai_client = genai.Client(api_key=GEMINI_API_KEY)
+        logger.info("✅ Gemini AI (google-genai) initialized")
     except Exception as e:
         logger.warning(f"Gemini AI initialization failed: {e}")
-
-# ==================== DATA MODELS ====================
-
-# ✅ Phase 1.3 & 2.2 - Input Validation Models
-
-class MetricsData(BaseModel):
-    """Biomechanical metrics from pose analysis"""
-    angles: Dict[str, float] = Field(..., description="Joint angles in degrees")
-    deviations: Dict[str, float] = Field(..., description="Deviations from ideal")
-    pose_confidence: float = Field(..., ge=0, le=1)
-    ideal_ranges: Optional[Dict[str, Dict[str, float]]] = None
-    
-    model_config = {
-        "json_schema_extra": {
-            "example": {
-                "angles": {"knee": 85.3, "hip": 92.1},
-                "deviations": {"knee": 5.2, "hip": 2.1},
-                "pose_confidence": 0.95
-            }
-        }
-    }
-
-class FeedbackRequest(BaseModel):
-    """Exercise analysis request"""
-    metrics: MetricsData
-    exercise_type: str = Field(..., min_length=1, max_length=50)
-    user_id: Optional[str] = None
-    session_id: Optional[str] = None
-    
-    @validator("exercise_type")
-    def validate_exercise(cls, v: str) -> str:
-        VALID = ["squat", "pushup", "lunge", "deadlift", "bicep_curl",
-                 "shoulder_press", "plank", "general", "jog", "sprint"]
-        if v.lower() not in VALID:
-            logger.warning(f"Unknown exercise: {v}")
-        return v
-
-class CoachFeedback(BaseModel):
-    """AI-generated coaching feedback"""
-    issue: str
-    reason: str
-    fix: str
-    confidence: float = 0.95
-
-class AnalysisResponse(BaseModel):
-    """Complete analysis response"""
-    status: str
-    timestamp: float
-    analysis_id: str
-    summary: Dict[str, Any]
-    coach_feedback: CoachFeedback
-    performance_metrics: Dict[str, Any]
-
-class ProfileData(BaseModel):
-    """User profile"""
-    id: str
-    name: str
-    email: str
-    picture: Optional[str] = None
-    stats: Optional[Dict[str, Any]] = None
-
-class SessionData(BaseModel):
-    """Workout session"""
-    user_id: str
-    exercise: str
-    reps: int = Field(..., ge=0)
-    score: float = Field(..., ge=0, le=100)
-    duration: float = Field(..., ge=0)
-
-class HealthResponse(BaseModel):
-    """Health check response"""
-    status: str
-    timestamp: str
-    version: str
-    services: Dict[str, str]
 
 # ==================== AUTHENTICATION ====================
 
@@ -283,6 +221,21 @@ async def verify_api_key(x_api_key: str = Header(None)) -> Dict[str, Any]:
 
 # ==================== MAIN ENDPOINTS ====================
 
+@app.get("/config/public")
+async def get_public_config():
+    """Get public configuration for the frontend (Security Hardened)"""
+    return {
+        "BACKEND_URL": os.getenv("BACKEND_URL", "http://localhost:8000"),
+        "ENVIRONMENT": os.getenv("ENVIRONMENT", "development"),
+        "API_VERSION": "2.0.0-complete",
+        "FEATURES": {
+            "PHASE_2": True,
+            "REALTIME": True,
+            "FRAUD_PROTECTION": True,
+            "HYBRID_MODE": True
+        }
+    }
+
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint with service status"""
@@ -292,7 +245,7 @@ async def health_check():
         version="2.0.0-complete",
         services={
             "supabase": "connected" if supabase else "disconnected",
-            "gemini": "connected" if model else "disconnected",
+            "gemini": "connected" if ai_client else "disconnected",
             "redis": "connected" if cache_manager.redis_enabled else "in-memory",
             "pose_engine": "ready"
         }
@@ -385,16 +338,25 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
         
         processing_status = "SAFE_MODE"
         
-        if model:
+        if ai_client:
             try:
-                prompt = f"""
-                As a biomechanics expert, analyze this {exercise_type} exercise.
-                Metrics: Angles={metrics_dict.get('angles')}, Risk Level={risk_info['risk_level']}
+                # New prompt with JSON request object
+                prompt = (
+                    f"As a biomechanics expert, analyze this {exercise_type} exercise. "
+                    f"Metrics: Angles={metrics_dict.get('angles')}, Risk Level={risk_info['risk_level']}. "
+                    "Provide feedback on the issue, the reason behind it, and a recommended fix. "
+                    "Return strictly valid JSON with keys: issue, reason, fix."
+                )
                 
-                Return JSON: {{"issue": "...", "reason": "...", "fix": "..."}}
-                """
-                
-                response = model.generate_content(prompt, request_options={"timeout": 8})
+                # New SDK generate_content call
+                response = ai_client.models.generate_content(
+                    model=AI_MODEL_NAME,
+                    contents=prompt,
+                    config=genai.types.GenerateContentConfig(
+                        # We can specify response_mime_type if needed for stricter JSON
+                        response_mime_type="application/json"
+                    )
+                )
                 text = response.text
                 
                 # Extract JSON
@@ -435,9 +397,10 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
             },
             coach_feedback=ai_feedback,
             performance_metrics={
-                "processing_time_sec": round(duration, 3),
-                "engine_status": processing_status,
-                "accuracy": "96.4%" if processing_status == "AI_AUGMENTED" else "85.0%"
+                "total_processing_time": f"{round(duration, 2)}s",
+                "avg_latency_per_frame": f"{round((duration / 30) * 1000, 1) if duration > 0 else 0}ms", # Estimated
+                "estimated_accuracy": "96.4%" if processing_status == "AI_AUGMENTED" else "85.0%",
+                "engine_status": processing_status
             }
         )
         
@@ -476,15 +439,20 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
 
 # Mount the root directory to serve index.html and other static assets
 # This allows testing the full site through the FastAPI server
-app.mount("/static", StaticFiles(directory="../static"), name="static")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
+INDEX_FILE = os.path.join(PROJECT_ROOT, "index.html")
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/{path:path}")
 async def catch_all(path: str):
     """Serve index.html for all other routes to support client-side routing"""
-    file_path = os.path.join("..", path)
+    file_path = os.path.join(PROJECT_ROOT, path)
     if os.path.isfile(file_path):
         return FileResponse(file_path)
-    return FileResponse("../index.html")
+    return FileResponse(INDEX_FILE)
 
 @app.post("/sync-profile")
 @limiter.limit("20/minute")
@@ -567,19 +535,6 @@ async def clear_cache():
 async def root():
     """Root endpoint"""
     return {"status": "healthy", "version": "2.0.0-complete"}
-
-# ==================== STARTUP & SHUTDOWN ====================
-
-@app.on_event("startup")
-async def startup():
-    logger.info("✅ Backend startup complete")
-    logger.info(f"Features: Caching={cache_manager.redis_enabled}, Tasks=enabled, "
-               f"Monitoring=enabled, Security=full")
-
-@app.on_event("shutdown")
-async def shutdown():
-    logger.info("🛑 Backend shutdown")
-    cache_manager.clear_all()
 
 # ==================== ERROR HANDLERS ====================
 

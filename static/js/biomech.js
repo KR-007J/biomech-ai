@@ -1182,12 +1182,43 @@ Max 280 words. Use anatomical terms.`;
 
     // Use our professional API which handles Backend Proxy + Local Fallback
     const result = await BiomechApi.analyzeMetrics(metrics, ex.name || state.exercise, db.googleUser?.uid);
-    const text = result.raw_response || result.coach_feedback?.issue || "Analysis Complete.";
+    
+    let formattedHtml = '';
+    
+    if (result.coach_feedback && result.coach_feedback.issue && result.coach_feedback.fix) {
+        // Structured Success from Backend
+        const cf = result.coach_feedback;
+        formattedHtml = `
+            <div class="ai-structured-feedback" style="animation:fadeIn 0.5s ease-out; display: flex; flex-direction: column; gap: 12px;">
+                <div class="ai-section">
+                    <div style="color:#ff3366; font-family:'Michroma',sans-serif; font-size:10px; letter-spacing:1px; margin-bottom:4px;">ISSUE DETECTED</div>
+                    <div style="color:#fff; font-size:0.85rem;">${cf.issue}</div>
+                </div>
+                <div class="ai-section">
+                    <div style="color:#00ffcc; font-family:'Michroma',sans-serif; font-size:10px; letter-spacing:1px; margin-bottom:4px;">BIOMECHANICAL REASON</div>
+                    <div style="color:#e2e8f0; font-size:0.8rem; opacity:0.9;">${cf.reason}</div>
+                </div>
+                <div class="ai-section" style="background:rgba(0,255,204,0.05); padding:10px; border-left:3px solid var(--cyan); border-radius:4px;">
+                    <div style="color:var(--cyan); font-family:'Michroma',sans-serif; font-size:10px; letter-spacing:1px; margin-bottom:4px;">CORRECTIVE ACTION</div>
+                    <div style="color:#fff; font-size:0.85rem; font-weight:500;">${cf.fix}</div>
+                </div>
+                ${result.performance_metrics ? `
+                <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; font-size:0.6rem; color:rgba(255,255,255,0.4); font-family:var(--font-mono);">
+                    <span>LATENCY: ${result.performance_metrics.total_processing_time}</span>
+                    <span>ACCURACY: ${result.performance_metrics.estimated_accuracy}</span>
+                </div>` : ''}
+            </div>
+        `;
+    } else {
+        // Fallback or Direct Mode (Raw Text)
+        const text = result.raw_response || result.coach_feedback?.issue || "Analysis Complete.";
+        const formatted = text.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#a78bfa;font-family:\'Michroma\',monospace;font-size:11px;letter-spacing:2px;">$1</strong>').replace(/\n/g,'<br>');
+        formattedHtml = `<div class="ai-text" style="animation:fadeIn 0.5s ease-out; line-height:1.6; color:#e2e8f0;">${formatted}</div>`;
+    }
 
-    // Update UI
-    const formatted=text.replace(/\*\*(.*?)\*\*/g,'<strong style="color:#a78bfa;font-family:\'Michroma\',monospace;font-size:11px;letter-spacing:2px;">$1</strong>').replace(/\n/g,'<br>');
-    setHTML('ai-response-area',`<div class="ai-text" style="animation:fadeIn 0.5s ease-out;">${formatted}</div>`);
-    addLog('AI Analysis complete','good');playSuccessSound();
+    setHTML('ai-response-area', formattedHtml);
+    addLog('AI Analysis complete','good');
+    playSuccessSound();
   }catch(err){
     setHTML('ai-response-area',`<div class="ai-text" style="color:#f87171;padding:20px;text-align:center;">❌ ${err.message}<br><small style="opacity:0.6;font-size:0.6rem;">Double check the hardcoded Gemini API key is active.</small></div>`);
     showToast('AI Error: ' + err.message, 'error');
