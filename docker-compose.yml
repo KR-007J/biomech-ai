@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: biomech-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - ENVIRONMENT=docker
+      - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5000,http://localhost:8000,http://backend:8000
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    networks:
+      - biomech
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Redis: In-memory caching store
+  redis:
+    image: redis:7-alpine
+    container_name: biomech-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass biomech_redis_password
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - biomech
+    restart: unless-stopped
+    environment:
+      - REDIS_REPLICATION_MODE=master
+
+  # Prometheus: Metrics collection & time-series database
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: biomech-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - biomech
+    depends_on:
+      - redis
+    restart: unless-stopped
+    environment:
+      - PROMETHEUS_RETENTION=30d
+
+  # Grafana: Visualization & dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: biomech-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_INSTALL_PLUGINS=redis-datasource
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - biomech
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Sentry: Error tracking & monitoring (optional, commented out by default)
+  # Uncomment and add your SENTRY_DSN to enable
+  # sentry:
+  #   image: sentry:latest
+  #   container_name: biomech-sentry
+  #   ports:
+  #     - "9000:9000"
+  #   environment:
+  #     - SENTRY_SECRET_KEY=your-secret-key-here
+  #     - SENTRY_POSTGRES_HOST=postgres
+  #     - SENTRY_POSTGRES_PORT=5432
+  #     - SENTRY_POSTGRES_USER=sentry
+  #     - SENTRY_POSTGRES_PASSWORD=sentry
+  #     - SENTRY_REDIS_HOST=redis
+  #   networks:
+  #     - biomech
+  #   depends_on:
+  #     - redis
+  #   restart: unless-stopped
+
+volumes:
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  biomech:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

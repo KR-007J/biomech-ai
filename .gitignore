@@ -8,3 +8,7 @@ static/js/secrets.js
 backend/.env
 supabase/.temp/
 .firebaserc
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store

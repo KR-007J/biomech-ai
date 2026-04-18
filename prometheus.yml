@@ -1,0 +1,45 @@
+# Prometheus Configuration for Biomech AI
+
+global:
+  scrape_interval: 15s       # Default scrape interval
+  evaluation_interval: 15s   # How often to evaluate rules
+  external_labels:
+    cluster: 'biomech-ai'
+    environment: 'development'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            # - 'localhost:9093'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Biomech AI API backend metrics
+  - job_name: 'biomech-api'
+    scrape_interval: 5s
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['localhost:8000']
+    # Retry configuration
+    scrape_timeout: 10s
+    # Label relabeling
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'api_.*'
+        action: 'keep'
+
+  # Redis metrics (if redis_exporter is running)
+  # - job_name: 'redis'
+  #   static_configs:
+  #     - targets: ['localhost:6379']
+
+# Alert rules (commented out, add as needed)
+# rule_files:
+#   - 'alert_rules.yml'

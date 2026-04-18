@@ -1,21 +1,31 @@
 # Use the official lightweight Python image.
 # https://hub.docker.com/_/python
-FROM python:3.10-slim
+FROM python:3.11-slim
 
-# Allow statements and log messages to immediately appear in the Knative logs
-ENV PYTHONUNBUFFERED True
+# Allow statements and log messages to immediately appear in logs
+ENV PYTHONUNBUFFERED=True
 
-# Copy local code to the container image.
-ENV APP_HOME /app
+# Create app directory
+ENV APP_HOME=/app
 WORKDIR $APP_HOME
-COPY . ./
 
-# Install production dependencies.
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy requirements first for better layer caching
+COPY requirements.txt requirements.txt
 
-# Run the web service on container startup. Here we use the gunicorn
-# webserver, with one worker process and 8 threads.
-# For environments with multiple CPU cores, increase the number of workers
-# to be equal to the cores available.
-# Timeout is set to 0 to disable the timeouts of the workers to allow Cloud Run to handle instance scaling.
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app -k uvicorn.workers.UvicornWorker
+# Install production dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code
+COPY . .
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=5)"
+
+# Default port
+ENV PORT=8000
+
+# Run the web service on container startup using Uvicorn (more lightweight than gunicorn for this use case)
+# For production with multiple workers, use gunicorn with uvicorn workers
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
