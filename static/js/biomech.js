@@ -1305,6 +1305,12 @@ function saveSettings(){
   const conf=parseInt(document.getElementById('conf-slider').value);
   CONFIG.minDetectionConf=conf/100;CONFIG.minTrackingConf=conf/100;
   
+  const keyInput = document.getElementById('gemini-key');
+  if (keyInput) {
+    state.geminiKey = keyInput.value;
+    if (window.BIOMECH_CONFIG) window.BIOMECH_CONFIG.GEMINI_KEY = keyInput.value;
+  }
+  
   saveStorage(db);
   closeSettings();
   showToast('Settings Saved ✓');

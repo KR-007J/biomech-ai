@@ -47,8 +47,10 @@ const BiomechApi = {
      */
     async fallbackDirectAnalysis(metrics, exerciseType) {
         try {
-            const key = window.BIOMECH_CONFIG?.GEMINI_KEY;
-            if (!key) throw new Error("No API Key configured in secrets.js");
+            const key = (typeof state !== 'undefined' && state.geminiKey) || window.BIOMECH_CONFIG?.GEMINI_KEY;
+            if (!key || key === "your_gemini_api_key_here" || key === "REMOVED_FOR_SECURITY") {
+                throw new Error("No API Key configured. Please add your Gemini API Key in Settings or secrets.js");
+            }
 
             const prompt = `You are an elite AI Biomechanical Coach.
             Analyze these metrics for ${exerciseType}:
