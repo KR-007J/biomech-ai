@@ -12,7 +12,7 @@ services:
     environment:
       - PORT=8000
       - ENVIRONMENT=docker
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_URL=redis://:biomech_redis_password@redis:6379/0
       - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5000,http://localhost:8000,http://backend:8000
     depends_on:
       redis:
@@ -37,7 +37,7 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --requirepass biomech_redis_password
+    command: redis-server --appendonly yes --requirepass $${REDIS_PASSWORD:-biomech_redis_password}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -48,6 +48,7 @@ services:
     restart: unless-stopped
     environment:
       - REDIS_REPLICATION_MODE=master
++      - REDIS_PASSWORD=biomech_redis_password
 
   # Prometheus: Metrics collection & time-series database
   prometheus:
