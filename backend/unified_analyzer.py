@@ -6,28 +6,33 @@ Orchestrates all Tier 1-9 components and provides unified API layer.
 Coordinates ensemble analysis, predictions, analytics, and reporting.
 """
 
-import logging
 import asyncio
-from typing import Dict, List, Optional, Any, Tuple
+import json
+import logging
 from dataclasses import asdict
 from datetime import datetime
-import json
+from typing import Any, Dict, List, Optional, Tuple
 
-from ensemble_analyzer import EnsembleAnalyzer, ModelType
-from predictive_models import InjuryRiskTracker, SessionData
-from biomechanics_advanced import AdvancedBiomechanicsEngine
+from action_recognizer import (
+    ActionClassifier,
+    ExerciseType,
+    FormQualityAssessor,
+    RepetitionCounter,
+)
 from analytics_engine import (
-    TimeSeriesAnalyzer,
     ComparativeAnalyticsEngine,
     MovementSignatureGenerator,
+    TimeSeriesAnalyzer,
 )
-from reports_generator import ReportGenerator, ReportConfig
+from biomechanics_advanced import AdvancedBiomechanicsEngine
+from ensemble_analyzer import EnsembleAnalyzer, ModelType
 from multi_person_tracker import (
+    GroupExerciseAnalyzer,
     MultiPersonTracker,
     PersonReIdentificationEngine,
-    GroupExerciseAnalyzer,
 )
-from action_recognizer import ActionClassifier, RepetitionCounter, FormQualityAssessor, ExerciseType
+from predictive_models import InjuryRiskTracker, SessionData
+from reports_generator import ReportConfig, ReportGenerator
 
 logger = logging.getLogger(__name__)
 

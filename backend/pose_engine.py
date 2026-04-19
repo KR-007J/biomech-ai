@@ -1,7 +1,8 @@
+import logging
+from typing import Any, Dict, Optional, Tuple
+
 import cv2
 import numpy as np
-from typing import Optional, Dict, Tuple, Any
-import logging
 
 logger = logging.getLogger(__name__)
 

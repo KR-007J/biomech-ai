@@ -4,19 +4,20 @@ Test configuration and fixtures - Phase 3 Testing Framework
 Provides common fixtures and configuration for all pytest tests.
 """
 
-import pytest
 import asyncio
-from fastapi.testclient import TestClient
-from unittest.mock import MagicMock, patch, AsyncMock
-import sys
 import os
+import sys
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from fastapi.testclient import TestClient
 
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from main import app
-from cache import CacheManager
 from async_tasks import TaskManager
+from cache import CacheManager
+from main import app
 from metrics import MetricsCollector
 
 

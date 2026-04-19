@@ -5,10 +5,10 @@ Provides detailed analytics, insights, and reporting capabilities.
 """
 
 import logging
-from typing import Dict, Any, List
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from dataclasses import dataclass
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

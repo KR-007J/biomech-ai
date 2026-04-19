@@ -3,14 +3,14 @@ PHASE 2: TIER 16 - A/B TESTING & EXPERIMENTATION PLATFORM
 Experiment design, statistical analysis, variant allocation
 """
 
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime, timedelta
 import logging
-import random
 import math
+import random
 from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

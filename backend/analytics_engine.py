@@ -10,14 +10,15 @@ Advanced temporal analysis for biomechanical data:
 - Comparative analytics (peer benchmarking)
 """
 
+import json
 import logging
-import numpy as np
-import pandas as pd
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-import json
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 

@@ -5,13 +5,14 @@ Implements distributed caching with automatic expiration, cache invalidation,
 and multi-level fallback strategy for improved performance.
 """
 
-import redis
+import hashlib
 import json
 import logging
-from typing import Any, Optional, List
-from datetime import datetime, timedelta
-import hashlib
 import os
+from datetime import datetime, timedelta
+from typing import Any, List, Optional
+
+import redis
 
 logger = logging.getLogger(__name__)
 

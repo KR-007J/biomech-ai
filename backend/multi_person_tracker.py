@@ -11,12 +11,13 @@ Support for tracking and analyzing multiple people simultaneously:
 """
 
 import logging
-import numpy as np
-from typing import Dict, List, Tuple, Optional, Any, Set
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-import uuid
+from typing import Any, Dict, List, Optional, Set, Tuple
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 

@@ -4,10 +4,11 @@ Unit Tests - Phase 3.1 Testing Framework
 Tests for core API endpoints, data validation, and business logic.
 """
 
+import json
+from datetime import datetime
+
 import pytest
 from fastapi import HTTPException
-from datetime import datetime
-import json
 
 
 class TestHealthEndpoint:

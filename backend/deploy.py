@@ -4,13 +4,13 @@ Automated Deployment Script for AI Biomechanics Platform
 Supports: Local Dev, Staging, Production
 """
 
-import os
-import sys
-import subprocess
 import json
+import logging
+import os
+import subprocess
+import sys
 from pathlib import Path
 from typing import Optional
-import logging
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)

@@ -5,13 +5,13 @@ Generates WebGL/Three.js compatible data
 """
 
 import asyncio
-import uuid
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
-import logging
-from dataclasses import dataclass, field
 import json
+import logging
 import math
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

@@ -6,9 +6,10 @@ This module contains all input validation and response models for the
 Biomech AI platform, centralizing data definitions to avoid circular imports.
 """
 
-from typing import Dict, Optional, Any, List
-from pydantic import BaseModel, Field, field_validator
 import logging
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 

@@ -3,13 +3,13 @@ TIER 9: Sports Science & Accessibility
 Advanced gait analysis, sport-specific standards, and inclusive design
 """
 
+import logging
+import math
 import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Any, Tuple
-import logging
-from dataclasses import dataclass, field
-import math
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

@@ -3,14 +3,14 @@ TIER 8: Security & Compliance
 HIPAA, GDPR, data encryption, and regulatory compliance
 """
 
-import uuid
 import hashlib
+import logging
+import secrets
+import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Any
-import logging
-from dataclasses import dataclass, field
-import secrets
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

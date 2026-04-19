@@ -4,10 +4,11 @@ Integration Tests - Phase 3.2 Testing Framework
 Tests for end-to-end workflows and component interactions.
 """
 
-import pytest
 import asyncio
 import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 class TestEndToEndAnalysisFlow:

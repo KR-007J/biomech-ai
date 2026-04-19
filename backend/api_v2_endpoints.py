@@ -11,11 +11,12 @@ New endpoints for advanced features:
 - Comparative analytics
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks, File, UploadFile
-from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Any
-from datetime import datetime
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
+from pydantic import BaseModel, Field
 
 from unified_analyzer import UnifiedBiomechanicsAnalyzer
 

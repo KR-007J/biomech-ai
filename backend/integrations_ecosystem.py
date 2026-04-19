@@ -4,12 +4,12 @@ Strava, Apple Health, Google Fit, and third-party integrations
 """
 
 import asyncio
+import logging
 import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Any
-import logging
-from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

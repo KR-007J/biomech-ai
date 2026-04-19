@@ -3,15 +3,15 @@ PHASE 2: TIER 10 - ASYNC JOB QUEUING SYSTEM
 Advanced task processing with Celery + Redis
 """
 
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict, field
-from enum import Enum
-from datetime import datetime, timedelta
-import logging
 import asyncio
 import json
-from uuid import uuid4
+import logging
 import pickle
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 

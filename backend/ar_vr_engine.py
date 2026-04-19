@@ -5,14 +5,14 @@ Provides skeleton overlay, immersive coaching, and real-time form feedback
 """
 
 import asyncio
+import json
+import logging
+import math
 import uuid
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Tuple, Any
-import logging
-from dataclasses import dataclass, field, asdict
-import json
-import math
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

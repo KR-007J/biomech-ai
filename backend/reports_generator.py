@@ -10,12 +10,12 @@ Auto-generate professional PDF reports with:
 - Progress tracking
 """
 
-import logging
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
 import json
+import logging
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
 from io import BytesIO
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -57,18 +57,18 @@ class ReportGenerator:
     def try_import_reportlab(self) -> bool:
         """Try importing reportlab for PDF generation"""
         try:
-            from reportlab.lib.pagesizes import letter, A4
+            from reportlab.lib import colors
+            from reportlab.lib.pagesizes import A4, letter
+            from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+            from reportlab.lib.units import inch
             from reportlab.platypus import (
+                PageBreak,
+                Paragraph,
                 SimpleDocTemplate,
+                Spacer,
                 Table,
                 TableStyle,
-                Paragraph,
-                Spacer,
-                PageBreak,
             )
-            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-            from reportlab.lib.units import inch
-            from reportlab.lib import colors
 
             self.has_reportlab = True
             return True
@@ -204,18 +204,18 @@ class ReportGenerator:
             return None
 
         try:
+            from reportlab.lib import colors
             from reportlab.lib.pagesizes import A4
+            from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+            from reportlab.lib.units import inch
             from reportlab.platypus import (
-                SimpleDocTemplate,
+                PageBreak,
                 Paragraph,
+                SimpleDocTemplate,
                 Spacer,
                 Table,
                 TableStyle,
-                PageBreak,
             )
-            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-            from reportlab.lib.units import inch
-            from reportlab.lib import colors
 
             # Create PDF in memory
             pdf_buffer = BytesIO()
@@ -500,8 +500,9 @@ class ReportGenerator:
             return {}
 
         try:
-            import matplotlib.pyplot as plt
             import base64
+
+            import matplotlib.pyplot as plt
 
             charts = {}
 

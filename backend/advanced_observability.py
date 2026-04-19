@@ -3,13 +3,13 @@ TIER 7: Advanced Observability & Distributed Tracing
 Jaeger, OpenTelemetry, Grafana dashboards, and advanced monitoring
 """
 
+import logging
+import time
 import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Any
-import logging
-from dataclasses import dataclass, field
-import time
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

@@ -11,11 +11,12 @@ Automatically detect and classify exercises/movements:
 """
 
 import logging
-import numpy as np
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 

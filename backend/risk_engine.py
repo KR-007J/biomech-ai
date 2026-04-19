@@ -1,4 +1,4 @@
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 
 def analyze_injury_risk(analysis_data: Dict[str, Any]) -> Dict[str, Any]:

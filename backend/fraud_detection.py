@@ -3,13 +3,13 @@ PHASE 2: TIER 17 - FRAUD DETECTION & ANOMALY SYSTEM
 Behavioral analysis, rule engine, ML-based detection
 """
 
-from typing import Dict, List, Optional, Any, Tuple, Set
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime, timedelta
-import logging
 import json
+import logging
 from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 

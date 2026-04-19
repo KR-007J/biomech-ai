@@ -13,25 +13,33 @@ Integrates all Phase 2 modules into the main API:
 - Fraud detection integration
 """
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Any
-from datetime import datetime
-import logging
 import asyncio
 import json
+import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+)
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+
+from ab_testing import ABTestingEngine, AllocationStrategy
+from advanced_analytics import AdvancedAnalyticsEngine
 
 # Phase 2 modules
 from async_job_queue import AsyncJobQueue, JobPriority
-from realtime_websocket import RealtimeWebSocketHub, RealtimeEvents
-from webhook_events import EventSystem, Event
+from fraud_detection import FraudDetectionEngine
 from graphql_api import GraphQLServer
 from model_versioning import ModelRegistry
-from advanced_analytics import AdvancedAnalyticsEngine
-from ab_testing import ABTestingEngine, AllocationStrategy
-from fraud_detection import FraudDetectionEngine
+from realtime_websocket import RealtimeEvents, RealtimeWebSocketHub
 from schemas import FeedbackRequest
+from webhook_events import Event, EventSystem
 
 logger = logging.getLogger(__name__)
 

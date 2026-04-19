@@ -5,76 +5,78 @@ Production-grade biomechanical analysis with security, performance, reliability,
 documentation, and enterprise features fully integrated.
 """
 
+import asyncio
+import json
+import logging
 import os
-import cv2
-import uuid
 import shutil
 import time
-import numpy as np
-import logging
-import json
-import asyncio
-from typing import Dict, Optional, Any, List
-from datetime import datetime
+import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-# FastAPI
-from fastapi import (
-    FastAPI,
-    File,
-    UploadFile,
-    BackgroundTasks,
-    HTTPException,
-    Request,
-    Depends,
-    Header,
-)
-from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
+import cv2
+import numpy as np
 
-# Phase 2 modules
-from api_v2_phase2 import router as phase2_router
-
-# Data models
-from schemas import (
-    MetricsData,
-    FeedbackRequest,
-    CoachFeedback,
-    AnalysisResponse,
-    ProfileData,
-    SessionData,
-    HealthResponse,
-)
-
-# AI & ML
-from google import genai
-
-# Database
-from supabase import create_client, Client
-
-# Rate limiting
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
+# Monitoring
+import sentry_sdk
 
 # Environment
 from dotenv import load_dotenv
 
-# Monitoring
-import sentry_sdk
-from prometheus_client import generate_latest, REGISTRY
+# FastAPI
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    File,
+    Header,
+    HTTPException,
+    Request,
+    UploadFile,
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+# AI & ML
+from google import genai
+from prometheus_client import REGISTRY, generate_latest
 from sentry_sdk.integrations.fastapi import FastApiIntegration
+
+# Rate limiting
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from starlette.middleware.gzip import GZipMiddleware
+
+# Database
+from supabase import Client, create_client
+
+# Phase 2 modules
+from api_v2_phase2 import router as phase2_router
+from async_tasks import TaskManager, get_task_manager
+from biomechanics import get_biomechanical_analysis
+from cache import CacheManager, get_cache_manager
+from metrics import REGISTRY as METRICS_REGISTRY
+from metrics import MetricsCollector
 
 # Custom modules
 from pose_engine import PoseEngine
-from biomechanics import get_biomechanical_analysis
 from risk_engine import analyze_injury_risk
-from cache import get_cache_manager, CacheManager
-from async_tasks import get_task_manager, TaskManager
-from metrics import MetricsCollector, REGISTRY as METRICS_REGISTRY
-from security import APIKeyManager, get_security_headers, RequestValidator, TokenManager
+
+# Data models
+from schemas import (
+    AnalysisResponse,
+    CoachFeedback,
+    FeedbackRequest,
+    HealthResponse,
+    MetricsData,
+    ProfileData,
+    SessionData,
+)
+from security import APIKeyManager, RequestValidator, TokenManager, get_security_headers
 
 # ==================== CONFIGURATION ====================
 

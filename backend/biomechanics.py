@@ -1,5 +1,6 @@
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
-from typing import List, Dict, Any, Tuple
 
 
 def calculate_angle(a: List[float], b: List[float], c: List[float]) -> float:

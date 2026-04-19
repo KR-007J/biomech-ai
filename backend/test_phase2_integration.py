@@ -13,22 +13,24 @@ Comprehensive integration tests for advanced platform features:
 - Fraud detection
 """
 
-import pytest
 import asyncio
 import json
 import time
-from unittest.mock import patch, MagicMock, AsyncMock
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from ab_testing import ABTestingEngine, AllocationStrategy
+from advanced_analytics import AdvancedAnalyticsEngine
 
 # Phase 2 modules
 from async_job_queue import AsyncJobQueue, JobMetadata, JobPriority
-from realtime_websocket import RealtimeWebSocketHub, RealtimeEvents
-from webhook_events import EventSystem, Event, Webhook
-from graphql_api import GraphQLServer
-from model_versioning import ModelRegistry, ModelVersion, ExperimentRun
-from advanced_analytics import AdvancedAnalyticsEngine
-from ab_testing import ABTestingEngine, AllocationStrategy
 from fraud_detection import FraudDetectionEngine, RiskLevel
+from graphql_api import GraphQLServer
+from model_versioning import ExperimentRun, ModelRegistry, ModelVersion
+from realtime_websocket import RealtimeEvents, RealtimeWebSocketHub
+from webhook_events import Event, EventSystem, Webhook
 
 
 @pytest.fixture

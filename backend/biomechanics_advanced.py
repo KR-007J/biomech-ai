@@ -10,13 +10,14 @@ Replace basic angle scoring with physics-based biomechanics:
 - Joint loading calculations
 """
 
-import logging
-import numpy as np
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass
-from enum import Enum
 import json
+import logging
+from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 

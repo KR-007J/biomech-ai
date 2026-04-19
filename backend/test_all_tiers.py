@@ -3,10 +3,11 @@ Comprehensive Test Suite for Tiers 1-9
 Integration tests validating all modules work together
 """
 
-import pytest
 import asyncio
-from datetime import datetime, timedelta
 import json
+from datetime import datetime, timedelta
+
+import pytest
 
 # ============================================================================
 # TIER 1-3 TESTS (ML & ANALYTICS)

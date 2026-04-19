@@ -5,10 +5,11 @@ Implements comprehensive metrics collection for API performance, accuracy,
 and operational health tracking.
 """
 
-from prometheus_client import Counter, Histogram, Gauge, Info, CollectorRegistry
 import logging
-from typing import Dict, Any
 import time
+from typing import Any, Dict
+
+from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, Info
 
 logger = logging.getLogger(__name__)
 

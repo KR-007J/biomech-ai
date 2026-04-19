@@ -3,12 +3,12 @@ PHASE 2: TIER 15 - ADVANCED ANALYTICS PLATFORM
 Cohort analysis, retention, funnel analysis, predictive segments
 """
 
-from typing import Dict, List, Optional, Any, Set
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime, timedelta
 import logging
 from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
