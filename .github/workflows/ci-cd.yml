@@ -295,7 +295,6 @@ jobs:
         if: success()
         uses: slackapi/slack-github-action@v1
         with:
-          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK }}
           payload: |
             {
               "text": "✅ Biomech AI CI/CD Pipeline Passed",
@@ -309,12 +308,14 @@ jobs:
                 }
               ]
             }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
       
       - name: Send Slack notification (failure)
         if: failure()
         uses: slackapi/slack-github-action@v1
         with:
-          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK }}
           payload: |
             {
               "text": "❌ Biomech AI CI/CD Pipeline Failed",
@@ -328,3 +329,6 @@ jobs:
                 }
               ]
             }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
