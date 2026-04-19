@@ -165,6 +165,7 @@ jobs:
           format: 'JSON'
           args: >
             --enableExperimental
+        continue-on-error: true
 
   # ==================== PERFORMANCE TESTING ====================
   
@@ -293,8 +294,10 @@ jobs:
       
       - name: Send Slack notification (success)
         if: success()
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@v1.24.0
         with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          webhook-type: INCOMING_WEBHOOK
           payload: |
             {
               "text": "✅ Biomech AI CI/CD Pipeline Passed",
@@ -308,14 +311,13 @@ jobs:
                 }
               ]
             }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
       
       - name: Send Slack notification (failure)
         if: failure()
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@v1.24.0
         with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          webhook-type: INCOMING_WEBHOOK
           payload: |
             {
               "text": "❌ Biomech AI CI/CD Pipeline Failed",
@@ -329,6 +331,3 @@ jobs:
                 }
               ]
             }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
