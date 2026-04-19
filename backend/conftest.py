@@ -27,6 +27,16 @@ def event_loop():
     yield loop
     loop.close()
 
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    """Reset rate limiter before each test to prevent cross-test contamination"""
+    from main import limiter
+    # Clear the rate limiter state before the test
+    limiter.reset()
+    yield
+    # Also reset after the test
+    limiter.reset()
+
 @pytest.fixture
 def client():
     """FastAPI test client"""

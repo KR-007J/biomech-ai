@@ -437,22 +437,7 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
 
 # ==================== STATIC FILES ====================
 
-# Mount the root directory to serve index.html and other static assets
-# This allows testing the full site through the FastAPI server
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(BASE_DIR)
-STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
-INDEX_FILE = os.path.join(PROJECT_ROOT, "index.html")
-
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-
-@app.get("/{path:path}")
-async def catch_all(path: str):
-    """Serve index.html for all other routes to support client-side routing"""
-    file_path = os.path.join(PROJECT_ROOT, path)
-    if os.path.isfile(file_path):
-        return FileResponse(file_path)
-    return FileResponse(INDEX_FILE)
+# ==================== UTILITY ENDPOINTS ====================
 
 @app.post("/sync-profile")
 @limiter.limit("20/minute")
@@ -535,6 +520,25 @@ async def clear_cache():
 async def root():
     """Root endpoint"""
     return {"status": "healthy", "version": "2.0.0-complete"}
+
+# ==================== STATIC FILE SERVING & SPA ROUTING ====================
+# Mount the root directory to serve index.html and other static assets
+# This allows testing the full site through the FastAPI server
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
+INDEX_FILE = os.path.join(PROJECT_ROOT, "index.html")
+
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# Catch-all route for client-side routing - MUST be last to not interfere with API routes
+@app.get("/{path:path}")
+async def catch_all(path: str):
+    """Serve index.html for all other routes to support client-side routing"""
+    file_path = os.path.join(PROJECT_ROOT, path)
+    if os.path.isfile(file_path):
+        return FileResponse(file_path)
+    return FileResponse(INDEX_FILE)
 
 # ==================== ERROR HANDLERS ====================
 

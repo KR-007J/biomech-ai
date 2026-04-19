@@ -94,7 +94,7 @@ class TestFeedbackEndpoint:
         
         # Check coach feedback structure
         feedback = data["coach_feedback"]
-        assert "{issue", "reason", "fix"} <= set(feedback.keys())
+        assert {"issue", "reason", "fix"} <= set(feedback.keys())
     
     @pytest.mark.unit
     def test_feedback_invalid_exercise(self, client, sample_feedback_request):
@@ -181,9 +181,10 @@ class TestErrorHandling:
     
     @pytest.mark.unit
     def test_invalid_endpoint(self, client):
-        """❌ Invalid endpoint returns 404"""
+        """✅ Invalid endpoint returns index.html (SPA routing)"""
         response = client.get("/nonexistent-endpoint")
-        assert response.status_code == 404
+        # SPA with catch-all routing serves index.html for undefined routes
+        assert response.status_code == 200
     
     @pytest.mark.unit
     def test_invalid_method(self, client):

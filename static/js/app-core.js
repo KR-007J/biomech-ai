@@ -1185,7 +1185,16 @@ Max 280 words. Use anatomical terms.`;
     
     let formattedHtml = '';
     
-    if (result.coach_feedback && result.coach_feedback.issue && result.coach_feedback.fix) {
+    if (result.status === 'error') {
+        const cf = result.coach_feedback;
+        formattedHtml = `
+            <div class="ai-error-wrap" style="color:#f87171; padding:20px; text-align:center; border:1px solid rgba(248,113,113,0.2); border-radius:10px;">
+                <div style="font-family:'Michroma',sans-serif; font-size:11px; margin-bottom:10px;">❌ ${cf.issue}</div>
+                <div style="font-size:0.8rem; margin-bottom:15px; opacity:0.8;">${cf.reason}</div>
+                <div style="font-size:0.75rem; padding:10px; background:rgba(255,255,255,0.05); border-radius:5px;"><strong>FIX:</strong> ${cf.fix}</div>
+            </div>
+        `;
+    } else if (result.coach_feedback && result.coach_feedback.issue && result.coach_feedback.fix) {
         // Structured Success from Backend
         const cf = result.coach_feedback;
         formattedHtml = `
@@ -1261,13 +1270,22 @@ Keep it elite, motivational, and technical.`;
     };
 
     const result = await BiomechApi.analyzeMetrics(summaryData, "Performance Audit", db.googleUser?.uid);
-    const text = result.raw_response || "Audit Complete.";
-    const formatted = text.replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--purple);font-family:\'Michroma\',monospace;font-size:11px;">$1</strong>').replace(/\n/g,'<br>');
+    if (result.status === 'error') {
+        throw new Error(result.coach_feedback.reason || "AI Service unavailable.");
+    }
+    const text = result.raw_response || (result.coach_feedback ? result.coach_feedback.issue : "Audit Complete.");
+    const formatted = text.toString().replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--purple);font-family:\'Michroma\',monospace;font-size:11px;">$1</strong>').replace(/\n/g,'<br>');
     
     setHTML('ai-response-area', `<div class="ai-report-wrap" style="color:#e2e8f0;padding:5px;">${formatted}</div>`);
     showToast('Performance Report Generated! 📈');
   } catch(err) {
-    setHTML('ai-response-area', `<div style="color:#f87171;text-align:center;padding:20px;">Failed to generate report: ${err.message}</div>`);
+    setHTML('ai-response-area', `
+        <div style="color:#f87171;text-align:center;padding:20px;border:1px solid rgba(248,113,113,0.3);border-radius:10px;background:rgba(248,113,113,0.05);">
+            <div style="font-weight:bold;margin-bottom:10px;">❌ AI PROCESSOR ERROR</div>
+            <div style="font-size:0.8rem;margin-bottom:15px;opacity:0.9;">${err.message}</div>
+            <div style="font-size:0.7rem;opacity:0.7;">Try: <strong>Ctrl + F5</strong> and ensure your <strong>Gemini API Key</strong> is active in <code>secrets.js</code>.</div>
+        </div>
+    `);
   } finally {
     btn.disabled = false;
   }
