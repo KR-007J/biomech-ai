@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class JobStatus(str, Enum):
     """Job lifecycle states"""
+
     PENDING = "PENDING"
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
@@ -28,6 +29,7 @@ class JobStatus(str, Enum):
 
 class JobPriority(int, Enum):
     """Job priority levels"""
+
     LOW = 3
     NORMAL = 2
     HIGH = 1
@@ -37,6 +39,7 @@ class JobPriority(int, Enum):
 @dataclass
 class JobMetadata:
     """Job execution metadata"""
+
     job_id: str = field(default_factory=lambda: str(uuid4()))
     status: JobStatus = JobStatus.PENDING
     created_at: datetime = field(default_factory=datetime.utcnow)
@@ -57,6 +60,7 @@ class JobMetadata:
 @dataclass
 class QueueStats:
     """Queue statistics"""
+
     total_jobs: int = 0
     pending_jobs: int = 0
     processing_jobs: int = 0
@@ -70,7 +74,7 @@ class QueueStats:
 class AsyncJobQueue:
     """
     Advanced async job queuing system for long-running tasks
-    
+
     Features:
     - Priority-based job scheduling
     - Automatic retries with exponential backoff
@@ -79,7 +83,7 @@ class AsyncJobQueue:
     - Result caching
     - Dead-letter queue for failed jobs
     """
-    
+
     def __init__(self, max_queue_size: int = 10000, max_concurrent_jobs: Optional[int] = None):
         self.max_queue_size = max_queue_size
         self.max_concurrent_jobs = max_concurrent_jobs or max_queue_size
@@ -90,7 +94,7 @@ class AsyncJobQueue:
         self.failed: Dict[str, JobMetadata] = {}
         self.callbacks: Dict[str, List[callable]] = {}
         self.stats = QueueStats()
-        
+
     async def submit_job(
         self,
         task_name: Optional[str] = None,
@@ -102,16 +106,16 @@ class AsyncJobQueue:
         depends_on: Optional[List[str]] = None,
         job_type: Optional[str] = None,
         payload: Optional[Dict[str, Any]] = None,
-        dependencies: Optional[List[str]] = None
+        dependencies: Optional[List[str]] = None,
     ) -> str:
         """
         Submit a job to the queue
-        
+
         Returns: job_id
         """
         if len(self.queue) >= self.max_queue_size:
             raise RuntimeError("Queue is full")
-        
+
         job_id = str(uuid4())
         metadata = JobMetadata(
             job_id=job_id,
@@ -119,19 +123,16 @@ class AsyncJobQueue:
             max_retries=max_retries,
             timeout_seconds=timeout_seconds,
             user_id=user_id,
-            depends_on=depends_on or dependencies or []
+            depends_on=depends_on or dependencies or [],
         )
-        
+
         self.jobs[job_id] = metadata
         self.queue.append(job_id)
-        self.queue.sort(
-            key=lambda jid: self.jobs[jid].priority.value,
-            reverse=False
-        )
-        
+        self.queue.sort(key=lambda jid: self.jobs[jid].priority.value, reverse=False)
+
         self.stats.total_jobs += 1
         self.stats.pending_jobs += 1
-        
+
         logger.info(f"Job {job_id} submitted: {task_name or job_type} (priority={priority.name})")
         return job_id
 
@@ -172,11 +173,11 @@ class AsyncJobQueue:
         await asyncio.sleep(0)
         await self.update_job_progress(job_id, 1.0)
         return True
-    
+
     async def get_job_status(self, job_id: str) -> Optional[JobMetadata]:
         """Get job status and metadata"""
         return self.jobs.get(job_id)
-    
+
     async def process_next_job(self) -> Optional[str]:
         """
         Process next job from queue
@@ -185,7 +186,7 @@ class AsyncJobQueue:
         # Find next job with satisfied dependencies
         for job_id in self.queue:
             metadata = self.jobs[job_id]
-            
+
             # Check dependencies
             if metadata.depends_on:
                 deps_satisfied = all(
@@ -194,28 +195,28 @@ class AsyncJobQueue:
                 )
                 if not deps_satisfied:
                     continue
-            
+
             # Check timeout
             if metadata.status == JobStatus.PROCESSING:
                 elapsed = (datetime.utcnow() - metadata.started_at).total_seconds()
                 if elapsed > metadata.timeout_seconds:
                     await self._handle_job_timeout(job_id)
                     continue
-            
+
             # Process job
             self.queue.remove(job_id)
             metadata.status = JobStatus.PROCESSING
             metadata.started_at = datetime.utcnow()
             self.processing[job_id] = metadata
-            
+
             self.stats.pending_jobs -= 1
             self.stats.processing_jobs += 1
-            
+
             logger.info(f"Processing job {job_id}")
             return job_id
-        
+
         return None
-    
+
     async def update_job_progress(self, job_id: str, progress: float) -> bool:
         """Update job progress (0.0-1.0)"""
         if metadata := self.jobs.get(job_id):
@@ -223,7 +224,7 @@ class AsyncJobQueue:
             logger.debug(f"Job {job_id} progress: {progress*100:.1f}%")
             return True
         return False
-    
+
     async def complete_job(self, job_id: str, result: Any) -> bool:
         """Mark job as completed"""
         if metadata := self.jobs.get(job_id):
@@ -231,13 +232,13 @@ class AsyncJobQueue:
             metadata.completed_at = datetime.utcnow()
             metadata.result = result
             metadata.progress = 1.0
-            
+
             self.processing.pop(job_id, None)
             self.completed[job_id] = metadata
-            
+
             self.stats.processing_jobs -= 1
             self.stats.completed_jobs += 1
-            
+
             # Calculate avg processing time
             if self.stats.completed_jobs > 0:
                 total_time = sum(
@@ -246,29 +247,29 @@ class AsyncJobQueue:
                     if m.completed_at and m.started_at
                 )
                 self.stats.avg_processing_time = total_time / self.stats.completed_jobs
-            
+
             # Execute callbacks
             await self._execute_callbacks(job_id, "completed", result)
             logger.info(f"Job {job_id} completed")
             return True
         return False
-    
+
     async def fail_job(self, job_id: str, error: str) -> bool:
         """Handle job failure"""
         if metadata := self.jobs.get(job_id):
             metadata.error = error
-            
+
             if metadata.retry_count < metadata.max_retries:
                 # Retry with exponential backoff
                 metadata.retry_count += 1
                 metadata.status = JobStatus.RETRYING
-                backoff = min(600, 2 ** metadata.retry_count)  # Max 10 minutes
-                
+                backoff = min(600, 2**metadata.retry_count)  # Max 10 minutes
+
                 logger.warning(
                     f"Job {job_id} failed, retrying ({metadata.retry_count}/"
                     f"{metadata.max_retries}) after {backoff}s: {error}"
                 )
-                
+
                 # Re-queue with delay
                 await asyncio.sleep(backoff)
                 self.queue.append(job_id)
@@ -277,20 +278,20 @@ class AsyncJobQueue:
                 # Permanent failure
                 metadata.status = JobStatus.FAILED
                 metadata.completed_at = datetime.utcnow()
-                
+
                 self.processing.pop(job_id, None)
                 self.failed[job_id] = metadata
-                
+
                 self.stats.processing_jobs -= 1
                 self.stats.failed_jobs += 1
-                
+
                 # Execute failure callbacks
                 await self._execute_callbacks(job_id, "failed", error)
                 logger.error(f"Job {job_id} failed permanently: {error}")
                 return True
-        
+
         return False
-    
+
     async def cancel_job(self, job_id: str) -> bool:
         """Cancel a pending job"""
         if metadata := self.jobs.get(job_id):
@@ -306,11 +307,11 @@ class AsyncJobQueue:
         """Compatibility stats accessor."""
         self.stats.peak_queue_size = max(self.stats.peak_queue_size, len(self.queue))
         return asdict(self.stats)
-    
+
     async def _handle_job_timeout(self, job_id: str):
         """Handle job timeout"""
         await self.fail_job(job_id, "Job timeout exceeded")
-    
+
     async def _execute_callbacks(self, job_id: str, event: str, data: Any):
         """Execute registered callbacks"""
         callback_key = f"{job_id}:{event}"
@@ -322,39 +323,40 @@ class AsyncJobQueue:
                     callback(job_id, data)
             except Exception as e:
                 logger.error(f"Callback error for {job_id}: {e}")
-    
+
     def register_callback(self, job_id: str, event: str, callback: callable):
         """Register callback for job event"""
         callback_key = f"{job_id}:{event}"
         if callback_key not in self.callbacks:
             self.callbacks[callback_key] = []
         self.callbacks[callback_key].append(callback)
-    
+
     async def get_user_jobs(self, user_id: str) -> List[JobMetadata]:
         """Get all jobs for a user"""
-        return [
-            m for m in self.jobs.values()
-            if m.user_id == user_id
-        ]
-    
+        return [m for m in self.jobs.values() if m.user_id == user_id]
+
     async def get_queue_stats(self) -> QueueStats:
         """Get queue statistics"""
         self.stats.peak_queue_size = max(self.stats.peak_queue_size, len(self.queue))
-        
+
         if self.stats.total_jobs > 0:
             self.stats.success_rate = (
-                self.stats.completed_jobs / 
-                (self.stats.completed_jobs + self.stats.failed_jobs)
-                * 100
-            ) if (self.stats.completed_jobs + self.stats.failed_jobs) > 0 else 100.0
-        
+                (
+                    self.stats.completed_jobs
+                    / (self.stats.completed_jobs + self.stats.failed_jobs)
+                    * 100
+                )
+                if (self.stats.completed_jobs + self.stats.failed_jobs) > 0
+                else 100.0
+            )
+
         return self.stats
-    
+
     async def retry_failed_jobs(self, max_age_hours: int = 24) -> int:
         """Retry failed jobs created within max_age_hours"""
         count = 0
         cutoff_time = datetime.utcnow() - timedelta(hours=max_age_hours)
-        
+
         for job_id, metadata in list(self.failed.items()):
             if metadata.created_at > cutoff_time:
                 metadata.retry_count = 0
@@ -362,30 +364,30 @@ class AsyncJobQueue:
                 self.queue.append(job_id)
                 self.failed.pop(job_id)
                 count += 1
-        
+
         logger.info(f"Retried {count} failed jobs")
         return count
-    
+
     async def cleanup_old_jobs(self, days_old: int = 7) -> int:
         """Remove completed/failed jobs older than days_old"""
         count = 0
         cutoff_time = datetime.utcnow() - timedelta(days=days_old)
-        
+
         for job_id, metadata in list(self.completed.items()):
             if metadata.completed_at and metadata.completed_at < cutoff_time:
                 self.jobs.pop(job_id, None)
                 self.completed.pop(job_id)
                 count += 1
-        
+
         for job_id, metadata in list(self.failed.items()):
             if metadata.completed_at and metadata.completed_at < cutoff_time:
                 self.jobs.pop(job_id, None)
                 self.failed.pop(job_id)
                 count += 1
-        
+
         logger.info(f"Cleaned up {count} old jobs")
         return count
-    
+
     async def get_blocked_jobs(self) -> List[JobMetadata]:
         """Get jobs blocked by dependencies"""
         blocked = []
@@ -399,7 +401,7 @@ class AsyncJobQueue:
 # Common async tasks
 class AsyncTasks:
     """Pre-built async tasks for common operations"""
-    
+
     @staticmethod
     async def analyze_session_async(queue: AsyncJobQueue, session_id: str) -> str:
         """Queue session analysis"""
@@ -407,9 +409,9 @@ class AsyncTasks:
             "analyze_session",
             {"session_id": session_id},
             priority=JobPriority.HIGH,
-            timeout_seconds=1800
+            timeout_seconds=1800,
         )
-    
+
     @staticmethod
     async def generate_report_async(queue: AsyncJobQueue, user_id: str, report_type: str) -> str:
         """Queue report generation"""
@@ -418,31 +420,35 @@ class AsyncTasks:
             {"user_id": user_id, "report_type": report_type},
             user_id=user_id,
             priority=JobPriority.NORMAL,
-            timeout_seconds=3600
+            timeout_seconds=3600,
         )
-    
+
     @staticmethod
-    async def batch_process_async(queue: AsyncJobQueue, batch_id: str, items: List[str]) -> List[str]:
+    async def batch_process_async(
+        queue: AsyncJobQueue, batch_id: str, items: List[str]
+    ) -> List[str]:
         """Queue batch processing"""
         job_ids = []
         for i, item in enumerate(items):
             job_id = await queue.submit_job(
                 f"process_batch_item",
                 {"batch_id": batch_id, "item": item, "index": i},
-                priority=JobPriority.NORMAL if i % 2 == 0 else JobPriority.LOW
+                priority=JobPriority.NORMAL if i % 2 == 0 else JobPriority.LOW,
             )
             job_ids.append(job_id)
         return job_ids
-    
+
     @staticmethod
-    async def email_notification_async(queue: AsyncJobQueue, user_id: str, email: str, subject: str) -> str:
+    async def email_notification_async(
+        queue: AsyncJobQueue, user_id: str, email: str, subject: str
+    ) -> str:
         """Queue email notification"""
         return await queue.submit_job(
             "send_email",
             {"user_id": user_id, "email": email, "subject": subject},
             user_id=user_id,
             priority=JobPriority.LOW,
-            timeout_seconds=300
+            timeout_seconds=300,
         )
 
 

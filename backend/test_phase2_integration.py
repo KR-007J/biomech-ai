@@ -124,7 +124,7 @@ class TestPhase2Integration:
             job_type="analysis",
             payload={"session_id": "test-123"},
             priority=JobPriority.HIGH,
-            user_id="user-456"
+            user_id="user-456",
         )
 
         assert job_id
@@ -147,14 +147,12 @@ class TestPhase2Integration:
         """✅ Job dependency resolution"""
         # Submit parent job
         parent_id = await job_queue.submit_job(
-            job_type="batch_analysis",
-            payload={"batch_size": 10}
+            job_type="batch_analysis", payload={"batch_size": 10}
         )
 
         # Submit dependent job
         child_id = await job_queue.submit_job(
-            job_type="report_generation",
-            dependencies=[parent_id]
+            job_type="report_generation", dependencies=[parent_id]
         )
 
         # Child should not process until parent completes
@@ -285,16 +283,14 @@ class TestPhase2Integration:
         webhook_id = await event_system.register_webhook(
             url="https://example.com/webhook",
             secret="test-secret",
-            events=["user.created", "session.completed"]
+            events=["user.created", "session.completed"],
         )
 
         assert webhook_id in event_system.webhooks
 
         # Publish event
         event = Event(
-            event_type="user.created",
-            resource_id="user-123",
-            data={"email": "test@example.com"}
+            event_type="user.created", resource_id="user-123", data={"email": "test@example.com"}
         )
 
         await event_system.publish_event(event)
@@ -305,7 +301,7 @@ class TestPhase2Integration:
         assert stored_event.event_type == "user.created"
 
         # Simulate delivery (mock HTTP call)
-        with patch('aiohttp.ClientSession.post') as mock_post:
+        with patch("aiohttp.ClientSession.post") as mock_post:
             mock_post.return_value.__aenter__.return_value.status = 200
 
             await event_system._deliver_webhook(webhook_id, event)
@@ -319,8 +315,7 @@ class TestPhase2Integration:
     async def test_webhook_signature_verification(self, event_system):
         """✅ Webhook HMAC signature verification"""
         webhook_id = await event_system.register_webhook(
-            url="https://example.com/webhook",
-            secret="my-secret-key"
+            url="https://example.com/webhook", secret="my-secret-key"
         )
 
         event = Event(event_type="test.event", resource_id="test-123")
@@ -340,14 +335,13 @@ class TestPhase2Integration:
     async def test_webhook_circuit_breaker(self, event_system):
         """✅ Circuit breaker pattern for failing webhooks"""
         webhook_id = await event_system.register_webhook(
-            url="https://failing.example.com/webhook",
-            secret="test"
+            url="https://failing.example.com/webhook", secret="test"
         )
 
         event = Event(event_type="test.event", resource_id="test-123")
 
         # Simulate 5 failures
-        with patch('aiohttp.ClientSession.post') as mock_post:
+        with patch("aiohttp.ClientSession.post") as mock_post:
             mock_post.return_value.__aenter__.return_value.status = 500
 
             for _ in range(6):  # One more than threshold
@@ -398,16 +392,14 @@ class TestPhase2Integration:
         }
         """
 
-        variables = {
-            "userId": "user-123",
-            "exerciseType": "squats"
-        }
+        variables = {"userId": "user-123", "exerciseType": "squats"}
 
         # Mock resolver
-        with patch.object(graphql_server, '_execute_mutation', return_value={
-            "id": "session-456",
-            "status": "created"
-        }) as mock_execute:
+        with patch.object(
+            graphql_server,
+            "_execute_mutation",
+            return_value={"id": "session-456", "status": "created"},
+        ) as mock_execute:
             result = graphql_server.execute_mutation(mutation, variables)
 
             mock_execute.assert_called_once()
@@ -419,10 +411,7 @@ class TestPhase2Integration:
         """✅ Model registration and versioning"""
         # Register model
         model_id = model_registry.register_model(
-            name="ensemble_v1",
-            version="1.0.0",
-            model_type="ENSEMBLE",
-            metadata={"accuracy": 0.95}
+            name="ensemble_v1", version="1.0.0", model_type="ENSEMBLE", metadata={"accuracy": 0.95}
         )
 
         assert model_id in model_registry.models
@@ -456,9 +445,7 @@ class TestPhase2Integration:
     def test_experiment_tracking(self, model_registry):
         """✅ Experiment run tracking"""
         experiment_id = model_registry.start_experiment(
-            name="accuracy_optimization",
-            model_type="ENSEMBLE",
-            parameters={"learning_rate": 0.001}
+            name="accuracy_optimization", model_type="ENSEMBLE", parameters={"learning_rate": 0.001}
         )
 
         assert experiment_id in model_registry.experiments
@@ -481,7 +468,7 @@ class TestPhase2Integration:
         cohort_id = analytics_engine.create_cohort(
             name="new_users_q1_2026",
             criteria={"registration_date": {"start": "2026-01-01", "end": "2026-03-31"}},
-            group_by="month"
+            group_by="month",
         )
 
         assert cohort_id in analytics_engine.cohorts
@@ -493,7 +480,7 @@ class TestPhase2Integration:
         users = [
             {"id": "user-1", "registration_date": "2026-01-15", "sessions": 10},
             {"id": "user-2", "registration_date": "2026-02-10", "sessions": 8},
-            {"id": "user-3", "registration_date": "2026-03-20", "sessions": 12}
+            {"id": "user-3", "registration_date": "2026-03-20", "sessions": 12},
         ]
 
         # Calculate retention
@@ -513,7 +500,7 @@ class TestPhase2Integration:
             {"user_id": "user-1", "steps": ["landing_page", "sign_up", "first_session", "payment"]},
             {"user_id": "user-2", "steps": ["landing_page", "sign_up", "first_session"]},
             {"user_id": "user-3", "steps": ["landing_page", "sign_up"]},
-            {"user_id": "user-4", "steps": ["landing_page"]}
+            {"user_id": "user-4", "steps": ["landing_page"]},
         ]
 
         # Analyze funnel
@@ -529,22 +516,25 @@ class TestPhase2Integration:
             {"id": "user-1", "sessions_per_week": 5, "avg_score": 85, "age": 25},
             {"id": "user-2", "sessions_per_week": 2, "avg_score": 92, "age": 30},
             {"id": "user-3", "sessions_per_week": 7, "avg_score": 78, "age": 22},
-            {"id": "user-4", "sessions_per_week": 1, "avg_score": 88, "age": 35}
+            {"id": "user-4", "sessions_per_week": 1, "avg_score": 88, "age": 35},
         ]
 
         # Create segments
-        segments = analytics_engine.create_segments(users, {
-            "high_engagement": lambda u: u["sessions_per_week"] >= 5,
-            "high_performer": lambda u: u["avg_score"] >= 90,
-            "young_adult": lambda u: u["age"] < 30
-        })
+        segments = analytics_engine.create_segments(
+            users,
+            {
+                "high_engagement": lambda u: u["sessions_per_week"] >= 5,
+                "high_performer": lambda u: u["avg_score"] >= 90,
+                "young_adult": lambda u: u["age"] < 30,
+            },
+        )
 
         assert "high_engagement" in segments
         assert "high_performer" in segments
         assert "young_adult" in segments
 
         assert len(segments["high_engagement"]) == 2  # users 1 and 3
-        assert len(segments["high_performer"]) == 1   # user 2
+        assert len(segments["high_performer"]) == 1  # user 2
 
     # ==================== TIER 16: A/B TESTING ====================
 
@@ -555,7 +545,7 @@ class TestPhase2Integration:
             name="ui_button_color_test",
             variants=["red_button", "blue_button"],
             traffic_percentage=100,
-            strategy=AllocationStrategy.RANDOM
+            strategy=AllocationStrategy.RANDOM,
         )
 
         assert experiment_id in ab_engine.experiments
@@ -573,9 +563,7 @@ class TestPhase2Integration:
     def test_user_allocation_strategies(self, ab_engine):
         """✅ Different allocation strategies"""
         experiment_id = ab_engine.create_experiment(
-            name="allocation_test",
-            variants=["A", "B"],
-            strategy=AllocationStrategy.STRATIFIED
+            name="allocation_test", variants=["A", "B"], strategy=AllocationStrategy.STRATIFIED
         )
 
         ab_engine.start_experiment(experiment_id)
@@ -593,8 +581,7 @@ class TestPhase2Integration:
     def test_experiment_results_analysis(self, ab_engine):
         """✅ Statistical analysis of experiment results"""
         experiment_id = ab_engine.create_experiment(
-            name="conversion_test",
-            variants=["control", "variant"]
+            name="conversion_test", variants=["control", "variant"]
         )
 
         ab_engine.start_experiment(experiment_id)
@@ -626,8 +613,8 @@ class TestPhase2Integration:
         # Simulate suspicious actions
         actions = [
             {"type": "api_call", "count": 150, "timeframe": "minute"},  # Velocity breach
-            {"type": "location_change", "from": "US", "to": "RU"},       # Geo anomaly
-            {"type": "device_change", "new_device": True},             # Device anomaly
+            {"type": "location_change", "from": "US", "to": "RU"},  # Geo anomaly
+            {"type": "device_change", "new_device": True},  # Device anomaly
         ]
 
         # Calculate risk score
@@ -644,7 +631,7 @@ class TestPhase2Integration:
         normal_actions = [
             {"hour": 9, "location": "US", "device": "mobile", "sessions": 3},
             {"hour": 10, "location": "US", "device": "mobile", "sessions": 2},
-            {"hour": 11, "location": "US", "device": "mobile", "sessions": 4}
+            {"hour": 11, "location": "US", "device": "mobile", "sessions": 4},
         ]
 
         fraud_engine.build_behavior_profile(user_id, normal_actions)
@@ -662,8 +649,8 @@ class TestPhase2Integration:
         # Simulate critical fraud indicators
         actions = [
             {"type": "api_call", "count": 200, "timeframe": "minute"},  # Major velocity breach
-            {"type": "location_change", "from": "US", "to": "UNKNOWN"}, # Geo anomaly
-            {"type": "unusual_time", "hour": 3},                       # Unusual hour
+            {"type": "location_change", "from": "US", "to": "UNKNOWN"},  # Geo anomaly
+            {"type": "unusual_time", "hour": 3},  # Unusual hour
         ]
 
         risk_score = fraud_engine.calculate_risk_score(user_id, actions)
@@ -703,6 +690,7 @@ class TestPhase2Integration:
 
 # ==================== END-TO-END INTEGRATION TESTS ====================
 
+
 class TestPhase2EndToEndIntegration:
     """End-to-end integration tests combining multiple Phase 2 features"""
 
@@ -718,7 +706,7 @@ class TestPhase2EndToEndIntegration:
         job_id = await job_queue.submit_job(
             job_type="biomech_analysis",
             payload={"session_id": "session-123", "frames": 100},
-            user_id=user_id
+            user_id=user_id,
         )
 
         # Process job (would normally send WebSocket updates)
@@ -734,7 +722,7 @@ class TestPhase2EndToEndIntegration:
         # Register webhook for model events
         webhook_id = await event_system.register_webhook(
             url="https://ml-platform.example.com/webhook",
-            events=["model.approved", "model.deployed"]
+            events=["model.approved", "model.deployed"],
         )
 
         # Register and approve model
@@ -751,8 +739,7 @@ class TestPhase2EndToEndIntegration:
         """✅ A/B test results integrated with analytics"""
         # Create A/B test
         experiment_id = ab_engine.create_experiment(
-            name="feature_test",
-            variants=["old_ui", "new_ui"]
+            name="feature_test", variants=["old_ui", "new_ui"]
         )
         ab_engine.start_experiment(experiment_id)
 
@@ -765,20 +752,19 @@ class TestPhase2EndToEndIntegration:
             ab_engine.record_conversion(experiment_id, user_id, converted)
 
             # Track in analytics
-            users.append({
-                "id": user_id,
-                "variant": variant,
-                "converted": converted  # 70% vs 50%
-            })
+            users.append({"id": user_id, "variant": variant, "converted": converted})  # 70% vs 50%
 
         # Analyze experiment
         results = ab_engine.analyze_results(experiment_id)
 
         # Analytics could use this data for segmentation
-        segments = analytics_engine.create_segments(users, {
-            "converted": lambda u: u["converted"],
-            "new_ui_users": lambda u: u["variant"] == "new_ui"
-        })
+        segments = analytics_engine.create_segments(
+            users,
+            {
+                "converted": lambda u: u["converted"],
+                "new_ui_users": lambda u: u["variant"] == "new_ui",
+            },
+        )
 
         assert len(segments["converted"]) > 0
         assert results["new_ui"]["conversion_rate"] > results["old_ui"]["conversion_rate"]

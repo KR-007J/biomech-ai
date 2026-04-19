@@ -1,20 +1,21 @@
 import numpy as np
 from typing import List, Dict, Any, Tuple
 
+
 def calculate_angle(a: List[float], b: List[float], c: List[float]) -> float:
     """
     Calculates the angle at joint 'b' using the vector dot product.
-    
+
     Formula: theta = arccos( (v1 dot v2) / (|v1| * |v2|) )
-    
+
     Args:
         a: First point coordinates [x, y]
         b: Vertex point coordinates [x, y]
         c: Third point coordinates [x, y]
-    
+
     Returns:
         Angle in degrees (0-180)
-    
+
     Raises:
         ValueError: If points are invalid or cause numerical errors
     """
@@ -41,13 +42,14 @@ def calculate_angle(a: List[float], b: List[float], c: List[float]) -> float:
     except Exception as e:
         raise ValueError(f"Failed to calculate angle: {e}")
 
+
 def get_biomechanical_analysis(keypoints: Dict[str, Dict[str, float]]) -> Dict[str, Any]:
     """
     Analyzes key joints and returns structured biomechanical data.
-    
+
     Args:
         keypoints: Dict of landmark positions with visibility scores
-    
+
     Returns:
         Dict containing angles, deviations, and pose confidence
     """
@@ -56,32 +58,44 @@ def get_biomechanical_analysis(keypoints: Dict[str, Dict[str, float]]) -> Dict[s
 
     def get_pt(name: str) -> List[float]:
         """Extract x, y coordinates from keypoint"""
-        return [keypoints[name]['x'], keypoints[name]['y']]
+        return [keypoints[name]["x"], keypoints[name]["y"]]
 
     # Ideal ranges for common exercises (Example defaults)
     IDEAL_RANGES: Dict[str, Dict[str, float]] = {
         "knee": {"min": 85, "max": 100},
         "elbow": {"min": 45, "max": 160},
-        "hip": {"min": 70, "max": 180}
+        "hip": {"min": 70, "max": 180},
     }
 
     results: Dict[str, Any] = {
         "angles": {},
         "ideal_ranges": IDEAL_RANGES,
         "deviations": {},
-        "pose_confidence": 0.0
+        "pose_confidence": 0.0,
     }
-    
+
     try:
         # Calculate Angles
-        results["angles"]["left_elbow"] = calculate_angle(get_pt('LEFT_SHOULDER'), get_pt('LEFT_ELBOW'), get_pt('LEFT_WRIST'))
-        results["angles"]["right_elbow"] = calculate_angle(get_pt('RIGHT_SHOULDER'), get_pt('RIGHT_ELBOW'), get_pt('RIGHT_WRIST'))
-        results["angles"]["left_knee"] = calculate_angle(get_pt('LEFT_HIP'), get_pt('LEFT_KNEE'), get_pt('LEFT_ANKLE'))
-        results["angles"]["right_knee"] = calculate_angle(get_pt('RIGHT_HIP'), get_pt('RIGHT_KNEE'), get_pt('RIGHT_ANKLE'))
-        results["angles"]["left_hip"] = calculate_angle(get_pt('LEFT_SHOULDER'), get_pt('LEFT_HIP'), get_pt('LEFT_KNEE'))
-        results["angles"]["right_hip"] = calculate_angle(get_pt('RIGHT_SHOULDER'), get_pt('RIGHT_HIP'), get_pt('RIGHT_KNEE'))
+        results["angles"]["left_elbow"] = calculate_angle(
+            get_pt("LEFT_SHOULDER"), get_pt("LEFT_ELBOW"), get_pt("LEFT_WRIST")
+        )
+        results["angles"]["right_elbow"] = calculate_angle(
+            get_pt("RIGHT_SHOULDER"), get_pt("RIGHT_ELBOW"), get_pt("RIGHT_WRIST")
+        )
+        results["angles"]["left_knee"] = calculate_angle(
+            get_pt("LEFT_HIP"), get_pt("LEFT_KNEE"), get_pt("LEFT_ANKLE")
+        )
+        results["angles"]["right_knee"] = calculate_angle(
+            get_pt("RIGHT_HIP"), get_pt("RIGHT_KNEE"), get_pt("RIGHT_ANKLE")
+        )
+        results["angles"]["left_hip"] = calculate_angle(
+            get_pt("LEFT_SHOULDER"), get_pt("LEFT_HIP"), get_pt("LEFT_KNEE")
+        )
+        results["angles"]["right_hip"] = calculate_angle(
+            get_pt("RIGHT_SHOULDER"), get_pt("RIGHT_HIP"), get_pt("RIGHT_KNEE")
+        )
 
-        # Calculate Deviations 
+        # Calculate Deviations
         for joint, value in results["angles"].items():
             base_joint = "knee" if "knee" in joint else ("elbow" if "elbow" in joint else "hip")
             ideal = IDEAL_RANGES[base_joint]
@@ -93,10 +107,10 @@ def get_biomechanical_analysis(keypoints: Dict[str, Dict[str, float]]) -> Dict[s
                 results["deviations"][joint] = 0.0
 
         # Overall Confidence
-        visibilities = [keypoints[name]['visibility'] for name in keypoints]
+        visibilities = [keypoints[name]["visibility"] for name in keypoints]
         results["pose_confidence"] = float(round(np.mean(visibilities), 3))
-        
+
     except KeyError:
         pass
-        
+
     return results
