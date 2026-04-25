@@ -182,9 +182,7 @@ class TimeSeriesAnalyzer:
             logger.error(f"Trend analysis error for {metric_name}: {e}")
             return None
 
-    def detect_anomalies(
-        self, metric_name: str, method: str = "isolation_forest", threshold: float = 2.5
-    ) -> List[Anomaly]:
+    def detect_anomalies(self, metric_name: str, method: str = "isolation_forest", threshold: float = 2.5) -> List[Anomaly]:
         """
         Detect anomalies in time series
 
@@ -217,9 +215,7 @@ class TimeSeriesAnalyzer:
                     z_score = abs((value[0] - mean) / (std + 1e-6))
                     if z_score > threshold:
                         expected = mean
-                        severity = (
-                            "critical" if z_score > 4 else "high" if z_score > 3 else "medium"
-                        )
+                        severity = "critical" if z_score > 4 else "high" if z_score > 3 else "medium"
                         anomalies.append(
                             Anomaly(
                                 timestamp=point.timestamp,
@@ -242,11 +238,7 @@ class TimeSeriesAnalyzer:
                     for i, (pred, point, value) in enumerate(zip(predictions, points, values)):
                         if pred == -1:  # Anomaly
                             deviation = abs((value[0] - mean) / (np.std(values) + 1e-6))
-                            severity = (
-                                "critical"
-                                if deviation > 4
-                                else "high" if deviation > 2.5 else "medium"
-                            )
+                            severity = "critical" if deviation > 4 else "high" if deviation > 2.5 else "medium"
                             anomalies.append(
                                 Anomaly(
                                     timestamp=point.timestamp,
@@ -272,11 +264,7 @@ class TimeSeriesAnalyzer:
                     for i, (pred, point, value) in enumerate(zip(predictions, points, values)):
                         if pred == -1:  # Anomaly
                             deviation = abs((value[0] - mean) / (np.std(values) + 1e-6))
-                            severity = (
-                                "critical"
-                                if deviation > 4
-                                else "high" if deviation > 2.5 else "medium"
-                            )
+                            severity = "critical" if deviation > 4 else "high" if deviation > 2.5 else "medium"
                             anomalies.append(
                                 Anomaly(
                                     timestamp=point.timestamp,
@@ -397,9 +385,7 @@ class ComparativeAnalyticsEngine:
 
         self.cohort_data[cohort_name][metric_name].extend(values)
 
-    def get_percentile_ranking(
-        self, user_id: str, metric_name: str, cohort_name: str
-    ) -> Optional[Dict[str, Any]]:
+    def get_percentile_ranking(self, user_id: str, metric_name: str, cohort_name: str) -> Optional[Dict[str, Any]]:
         """
         Get user's percentile ranking in cohort
 
@@ -411,11 +397,7 @@ class ComparativeAnalyticsEngine:
         Returns:
             Percentile ranking and statistics
         """
-        if (
-            user_id not in self.user_benchmarks
-            or cohort_name not in self.cohort_data
-            or metric_name not in self.cohort_data[cohort_name]
-        ):
+        if user_id not in self.user_benchmarks or cohort_name not in self.cohort_data or metric_name not in self.cohort_data[cohort_name]:
             return None
 
         user_value = self.user_benchmarks[user_id].get(metric_name)
@@ -432,17 +414,11 @@ class ComparativeAnalyticsEngine:
             "cohort_mean": float(np.mean(cohort_values)),
             "cohort_std": float(np.std(cohort_values)),
             "percentile": float(percentile),
-            "rank": (
-                f"Top {100 - percentile:.0f}%" if percentile > 50 else f"Bottom {percentile:.0f}%"
-            ),
-            "z_score": float(
-                (user_value - np.mean(cohort_values)) / (np.std(cohort_values) + 1e-6)
-            ),
+            "rank": (f"Top {100 - percentile:.0f}%" if percentile > 50 else f"Bottom {percentile:.0f}%"),
+            "z_score": float((user_value - np.mean(cohort_values)) / (np.std(cohort_values) + 1e-6)),
         }
 
-    def get_peer_comparison(
-        self, user_id: str, similar_users: List[str], metrics: List[str]
-    ) -> Dict[str, Any]:
+    def get_peer_comparison(self, user_id: str, similar_users: List[str], metrics: List[str]) -> Dict[str, Any]:
         """Compare user to similar peers"""
         comparison = {"user_id": user_id, "similar_users": similar_users, "metrics": {}}
 
@@ -456,8 +432,7 @@ class ComparativeAnalyticsEngine:
                     "user_value": float(user_val),
                     "peer_mean": float(np.mean(peer_vals)),
                     "peer_std": float(np.std(peer_vals)),
-                    "better_than_peers": user_val
-                    < np.mean(peer_vals),  # Assuming lower is better for most metrics
+                    "better_than_peers": user_val < np.mean(peer_vals),  # Assuming lower is better for most metrics
                     "difference": float(user_val - np.mean(peer_vals)),
                 }
 
@@ -468,9 +443,7 @@ class MovementSignatureGenerator:
     """Generate and analyze unique movement signatures"""
 
     @staticmethod
-    def generate_signature(
-        joint_angles: Dict[str, float], movement_metrics: Dict[str, float]
-    ) -> str:
+    def generate_signature(joint_angles: Dict[str, float], movement_metrics: Dict[str, float]) -> str:
         """
         Generate movement signature hash
 
@@ -489,9 +462,7 @@ class MovementSignatureGenerator:
             quantized[joint] = round(angle / 5) * 5  # 5-degree bins
 
         # Create canonical string
-        sig_str = json.dumps(quantized, sort_keys=True) + json.dumps(
-            movement_metrics, sort_keys=True
-        )
+        sig_str = json.dumps(quantized, sort_keys=True) + json.dumps(movement_metrics, sort_keys=True)
 
         # Hash
         return hashlib.md5(sig_str.encode()).hexdigest()

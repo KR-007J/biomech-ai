@@ -76,9 +76,7 @@ class UnifiedBiomechanicsAnalyzer:
             logger.error(f"❌ Initialization error: {e}")
             return False
 
-    async def analyze_frame(
-        self, frame_data: Dict[str, Any], session_id: str, user_id: str
-    ) -> Dict[str, Any]:
+    async def analyze_frame(self, frame_data: Dict[str, Any], session_id: str, user_id: str) -> Dict[str, Any]:
         """
         Comprehensive frame analysis
 
@@ -140,9 +138,7 @@ class UnifiedBiomechanicsAnalyzer:
 
                 # Group analysis if multiple
                 if len(tracked) > 1:
-                    group_sync = self.group_analyzer.analyze_group_sync(
-                        list(tracked.values()), f"group_{session_id}"
-                    )
+                    group_sync = self.group_analyzer.analyze_group_sync(list(tracked.values()), f"group_{session_id}")
                     if group_sync:
                         result["group_sync"] = asdict(group_sync)
 
@@ -178,9 +174,7 @@ class UnifiedBiomechanicsAnalyzer:
             logger.error(f"Frame analysis error: {e}")
             return {"error": str(e), "frame_number": self.frame_count}
 
-    async def analyze_session(
-        self, session_id: str, user_id: str, frames_data: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    async def analyze_session(self, session_id: str, user_id: str, frames_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Comprehensive session analysis
 
@@ -397,9 +391,7 @@ class UnifiedBiomechanicsAnalyzer:
                 form_scores.append(result["form"]["quality_score"])
 
         # Primary exercise
-        primary_exercise = (
-            max(exercises_detected, key=exercises_detected.get) if exercises_detected else "unknown"
-        )
+        primary_exercise = max(exercises_detected, key=exercises_detected.get) if exercises_detected else "unknown"
 
         return {
             "primary_exercise": primary_exercise,
@@ -436,9 +428,7 @@ class UnifiedBiomechanicsAnalyzer:
             "active_sessions": len(self.session_data),
             "ensemble_status": ("ready" if self.ensemble.detectors else "not_initialized"),
             "models_active": len(self.ensemble.detectors),
-            "analytics_points": {
-                metric: len(points) for metric, points in self.analytics.data_history.items()
-            },
+            "analytics_points": {metric: len(points) for metric, points in self.analytics.data_history.items()},
         }
 
 

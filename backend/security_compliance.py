@@ -288,9 +288,7 @@ class ComplianceEngine:
             logger.error(f"Audit logging failed: {str(e)}")
             return False
 
-    async def record_consent(
-        self, user_id: str, consent_type: str, ip_address: str, version: str = "1.0"
-    ) -> Dict[str, Any]:
+    async def record_consent(self, user_id: str, consent_type: str, ip_address: str, version: str = "1.0") -> Dict[str, Any]:
         """
         Record user consent (GDPR)
 
@@ -389,9 +387,7 @@ class ComplianceEngine:
             logger.error(f"Report generation failed: {str(e)}")
             return {"error": str(e)}
 
-    async def add_data_retention_policy(
-        self, data_type: str, retention_days: int, classification: str, description: str
-    ) -> Dict[str, Any]:
+    async def add_data_retention_policy(self, data_type: str, retention_days: int, classification: str, description: str) -> Dict[str, Any]:
         """Add data retention policy"""
         try:
             policy_id = str(uuid.uuid4())

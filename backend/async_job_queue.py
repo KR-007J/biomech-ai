@@ -142,8 +142,7 @@ class AsyncJobQueue:
 
         if metadata.depends_on:
             deps_satisfied = all(
-                self.jobs.get(dep_id) and self.jobs[dep_id].status == JobStatus.COMPLETED
-                for dep_id in metadata.depends_on
+                self.jobs.get(dep_id) and self.jobs[dep_id].status == JobStatus.COMPLETED for dep_id in metadata.depends_on
             )
             if not deps_satisfied:
                 return False
@@ -187,10 +186,7 @@ class AsyncJobQueue:
 
             # Check dependencies
             if metadata.depends_on:
-                deps_satisfied = all(
-                    self.jobs.get(dep_id, JobMetadata()).status == JobStatus.COMPLETED
-                    for dep_id in metadata.depends_on
-                )
+                deps_satisfied = all(self.jobs.get(dep_id, JobMetadata()).status == JobStatus.COMPLETED for dep_id in metadata.depends_on)
                 if not deps_satisfied:
                     continue
 
@@ -240,9 +236,7 @@ class AsyncJobQueue:
             # Calculate avg processing time
             if self.stats.completed_jobs > 0:
                 total_time = sum(
-                    (m.completed_at - m.started_at).total_seconds()
-                    for m in self.completed.values()
-                    if m.completed_at and m.started_at
+                    (m.completed_at - m.started_at).total_seconds() for m in self.completed.values() if m.completed_at and m.started_at
                 )
                 self.stats.avg_processing_time = total_time / self.stats.completed_jobs
 
@@ -264,8 +258,7 @@ class AsyncJobQueue:
                 backoff = min(600, 2**metadata.retry_count)  # Max 10 minutes
 
                 logger.warning(
-                    f"Job {job_id} failed, retrying ({metadata.retry_count}/"
-                    f"{metadata.max_retries}) after {backoff}s: {error}"
+                    f"Job {job_id} failed, retrying ({metadata.retry_count}/" f"{metadata.max_retries}) after {backoff}s: {error}"
                 )
 
                 # Re-queue with delay
@@ -339,11 +332,7 @@ class AsyncJobQueue:
 
         if self.stats.total_jobs > 0:
             self.stats.success_rate = (
-                (
-                    self.stats.completed_jobs
-                    / (self.stats.completed_jobs + self.stats.failed_jobs)
-                    * 100
-                )
+                (self.stats.completed_jobs / (self.stats.completed_jobs + self.stats.failed_jobs) * 100)
                 if (self.stats.completed_jobs + self.stats.failed_jobs) > 0
                 else 100.0
             )
@@ -422,9 +411,7 @@ class AsyncTasks:
         )
 
     @staticmethod
-    async def batch_process_async(
-        queue: AsyncJobQueue, batch_id: str, items: List[str]
-    ) -> List[str]:
+    async def batch_process_async(queue: AsyncJobQueue, batch_id: str, items: List[str]) -> List[str]:
         """Queue batch processing"""
         job_ids = []
         for i, item in enumerate(items):
@@ -437,9 +424,7 @@ class AsyncTasks:
         return job_ids
 
     @staticmethod
-    async def email_notification_async(
-        queue: AsyncJobQueue, user_id: str, email: str, subject: str
-    ) -> str:
+    async def email_notification_async(queue: AsyncJobQueue, user_id: str, email: str, subject: str) -> str:
         """Queue email notification"""
         return await queue.submit_job(
             "send_email",

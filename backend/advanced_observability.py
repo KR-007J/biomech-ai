@@ -377,9 +377,7 @@ class DistributedTracingEngine:
                     metric = latest_metrics[alert.metric_name]
 
                     # Evaluate condition
-                    triggered_now = self._evaluate_condition(
-                        alert.condition, metric.value, alert.threshold
-                    )
+                    triggered_now = self._evaluate_condition(alert.condition, metric.value, alert.threshold)
 
                     if triggered_now and not alert.triggered_at:
                         alert.triggered_at = datetime.utcnow()
@@ -404,9 +402,7 @@ class DistributedTracingEngine:
             return abs(value - threshold) >= 0.01
         return False
 
-    async def get_metrics_dashboard(
-        self, metric_names: List[str] = None, time_range_minutes: int = 60
-    ) -> Dict[str, Any]:
+    async def get_metrics_dashboard(self, metric_names: List[str] = None, time_range_minutes: int = 60) -> Dict[str, Any]:
         """Get metrics for dashboard"""
         try:
             # Filter metrics

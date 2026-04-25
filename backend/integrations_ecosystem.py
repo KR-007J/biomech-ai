@@ -115,9 +115,7 @@ class IntegrationManager:
         self.sync_queue: List[str] = []  # integration_ids to sync
         logger.info("Integration manager initialized")
 
-    async def connect_integration(
-        self, user_id: str, provider: str, credentials: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def connect_integration(self, user_id: str, provider: str, credentials: Dict[str, Any]) -> Dict[str, Any]:
         """
         Connect third-party integration
 
@@ -160,9 +158,7 @@ class IntegrationManager:
             logger.error(f"Integration connection failed: {str(e)}")
             return {"error": str(e)}
 
-    async def _validate_credentials(
-        self, provider: IntegrationProvider, credentials: Dict
-    ) -> tuple[bool, Dict]:
+    async def _validate_credentials(self, provider: IntegrationProvider, credentials: Dict) -> tuple[bool, Dict]:
         """Validate credentials with provider"""
         # In production, make actual API calls to validate
         return True, {"id": "external_123", "email": "user@example.com"}
@@ -252,9 +248,7 @@ class IntegrationManager:
             logger.error(f"Activity fetch failed: {str(e)}")
             return []
 
-    async def _fetch_strava_activities(
-        self, integration: IntegrationAccount, limit: int
-    ) -> List[Dict]:
+    async def _fetch_strava_activities(self, integration: IntegrationAccount, limit: int) -> List[Dict]:
         """Fetch from Strava API"""
         return [
             {
@@ -268,9 +262,7 @@ class IntegrationManager:
             }
         ]
 
-    async def _fetch_apple_health_activities(
-        self, integration: IntegrationAccount, limit: int
-    ) -> List[Dict]:
+    async def _fetch_apple_health_activities(self, integration: IntegrationAccount, limit: int) -> List[Dict]:
         """Fetch from Apple Health"""
         return [
             {
@@ -283,9 +275,7 @@ class IntegrationManager:
             }
         ]
 
-    async def _fetch_google_fit_activities(
-        self, integration: IntegrationAccount, limit: int
-    ) -> List[Dict]:
+    async def _fetch_google_fit_activities(self, integration: IntegrationAccount, limit: int) -> List[Dict]:
         """Fetch from Google Fit"""
         return [
             {
@@ -327,9 +317,7 @@ class IntegrationManager:
     async def get_user_integrations(self, user_id: str) -> Dict[str, Any]:
         """Get all integrations for user"""
         try:
-            user_integrations = [
-                i.to_dict() for i in self.integrations.values() if i.user_id == user_id
-            ]
+            user_integrations = [i.to_dict() for i in self.integrations.values() if i.user_id == user_id]
 
             return {
                 "user_id": user_id,

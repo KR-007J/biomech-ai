@@ -192,11 +192,7 @@ class YOLOv8Detector(ModelDetector):
                     for idx, kpt_name in enumerate(kpt_names):
                         if idx < len(keypoints.xy[0]):
                             x, y = keypoints.xy[0][idx]
-                            conf = (
-                                keypoints.conf[0][idx].item()
-                                if idx < len(keypoints.conf[0])
-                                else 0.5
-                            )
+                            conf = keypoints.conf[0][idx].item() if idx < len(keypoints.conf[0]) else 0.5
                             detections[kpt_name] = LandmarkDetection(
                                 model=ModelType.YOLOV8_POSE,
                                 landmark_name=kpt_name,
@@ -286,9 +282,7 @@ class EnsembleAnalyzer:
 
         return ensemble_results
 
-    def _consensus_vote(
-        self, landmark_name: str, detections: List[LandmarkDetection]
-    ) -> Optional[EnsembleResult]:
+    def _consensus_vote(self, landmark_name: str, detections: List[LandmarkDetection]) -> Optional[EnsembleResult]:
         """
         Consensus voting mechanism with outlier removal
 
@@ -312,9 +306,7 @@ class EnsembleAnalyzer:
         mean_x, std_x = coords_x.mean(), coords_x.std()
         mean_y, std_y = coords_y.mean(), coords_y.std()
 
-        mask = (np.abs(coords_x - mean_x) <= self.outlier_threshold * std_x) & (
-            np.abs(coords_y - mean_y) <= self.outlier_threshold * std_y
-        )
+        mask = (np.abs(coords_x - mean_x) <= self.outlier_threshold * std_x) & (np.abs(coords_y - mean_y) <= self.outlier_threshold * std_y)
 
         outliers_removed = len(detections) - mask.sum()
 
@@ -348,9 +340,7 @@ class EnsembleAnalyzer:
             timestamp=datetime.utcnow().isoformat(),
         )
 
-    def _temporal_smooth(
-        self, current_results: Dict[str, EnsembleResult]
-    ) -> Dict[str, EnsembleResult]:
+    def _temporal_smooth(self, current_results: Dict[str, EnsembleResult]) -> Dict[str, EnsembleResult]:
         """Apply temporal smoothing using Kalman filter"""
         try:
             pass

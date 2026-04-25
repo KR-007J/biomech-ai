@@ -150,9 +150,7 @@ class TaskManager:
                     task.retry_count += 1
                     if task.retry_count > task.max_retries:
                         raise
-                    logger.warning(
-                        f"Task retry {task.retry_count}/{task.max_retries}: {task.task_id}"
-                    )
+                    logger.warning(f"Task retry {task.retry_count}/{task.max_retries}: {task.task_id}")
                     await asyncio.sleep(2**task.retry_count)  # Exponential backoff
 
         except Exception as e:
@@ -189,11 +187,7 @@ class TaskManager:
     def cleanup_old_tasks(self, hours: int = 24):
         """Remove tasks older than specified hours"""
         cutoff = datetime.now() - timedelta(hours=hours)
-        to_remove = [
-            task_id
-            for task_id, task in self.tasks.items()
-            if task.completed_at and task.completed_at < cutoff
-        ]
+        to_remove = [task_id for task_id, task in self.tasks.items() if task.completed_at and task.completed_at < cutoff]
 
         for task_id in to_remove:
             del self.tasks[task_id]

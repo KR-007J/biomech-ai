@@ -272,9 +272,7 @@ class SportsScienceEngine:
             logger.error(f"Profile creation failed: {str(e)}")
             return {"error": str(e)}
 
-    async def analyze_gait_pro(
-        self, session_id: str, person_id: str, sport: str, pose_data: Dict
-    ) -> Dict[str, Any]:
+    async def analyze_gait_pro(self, session_id: str, person_id: str, sport: str, pose_data: Dict) -> Dict[str, Any]:
         """
         Professional-grade gait analysis
 
@@ -370,11 +368,10 @@ class SportsScienceEngine:
 
             if isinstance(left_foot, dict) and isinstance(right_foot, dict):
                 dist = math.sqrt(
-                    (left_foot.get("x", 0) - right_foot.get("x", 0)) ** 2
-                    + (left_foot.get("y", 0) - right_foot.get("y", 0)) ** 2
+                    (left_foot.get("x", 0) - right_foot.get("x", 0)) ** 2 + (left_foot.get("y", 0) - right_foot.get("y", 0)) ** 2
                 )
                 return dist * 1.5  # Approximate in meters
-        except:
+        except Exception:
             pass
         return 1.6  # Default stride length
 
@@ -413,7 +410,7 @@ class SportsScienceEngine:
             cos_angle = dot / (mag1 * mag2)
             angle_rad = math.acos(max(-1, min(1, cos_angle)))
             return math.degrees(angle_rad)
-        except:
+        except Exception:
             return 0.0
 
     def _calculate_gait_timing(self, pose_data: Dict) -> Tuple[float, float]:
@@ -460,9 +457,7 @@ class SportsScienceEngine:
                     interpretations.append("Cadence excellent - high running efficiency")
 
         if analysis.symmetry_index < 90:
-            interpretations.append(
-                f"Asymmetry detected ({100-analysis.symmetry_index:.1f}%) - address muscle imbalance"
-            )
+            interpretations.append(f"Asymmetry detected ({100-analysis.symmetry_index:.1f}%) - address muscle imbalance")
 
         return {
             "interpretations": interpretations,
@@ -473,9 +468,7 @@ class SportsScienceEngine:
             ],
         }
 
-    async def get_sport_standards(
-        self, sport: str, age_group: str = "25-35", gender: str = "M"
-    ) -> Dict[str, Any]:
+    async def get_sport_standards(self, sport: str, age_group: str = "25-35", gender: str = "M") -> Dict[str, Any]:
         """Get sport-specific performance standards"""
         try:
             standards = self.standards.get(sport, [])

@@ -62,9 +62,7 @@ class Vector3D:
 
     def distance_to(self, other: "Vector3D") -> float:
         """Calculate Euclidean distance"""
-        return math.sqrt(
-            (self.x - other.x) ** 2 + (self.y - other.y) ** 2 + (self.z - other.z) ** 2
-        )
+        return math.sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2 + (self.z - other.z) ** 2)
 
     def normalize(self) -> "Vector3D":
         """Return normalized vector"""
@@ -202,9 +200,7 @@ class AREngine:
         self.correction_overlays: Dict[str, List[FormCorrection3D]] = {}
         logger.info(f"AR Engine initialized (max {max_persons} persons)")
 
-    async def start_ar_session(
-        self, user_id: str, mode: str, camera_intrinsics: Dict
-    ) -> Dict[str, Any]:
+    async def start_ar_session(self, user_id: str, mode: str, camera_intrinsics: Dict) -> Dict[str, Any]:
         """
         Start AR session
 
@@ -301,9 +297,7 @@ class AREngine:
 
         for joint_name, landmark in landmarks_3d.items():
             if isinstance(landmark, dict):
-                joints[joint_name] = Vector3D(
-                    landmark.get("x", 0), landmark.get("y", 0), landmark.get("z", 0)
-                )
+                joints[joint_name] = Vector3D(landmark.get("x", 0), landmark.get("y", 0), landmark.get("z", 0))
 
         # Build bones connecting joints
         bone_pairs = [
@@ -350,9 +344,7 @@ class AREngine:
         else:
             return (0, 0, 255)  # Blue for torso
 
-    async def _generate_3d_corrections(
-        self, skeleton: Skeleton3D, pose_data: Dict
-    ) -> List[FormCorrection3D]:
+    async def _generate_3d_corrections(self, skeleton: Skeleton3D, pose_data: Dict) -> List[FormCorrection3D]:
         """Generate 3D form corrections"""
         corrections = []
 
@@ -414,9 +406,7 @@ class AREngine:
 
         return corrections
 
-    async def get_joint_heatmap(
-        self, skeleton_id: str, session_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+    async def get_joint_heatmap(self, skeleton_id: str, session_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Generate joint stress heatmap
 
@@ -524,9 +514,7 @@ class VREngine:
             },
         }
 
-    async def create_training_program(
-        self, user_id: str, goal: str, duration_weeks: int
-    ) -> Dict[str, Any]:
+    async def create_training_program(self, user_id: str, goal: str, duration_weeks: int) -> Dict[str, Any]:
         """
         Create personalized VR training program
 
@@ -589,9 +577,7 @@ class VREngine:
             "endurance": {"duration_increase_weekly": 0.10, "intensity_increase": 2},
         }.get(goal, {})
 
-    async def start_vr_session(
-        self, user_id: str, program_id: str, environment: str
-    ) -> Dict[str, Any]:
+    async def start_vr_session(self, user_id: str, program_id: str, environment: str) -> Dict[str, Any]:
         """
         Start VR training session
 

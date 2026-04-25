@@ -254,9 +254,7 @@ class DistributedCache:
             logger.error(f"Cache CLEAR failed: {str(e)}")
             return 0
 
-    async def increment(
-        self, key: str, amount: int = 1, tenant_id: Optional[str] = None
-    ) -> Optional[int]:
+    async def increment(self, key: str, amount: int = 1, tenant_id: Optional[str] = None) -> Optional[int]:
         """Increment numeric value"""
         try:
             tenant_prefixed_key = f"{tenant_id}:{key}" if tenant_id else key
@@ -295,9 +293,7 @@ class DistributedCache:
             logger.error(f"Cache PUSH failed: {str(e)}")
             return 0
 
-    async def get_list(
-        self, key: str, start: int = 0, end: int = -1, tenant_id: Optional[str] = None
-    ) -> Optional[List]:
+    async def get_list(self, key: str, start: int = 0, end: int = -1, tenant_id: Optional[str] = None) -> Optional[List]:
         """Get range from list"""
         try:
             value = await self.get(key, tenant_id)
@@ -333,9 +329,7 @@ class DistributedCache:
                 sorted_entries = sorted(self.cache.items(), key=lambda x: x[1].access_count)
             elif self.eviction_policy == "ttl":
                 # Shortest TTL first
-                sorted_entries = sorted(
-                    self.cache.items(), key=lambda x: x[1].expires_at or datetime.max
-                )
+                sorted_entries = sorted(self.cache.items(), key=lambda x: x[1].expires_at or datetime.max)
             else:  # random
                 import random
 
@@ -399,11 +393,7 @@ class DistributedCache:
     async def health_check(self) -> Dict[str, Any]:
         """Health check for all nodes"""
         try:
-            healthy_nodes = sum(
-                1
-                for n in self.nodes.values()
-                if (datetime.utcnow() - n.last_heartbeat).total_seconds() < 30
-            )
+            healthy_nodes = sum(1 for n in self.nodes.values() if (datetime.utcnow() - n.last_heartbeat).total_seconds() < 30)
 
             return {
                 "status": "healthy" if healthy_nodes > 0 else "degraded",

@@ -67,9 +67,7 @@ class MovementFeatureExtractor:
     """Extract features from session data for LSTM"""
 
     @staticmethod
-    def extract_temporal_features(
-        sessions: List[SessionData], lookback_window: int = 10
-    ) -> np.ndarray:
+    def extract_temporal_features(sessions: List[SessionData], lookback_window: int = 10) -> np.ndarray:
         """
         Extract temporal features from session sequence
 
@@ -109,9 +107,7 @@ class MovementFeatureExtractor:
         return np.array(features)
 
     @staticmethod
-    def extract_movement_degradation(
-        sessions: List[SessionData], window: int = 5
-    ) -> Dict[str, float]:
+    def extract_movement_degradation(sessions: List[SessionData], window: int = 5) -> Dict[str, float]:
         """
         Calculate movement quality degradation metrics
 
@@ -251,9 +247,7 @@ class InjuryPredictorLSTM:
 
                 # Create sequences
                 for i in range(self.lookback_window, len(sessions)):
-                    X = self.feature_extractor.extract_temporal_features(
-                        sessions[:i], self.lookback_window
-                    )
+                    X = self.feature_extractor.extract_temporal_features(sessions[:i], self.lookback_window)
                     X_train.append(X)
 
                     # Target: did injury occur in next session?
@@ -440,11 +434,7 @@ class InjuryRiskTracker:
             "risk_scores": risk_scores,
             "timestamps": timestamps,
             "current_risk": risk_scores[-1] if risk_scores else 0,
-            "trend": (
-                "increasing"
-                if len(risk_scores) > 1 and risk_scores[-1] > risk_scores[-2]
-                else "stable"
-            ),
+            "trend": ("increasing" if len(risk_scores) > 1 and risk_scores[-1] > risk_scores[-2] else "stable"),
         }
 
 

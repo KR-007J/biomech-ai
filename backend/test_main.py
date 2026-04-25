@@ -313,9 +313,7 @@ class TestRequestValidation:
         from security import RequestValidator
 
         # 6MB > 5MB limit for /generate-feedback
-        is_valid, error = RequestValidator.validate_request_size(
-            "/generate-feedback", 6 * 1024 * 1024
-        )
+        is_valid, error = RequestValidator.validate_request_size("/generate-feedback", 6 * 1024 * 1024)
         assert is_valid is False
         assert error is not None
 

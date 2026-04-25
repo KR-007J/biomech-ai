@@ -186,9 +186,7 @@ class ModelRegistry:
                     return True
         return False
 
-    async def deploy_model(
-        self, version_id: str, environment: str, traffic_percentage: float = 100.0
-    ) -> bool:
+    async def deploy_model(self, version_id: str, environment: str, traffic_percentage: float = 100.0) -> bool:
         """Deploy model version"""
         for versions in self.models.values():
             for model in versions:
@@ -235,9 +233,7 @@ class ModelRegistry:
             },
         }
 
-    async def track_experiment(
-        self, experiment_name: str, model_type: ModelType, config: Dict[str, Any]
-    ) -> str:
+    async def track_experiment(self, experiment_name: str, model_type: ModelType, config: Dict[str, Any]) -> str:
         """Start experiment run"""
         run = ExperimentRun(
             run_id=f"{experiment_name}_{int(datetime.utcnow().timestamp())}",
@@ -250,9 +246,7 @@ class ModelRegistry:
         logger.info(f"Experiment started: {run.run_id}")
         return run.run_id
 
-    async def log_experiment_metric(
-        self, run_id: str, metric_name: str, value: float, step: int = 0
-    ) -> bool:
+    async def log_experiment_metric(self, run_id: str, metric_name: str, value: float, step: int = 0) -> bool:
         """Log metric during experiment"""
         if run := self.experiments.get(run_id):
             if metric_name not in run.metrics_history:
@@ -327,9 +321,7 @@ class ModelRegistry:
                     "accuracy": version.metrics.accuracy,
                     "latency_ms": version.metrics.latency_ms,
                     "status": version.status.value,
-                    "deployed_at": (
-                        version.deployed_at.isoformat() if version.deployed_at else None
-                    ),
+                    "deployed_at": (version.deployed_at.isoformat() if version.deployed_at else None),
                 }
             )
 

@@ -93,9 +93,7 @@ class MultiPersonTracker:
         self.frame_count = 0
         self.last_track_id = 0
 
-    def update(
-        self, detected_persons: List[DetectedPerson], frame_timestamp: datetime
-    ) -> Dict[str, DetectedPerson]:
+    def update(self, detected_persons: List[DetectedPerson], frame_timestamp: datetime) -> Dict[str, DetectedPerson]:
         """
         Update tracker with new detections
 
@@ -282,9 +280,7 @@ class PersonReIdentificationEngine:
         logger.info(f"Registered person: {user_name} (ID: {track_id})")
         return track_id
 
-    def identify_person(
-        self, features: np.ndarray, confidence_threshold: float = 0.85
-    ) -> Tuple[Optional[str], float]:
+    def identify_person(self, features: np.ndarray, confidence_threshold: float = 0.85) -> Tuple[Optional[str], float]:
         """
         Identify person from features
 
@@ -346,9 +342,7 @@ class GroupExerciseAnalyzer:
     def __init__(self):
         self.movement_history: Dict[str, List[Dict]] = {}
 
-    def record_group_movement(
-        self, group_members: List[DetectedPerson], frame_timestamp: datetime
-    ) -> None:
+    def record_group_movement(self, group_members: List[DetectedPerson], frame_timestamp: datetime) -> None:
         """Record movement state for group"""
         for member in group_members:
             track_id = member.track_id
@@ -356,17 +350,13 @@ class GroupExerciseAnalyzer:
             if track_id not in self.movement_history:
                 self.movement_history[track_id] = []
 
-            self.movement_history[track_id].append(
-                {"timestamp": frame_timestamp, "keypoints": member.keypoints}
-            )
+            self.movement_history[track_id].append({"timestamp": frame_timestamp, "keypoints": member.keypoints})
 
             # Keep recent history
             if len(self.movement_history[track_id]) > 300:
                 self.movement_history[track_id].pop(0)
 
-    def analyze_group_sync(
-        self, group_members: List[DetectedPerson], group_id: Optional[str] = None
-    ) -> Optional[GroupSyncMetrics]:
+    def analyze_group_sync(self, group_members: List[DetectedPerson], group_id: Optional[str] = None) -> Optional[GroupSyncMetrics]:
         """
         Analyze synchronization in group exercise
 

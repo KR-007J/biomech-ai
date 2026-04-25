@@ -115,9 +115,7 @@ class ReportGenerator:
                 "detailed_analysis": self._generate_detailed_analysis(analysis_results),
                 "risk_assessment": self._generate_risk_assessment(analysis_results),
                 "recommendations": self._generate_recommendations(analysis_results),
-                "charts": (
-                    self._generate_charts(analysis_results) if config.include_charts else {}
-                ),
+                "charts": (self._generate_charts(analysis_results) if config.include_charts else {}),
             }
 
             logger.info(f"✅ Session report generated for user {user_id}")
@@ -175,9 +173,7 @@ class ReportGenerator:
             logger.error(f"Trend report error: {e}")
             return {"error": str(e)}
 
-    def generate_pdf_report(
-        self, report_data: Dict[str, Any], filename: Optional[str] = None
-    ) -> Optional[bytes]:
+    def generate_pdf_report(self, report_data: Dict[str, Any], filename: Optional[str] = None) -> Optional[bytes]:
         """
         Generate PDF from report data
 
@@ -235,8 +231,7 @@ class ReportGenerator:
             meta = report_data.get("metadata", {})
             story.append(
                 Paragraph(
-                    f"Generated: {meta.get('generated_date', 'N/A')} | "
-                    f"Type: {meta.get('report_type', 'N/A')}",
+                    f"Generated: {meta.get('generated_date', 'N/A')} | " f"Type: {meta.get('report_type', 'N/A')}",
                     styles["Normal"],
                 )
             )

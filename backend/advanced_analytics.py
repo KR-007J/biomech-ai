@@ -104,9 +104,7 @@ class AdvancedAnalyticsEngine:
         self.event_buffer: List[Event] = []
         self.max_buffer_size = 100000
 
-    async def track_event(
-        self, user_id: str, event_type: str, properties: Optional[Dict[str, Any]] = None
-    ) -> str:
+    async def track_event(self, user_id: str, event_type: str, properties: Optional[Dict[str, Any]] = None) -> str:
         """Track user event"""
         event = Event(
             event_id=f"{user_id}_{event_type}_{int(datetime.utcnow().timestamp())}",
@@ -124,9 +122,7 @@ class AdvancedAnalyticsEngine:
 
         return event.event_id
 
-    async def register_user(
-        self, user_id: str, attributes: Optional[Dict[str, Any]] = None
-    ) -> bool:
+    async def register_user(self, user_id: str, attributes: Optional[Dict[str, Any]] = None) -> bool:
         """Register user"""
         if user_id not in self.users:
             self.users[user_id] = User(
@@ -138,9 +134,7 @@ class AdvancedAnalyticsEngine:
             return True
         return False
 
-    async def create_cohort(
-        self, cohort_type: CohortType, criteria: Dict[str, Any], name: str = ""
-    ) -> str:
+    async def create_cohort(self, cohort_type: CohortType, criteria: Dict[str, Any], name: str = "") -> str:
         """Create user cohort"""
         cohort_id = f"cohort_{len(self.cohorts) + 1}"
         cohort = Cohort(
@@ -179,9 +173,7 @@ class AdvancedAnalyticsEngine:
                     return False
         return True
 
-    async def analyze_retention(
-        self, cohort_id: str, base_date: Optional[datetime] = None
-    ) -> RetentionMetrics:
+    async def analyze_retention(self, cohort_id: str, base_date: Optional[datetime] = None) -> RetentionMetrics:
         """Analyze retention for cohort"""
         if not (cohort := self.cohorts.get(cohort_id)):
             return RetentionMetrics()
@@ -271,11 +263,7 @@ class AdvancedAnalyticsEngine:
                 if event.event_type == event_type and event.user_id in segment_users:
                     filtered.add(event.user_id)
 
-            segment_users = (
-                segment_users.intersection(filtered)
-                if condition.get("and")
-                else segment_users.union(filtered)
-            )
+            segment_users = segment_users.intersection(filtered) if condition.get("and") else segment_users.union(filtered)
 
         self.user_segments[segment_name] = segment_users
         logger.info(f"Segment created: {segment_name} (size={len(segment_users)})")
@@ -335,9 +323,7 @@ class AdvancedAnalyticsEngine:
         ]
 
 
-def _compat_create_cohort(
-    self, name: str, criteria: Dict[str, Any], group_by: str = "month"
-) -> str:
+def _compat_create_cohort(self, name: str, criteria: Dict[str, Any], group_by: str = "month") -> str:
     cohort_id = f"cohort_{len(self.cohorts) + 1}"
     self.cohorts[cohort_id] = type(
         "CompatCohort",
@@ -352,16 +338,12 @@ def _compat_create_cohort(
     return cohort_id
 
 
-def _compat_calculate_retention(
-    self, cohort_id: str, users: List[Dict[str, Any]], days: List[int]
-) -> Dict[str, float]:
+def _compat_calculate_retention(self, cohort_id: str, users: List[Dict[str, Any]], days: List[int]) -> Dict[str, float]:
     total = len(users) or 1
     return {f"day_{day}": round(max(0.0, 1 - (day / (max(days) + total))), 2) for day in days}
 
 
-def _compat_analyze_funnel(
-    self, steps: List[str], user_journeys: List[Dict[str, Any]]
-) -> Dict[str, Dict[str, Any]]:
+def _compat_analyze_funnel(self, steps: List[str], user_journeys: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     total_users = len(user_journeys) or 1
     results: Dict[str, Dict[str, Any]] = {}
     for step in steps:
@@ -370,13 +352,8 @@ def _compat_analyze_funnel(
     return results
 
 
-def _compat_create_segments(
-    self, users: List[Dict[str, Any]], criteria: Dict[str, Any]
-) -> Dict[str, List[Dict[str, Any]]]:
-    return {
-        segment_name: [user for user in users if matcher(user)]
-        for segment_name, matcher in criteria.items()
-    }
+def _compat_create_segments(self, users: List[Dict[str, Any]], criteria: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+    return {segment_name: [user for user in users if matcher(user)] for segment_name, matcher in criteria.items()}
 
 
 AdvancedAnalyticsEngine.create_cohort = _compat_create_cohort

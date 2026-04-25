@@ -68,9 +68,7 @@ from security import APIKeyManager, RequestValidator, get_security_headers
 load_dotenv()
 
 # Logging setup
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Sentry error tracking (Phase 2.9)
@@ -98,10 +96,7 @@ task_manager: TaskManager = get_task_manager()
 async def lifespan(app: FastAPI):
     """Application lifecycle management"""
     logger.info("🚀 Starting Biomech AI Backend - Phase 2-5 Complete")
-    logger.info(
-        f"Features: Caching={cache_manager.redis_enabled}, Tasks=enabled, "
-        f"Monitoring=enabled, Security=full"
-    )
+    logger.info(f"Features: Caching={cache_manager.redis_enabled}, Tasks=enabled, " f"Monitoring=enabled, Security=full")
 
     # Start background task processor
     task_processor = asyncio.create_task(task_manager.process_queue())
@@ -581,9 +576,7 @@ async def catch_all(path: str):
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Custom HTTP exception handler with metrics"""
     MetricsCollector.record_error(f"http_{exc.status_code}", request.url.path)
-    return JSONResponse(
-        status_code=exc.status_code, content={"detail": exc.detail, "status": "error"}
-    )
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail, "status": "error"})
 
 
 @app.exception_handler(Exception)
@@ -593,9 +586,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     MetricsCollector.record_error("unhandled", request.url.path)
     if SENTRY_DSN:
         sentry_sdk.capture_exception(exc)
-    return JSONResponse(
-        status_code=500, content={"detail": "Internal server error", "status": "error"}
-    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error", "status": "error"})
 
 
 if __name__ == "__main__":

@@ -34,9 +34,7 @@ request_duration = Histogram(
 )
 
 # Gauge: Concurrent active requests
-active_requests = Gauge(
-    "biomech_active_requests", "Number of currently active requests", registry=REGISTRY
-)
+active_requests = Gauge("biomech_active_requests", "Number of currently active requests", registry=REGISTRY)
 
 # ==================== BUSINESS METRICS ====================
 
@@ -76,9 +74,7 @@ risk_levels = Counter(
 # ==================== ACCURACY METRICS ====================
 
 # Gauge: Average pose confidence score
-pose_confidence = Gauge(
-    "biomech_pose_confidence", "Average pose detection confidence", registry=REGISTRY
-)
+pose_confidence = Gauge("biomech_pose_confidence", "Average pose detection confidence", registry=REGISTRY)
 
 # Counter: AI fallback events
 ai_fallback_events = Counter(

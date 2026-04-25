@@ -144,20 +144,14 @@ class EventSystem:
             self.events.pop(0)
         self.events.append(event)
 
-        event_type_value = (
-            event.event_type.value if hasattr(event.event_type, "value") else event.event_type
-        )
+        event_type_value = event.event_type.value if hasattr(event.event_type, "value") else event.event_type
         logger.info(f"Event published: {event_type_value} (id={event.event_id})")
 
         # Execute local subscribers
         if event.event_type in self.subscribers:
             for subscriber in self.subscribers[event.event_type]:
                 try:
-                    (
-                        await subscriber(event)
-                        if hasattr(subscriber, "__await__")
-                        else subscriber(event)
-                    )
+                    (await subscriber(event) if hasattr(subscriber, "__await__") else subscriber(event))
                 except Exception as e:
                     logger.error(f"Subscriber error: {e}")
 
@@ -209,7 +203,7 @@ class EventSystem:
 
     async def unregister_webhook(self, webhook_id: str) -> bool:
         """Unregister webhook"""
-        if webhook := self.webhooks.pop(webhook_id, None):
+        if self.webhooks.pop(webhook_id, None):
             self.circuit_breakers.pop(webhook_id, None)
             logger.info(f"Webhook unregistered: {webhook_id}")
             return True
@@ -222,11 +216,7 @@ class EventSystem:
     def _get_matching_webhooks(self, event_type: EventType) -> List[Webhook]:
         """Get webhooks that should receive this event"""
         return [
-            w
-            for w in self.webhooks.values()
-            if w.active
-            and event_type in w.events
-            and not self._is_circuit_breaker_open(w.webhook_id)
+            w for w in self.webhooks.values() if w.active and event_type in w.events and not self._is_circuit_breaker_open(w.webhook_id)
         ]
 
     def _is_circuit_breaker_open(self, webhook_id: str) -> bool:
@@ -255,9 +245,7 @@ class EventSystem:
         # Attempt delivery
         await self._attempt_webhook_delivery(delivery, webhook, event)
 
-    async def _attempt_webhook_delivery(
-        self, delivery: WebhookDelivery, webhook: Webhook, event: Event
-    ):
+    async def _attempt_webhook_delivery(self, delivery: WebhookDelivery, webhook: Webhook, event: Event):
         """Attempt to deliver webhook"""
         delivery.attempts += 1
         delivery.last_attempt = datetime.utcnow()
@@ -359,9 +347,7 @@ class EventSystem:
         expected_signature = self._create_signature(payload, secret)
         return hmac.compare_digest(signature, expected_signature)
 
-    async def get_event_history(
-        self, event_type: Optional[EventType] = None, limit: int = 100
-    ) -> List[Event]:
+    async def get_event_history(self, event_type: Optional[EventType] = None, limit: int = 100) -> List[Event]:
         """Get event history"""
         events = self.events
 
@@ -392,9 +378,7 @@ class EventSystem:
         """Get webhook statistics"""
         if webhook := self.webhooks.get(webhook_id):
             total_attempts = webhook.success_count + webhook.failure_count
-            success_rate = (
-                (webhook.success_count / total_attempts * 100) if total_attempts > 0 else 0
-            )
+            success_rate = (webhook.success_count / total_attempts * 100) if total_attempts > 0 else 0
 
             return {
                 "webhook_id": webhook_id,
@@ -403,9 +387,7 @@ class EventSystem:
                 "success_count": webhook.success_count,
                 "failure_count": webhook.failure_count,
                 "success_rate": success_rate,
-                "last_triggered": (
-                    webhook.last_triggered.isoformat() if webhook.last_triggered else None
-                ),
+                "last_triggered": (webhook.last_triggered.isoformat() if webhook.last_triggered else None),
                 "circuit_breaker_open": self._is_circuit_breaker_open(webhook_id),
             }
         return None

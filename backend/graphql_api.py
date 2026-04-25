@@ -138,9 +138,7 @@ class GraphQLResolver:
         key = f"{type_name}.{field_name}"
         self.resolvers[key] = resolver
 
-    async def resolve_field(
-        self, type_name: str, field_name: str, obj: Any, args: Dict[str, Any]
-    ) -> Any:
+    async def resolve_field(self, type_name: str, field_name: str, obj: Any, args: Dict[str, Any]) -> Any:
         """Resolve a field value"""
         key = f"{type_name}.{field_name}"
 
@@ -166,9 +164,7 @@ class GraphQLExecutor:
         self.resolver = resolver
         self.parser = GraphQLQueryParser()
 
-    async def execute(
-        self, query_string: str, variables: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    async def execute(self, query_string: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute GraphQL query"""
         try:
             # Parse query
@@ -183,9 +179,7 @@ class GraphQLExecutor:
             data = {}
             for field in query.get("fields", []):
                 if field_def := self.schema.query_type.fields.get(field):
-                    value = await self.resolver.resolve_field(
-                        self.schema.query_type.name, field, None, variables or {}
-                    )
+                    value = await self.resolver.resolve_field(self.schema.query_type.name, field, None, variables or {})
                     data[field] = value
 
             return {"data": data}
@@ -194,9 +188,7 @@ class GraphQLExecutor:
             logger.error(f"Query execution error: {e}")
             return {"errors": [{"message": str(e)}]}
 
-    async def execute_mutation(
-        self, mutation_string: str, variables: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    async def execute_mutation(self, mutation_string: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute GraphQL mutation"""
         if not self.schema.mutation_type:
             return {"errors": [{"message": "Mutations not supported"}]}
@@ -208,9 +200,7 @@ class GraphQLExecutor:
             data = {}
             for field in mutation.get("fields", []):
                 if field_def := self.schema.mutation_type.fields.get(field):
-                    value = await self.resolver.resolve_field(
-                        self.schema.mutation_type.name, field, None, variables or {}
-                    )
+                    value = await self.resolver.resolve_field(self.schema.mutation_type.name, field, None, variables or {})
                     data[field] = value
 
             return {"data": data}
@@ -299,9 +289,7 @@ class GraphQLServer:
         query_type = GraphQLType(
             name="Query",
             fields={
-                "user": GraphQLField(
-                    "user", "User", args={"id": GraphQLArg("id", "ID", nullable=False)}
-                ),
+                "user": GraphQLField("user", "User", args={"id": GraphQLArg("id", "ID", nullable=False)}),
                 "session": GraphQLField(
                     "session",
                     "Session",
@@ -381,9 +369,7 @@ class GraphQLServer:
         """Register resolver for mutation field"""
         self.resolver.register_resolver("Mutation", field_name, resolver)
 
-    async def execute_query_async(
-        self, query_string: str, variables: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    async def execute_query_async(self, query_string: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute GraphQL query"""
         if not self.executor:
             self.build_schema()
@@ -395,9 +381,7 @@ class GraphQLServer:
 
         return await self.executor.execute(query_string, variables)
 
-    async def execute_mutation_async(
-        self, mutation_string: str, variables: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    async def execute_mutation_async(self, mutation_string: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute GraphQL mutation"""
         if not self.executor:
             self.build_schema()
@@ -410,9 +394,7 @@ class GraphQLServer:
     def _validate_query(self, query: str) -> bool:
         return self._parse_query(query) is not None
 
-    def _execute_mutation(
-        self, mutation: str, variables: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    def _execute_mutation(self, mutation: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         return {"mutation": mutation, "variables": variables or {}}
 
     def execute_query(
@@ -428,9 +410,7 @@ class GraphQLServer:
             "operation_name": operation_name,
         }
 
-    def execute_mutation(
-        self, mutation: str, variables: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    def execute_mutation(self, mutation: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         return self._execute_mutation(mutation, variables)
 
     def get_schema_definition(self) -> str:

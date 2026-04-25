@@ -127,9 +127,7 @@ class ThreeDVisualizationEngine:
 
             for joint_name, coord in landmarks.items():
                 if isinstance(coord, dict):
-                    joints_3d[joint_name] = Point3D(
-                        coord.get("x", 0), coord.get("y", 0), coord.get("z", 0)
-                    )
+                    joints_3d[joint_name] = Point3D(coord.get("x", 0), coord.get("y", 0), coord.get("z", 0))
 
             # Create frame
             frame = SkeletonFrame(
@@ -249,9 +247,7 @@ class ThreeDVisualizationEngine:
             logger.error(f"Trajectory fetch failed: {str(e)}")
             return {"error": str(e)}
 
-    async def create_comparison_view(
-        self, left_person_id: str, right_person_id: str, frame_count: int = 1
-    ) -> Dict[str, Any]:
+    async def create_comparison_view(self, left_person_id: str, right_person_id: str, frame_count: int = 1) -> Dict[str, Any]:
         """
         Create split-screen comparison visualization
 
@@ -333,23 +329,15 @@ class ThreeDVisualizationEngine:
 
         return round(alignment, 3)
 
-    def _calculate_metrics_diff(
-        self, frame1: SkeletonFrame, frame2: SkeletonFrame
-    ) -> Dict[str, float]:
+    def _calculate_metrics_diff(self, frame1: SkeletonFrame, frame2: SkeletonFrame) -> Dict[str, float]:
         """Calculate metric differences between frames"""
         return {
             "pose_distance": self._calculate_alignment_score(frame1, frame2),
-            "height_diff": abs(
-                frame1.joints.get("nose", Point3D(0, 0, 0)).y
-                - frame2.joints.get("nose", Point3D(0, 0, 0)).y
-            ),
+            "height_diff": abs(frame1.joints.get("nose", Point3D(0, 0, 0)).y - frame2.joints.get("nose", Point3D(0, 0, 0)).y),
             "width_diff": abs(
                 frame1.joints.get("left_shoulder", Point3D(0, 0, 0)).x
                 - frame1.joints.get("right_shoulder", Point3D(0, 0, 0)).x
-                - (
-                    frame2.joints.get("left_shoulder", Point3D(0, 0, 0)).x
-                    - frame2.joints.get("right_shoulder", Point3D(0, 0, 0)).x
-                )
+                - (frame2.joints.get("left_shoulder", Point3D(0, 0, 0)).x - frame2.joints.get("right_shoulder", Point3D(0, 0, 0)).x)
             ),
         }
 

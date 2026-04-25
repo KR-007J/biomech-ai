@@ -84,9 +84,7 @@ class DeploymentManager:
     def run_tests(self) -> bool:
         """Run test suite"""
         logger.info("Running test suite...")
-        return self.run_command(
-            [sys.executable, "-m", "pytest", "test_all_tiers.py", "-v", "--tb=short"]
-        )
+        return self.run_command([sys.executable, "-m", "pytest", "test_all_tiers.py", "-v", "--tb=short"])
 
     def validate_code(self) -> bool:
         """Run code validation"""

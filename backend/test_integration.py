@@ -24,9 +24,7 @@ class TestEndToEndAnalysisFlow:
         assert analysis_data["performance_metrics"]["processing_time_sec"] > 0
 
     @pytest.mark.integration
-    def test_analysis_then_profile_sync(
-        self, client, sample_feedback_request, sample_profile, mock_supabase
-    ):
+    def test_analysis_then_profile_sync(self, client, sample_feedback_request, sample_profile, mock_supabase):
         """✅ Analysis followed by profile sync works"""
         # Analyze
         response1 = client.post("/generate-feedback", json=sample_feedback_request)
@@ -38,9 +36,7 @@ class TestEndToEndAnalysisFlow:
         assert response2.json()["status"] == "success"
 
     @pytest.mark.integration
-    def test_session_tracking_workflow(
-        self, client, sample_feedback_request, sample_session, mock_supabase
-    ):
+    def test_session_tracking_workflow(self, client, sample_feedback_request, sample_session, mock_supabase):
         """✅ Session tracking workflow succeeds"""
         # Submit feedback
         response1 = client.post("/generate-feedback", json=sample_feedback_request)
@@ -72,9 +68,7 @@ class TestCacheIntegration:
         assert data2["status"] in ["cached", "completed"]
 
     @pytest.mark.integration
-    def test_cache_invalidation_on_profile_edit(
-        self, client, sample_feedback_request, sample_profile, mock_supabase, mock_cache
-    ):
+    def test_cache_invalidation_on_profile_edit(self, client, sample_feedback_request, sample_profile, mock_supabase, mock_cache):
         """✅ Cache invalidates when profile changes"""
         # First request
         response1 = client.post("/generate-feedback", json=sample_feedback_request)

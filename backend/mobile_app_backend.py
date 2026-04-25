@@ -276,9 +276,7 @@ class MobileAppBackend:
                 try:
                     session_id = session_data.get("session_id")
                     sync_status = await self._upload_session(user_id, session_data)
-                    uploaded_sessions.append(
-                        {"session_id": session_id, "status": sync_status.value}
-                    )
+                    uploaded_sessions.append({"session_id": session_id, "status": sync_status.value})
                 except Exception as e:
                     logger.error(f"Session upload failed: {str(e)}")
                     failed_sessions.append(session_data.get("session_id"))

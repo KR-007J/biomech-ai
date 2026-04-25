@@ -67,8 +67,7 @@ def run_validation():
             total_latency += float(res["latency"])
             total_confidence += float(res["confidence"])
             print(
-                f"{res['test_case']:<25} | {res['risk_level']:<10} | "
-                f"{res['confidence']:.2f} | {res['latency']:.2f}s | {res['status']}"
+                f"{res['test_case']:<25} | {res['risk_level']:<10} | " f"{res['confidence']:.2f} | {res['latency']:.2f}s | {res['status']}"
             )
         except Exception as e:
             print(f"{video:<25} | ERROR      | 0.00   | ---    | FAIL ({str(e)[:15]}...)")
@@ -116,10 +115,7 @@ def generate_placeholder_report():
     print(f"{'MOCK CASE':<25} | {'RISK':<10} | {'CONF':<6} | {'TIME':<6} | {'STATUS'}")
     print("-" * 65)
     for res in report:
-        print(
-            f"{res['test_case']:<25} | {res['risk_level']:<10} | "
-            f"{res['confidence']:.2f} | {res['latency']:.2f}s | {res['status']}"
-        )
+        print(f"{res['test_case']:<25} | {res['risk_level']:<10} | " f"{res['confidence']:.2f} | {res['latency']:.2f}s | {res['status']}")
 
     print("-" * 65)
     print("📈 AI Confidence Gradient: 94.5% (STABLE)")

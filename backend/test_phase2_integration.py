@@ -145,14 +145,10 @@ class TestPhase2Integration:
     async def test_job_dependencies(self, job_queue):
         """✅ Job dependency resolution"""
         # Submit parent job
-        parent_id = await job_queue.submit_job(
-            job_type="batch_analysis", payload={"batch_size": 10}
-        )
+        parent_id = await job_queue.submit_job(job_type="batch_analysis", payload={"batch_size": 10})
 
         # Submit dependent job
-        child_id = await job_queue.submit_job(
-            job_type="report_generation", dependencies=[parent_id]
-        )
+        child_id = await job_queue.submit_job(job_type="report_generation", dependencies=[parent_id])
 
         # Child should not process until parent completes
         await job_queue.process_job(child_id)
@@ -315,9 +311,7 @@ class TestPhase2Integration:
     @pytest.mark.asyncio
     async def test_webhook_signature_verification(self, event_system):
         """✅ Webhook HMAC signature verification"""
-        webhook_id = await event_system.register_webhook(
-            url="https://example.com/webhook", secret="my-secret-key"
-        )
+        webhook_id = await event_system.register_webhook(url="https://example.com/webhook", secret="my-secret-key")
 
         event = Event(event_type="test.event", resource_id="test-123")
 
@@ -335,9 +329,7 @@ class TestPhase2Integration:
     @pytest.mark.asyncio
     async def test_webhook_circuit_breaker(self, event_system):
         """✅ Circuit breaker pattern for failing webhooks"""
-        webhook_id = await event_system.register_webhook(
-            url="https://failing.example.com/webhook", secret="test"
-        )
+        webhook_id = await event_system.register_webhook(url="https://failing.example.com/webhook", secret="test")
 
         event = Event(event_type="test.event", resource_id="test-123")
 
@@ -594,9 +586,7 @@ class TestPhase2Integration:
 
     def test_experiment_results_analysis(self, ab_engine):
         """✅ Statistical analysis of experiment results"""
-        experiment_id = ab_engine.create_experiment(
-            name="conversion_test", variants=["control", "variant"]
-        )
+        experiment_id = ab_engine.create_experiment(name="conversion_test", variants=["control", "variant"])
 
         ab_engine.start_experiment(experiment_id)
 
@@ -759,9 +749,7 @@ class TestPhase2EndToEndIntegration:
     def test_ab_test_with_analytics_tracking(self, ab_engine, analytics_engine):
         """✅ A/B test results integrated with analytics"""
         # Create A/B test
-        experiment_id = ab_engine.create_experiment(
-            name="feature_test", variants=["old_ui", "new_ui"]
-        )
+        experiment_id = ab_engine.create_experiment(name="feature_test", variants=["old_ui", "new_ui"])
         ab_engine.start_experiment(experiment_id)
 
         # Simulate user interactions

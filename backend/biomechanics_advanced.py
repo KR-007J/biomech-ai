@@ -170,9 +170,7 @@ class InverseKinematicsSolver:
 
                     if hip_to_target <= upper_leg + lower_leg:
                         # Law of cosines for knee angle
-                        cos_knee = (upper_leg**2 + lower_leg**2 - hip_to_target**2) / (
-                            2 * upper_leg * lower_leg
-                        )
+                        cos_knee = (upper_leg**2 + lower_leg**2 - hip_to_target**2) / (2 * upper_leg * lower_leg)
                         cos_knee = np.clip(cos_knee, -1, 1)
                         knee_angle = np.degrees(np.arccos(cos_knee))
                         result["left_knee"] = float(np.clip(knee_angle, 0, 140))
@@ -182,9 +180,7 @@ class InverseKinematicsSolver:
                     hip_to_target = np.sqrt((target_x - 0.1) ** 2 + (target_y + 0.2) ** 2)
                     upper_leg = 0.3
                     lower_leg = 0.4
-                    cos_knee = (upper_leg**2 + lower_leg**2 - hip_to_target**2) / (
-                        2 * upper_leg * lower_leg
-                    )
+                    cos_knee = (upper_leg**2 + lower_leg**2 - hip_to_target**2) / (2 * upper_leg * lower_leg)
                     cos_knee = np.clip(cos_knee, -1, 1)
                     knee_angle = np.degrees(np.arccos(cos_knee))
                     result["right_knee"] = float(np.clip(knee_angle, 0, 140))
@@ -291,12 +287,8 @@ class MuscleActivationModel:
                     power = force * velocity / 1000  # Convert to Watts
 
                     # Fatigue accumulation
-                    fatigue_increment = (
-                        activation * (duration_seconds / 60) * 0.1
-                    )  # Fatigue per minute
-                    self.muscle_fatigue[muscle_name] = min(
-                        1.0, self.muscle_fatigue[muscle_name] + fatigue_increment
-                    )
+                    fatigue_increment = activation * (duration_seconds / 60) * 0.1  # Fatigue per minute
+                    self.muscle_fatigue[muscle_name] = min(1.0, self.muscle_fatigue[muscle_name] + fatigue_increment)
 
                     efficiency = activation / (1 + self.muscle_fatigue[muscle_name])
 
@@ -460,9 +452,7 @@ class AdvancedBiomechanicsEngine:
             movement_velocity = self._calculate_velocity(keypoints)
 
             # 6. Muscle activations
-            muscle_activations = self.muscle_model.estimate_activation(
-                joint_angles, movement_velocity, 0.033  # ~30fps
-            )
+            muscle_activations = self.muscle_model.estimate_activation(joint_angles, movement_velocity, 0.033)  # ~30fps
 
             # 7. Gait phase detection
             left_ankle_y = keypoints.get("left_ankle", {}).get("y", 0)
@@ -470,9 +460,7 @@ class AdvancedBiomechanicsEngine:
             left_hip = joint_angles.get("left_hip", 0)
             right_hip = joint_angles.get("right_hip", 0)
 
-            gait_phase, cycle_pct = self.gait_analyzer.detect_gait_phase(
-                left_ankle_y, right_ankle_y, left_hip, right_hip
-            )
+            gait_phase, cycle_pct = self.gait_analyzer.detect_gait_phase(left_ankle_y, right_ankle_y, left_hip, right_hip)
 
             # 8. Ground reaction force (estimated)
             grf = self._estimate_grf(gait_phase, body_weight)
@@ -484,17 +472,13 @@ class AdvancedBiomechanicsEngine:
             center_of_mass = self._calculate_center_of_mass(end_effector_positions)
 
             # 11. Energy expenditure
-            energy = self._estimate_energy_expenditure(
-                joint_angles, muscle_activations, body_weight
-            )
+            energy = self._estimate_energy_expenditure(joint_angles, muscle_activations, body_weight)
 
             # 12. Efficiency score
             efficiency = self._calculate_efficiency(joint_angles, muscle_activations, gait_phase)
 
             # 13. Injury risk
-            injury_risk = self._calculate_injury_risk_biomechanics(
-                joint_torques, joint_loading, muscle_activations
-            )
+            injury_risk = self._calculate_injury_risk_biomechanics(joint_torques, joint_loading, muscle_activations)
 
             return AdvancedBiomechanicsResult(
                 timestamp=frame_time,
@@ -538,9 +522,7 @@ class AdvancedBiomechanicsEngine:
         """Convert keypoints to target positions"""
         return {k: (v.get("x", 0), v.get("y", 0), 0) for k, v in keypoints.items()}
 
-    def _calculate_joint_torques(
-        self, angles: Dict, weight: float, height: float
-    ) -> Dict[str, float]:
+    def _calculate_joint_torques(self, angles: Dict, weight: float, height: float) -> Dict[str, float]:
         """Calculate joint torques using inverse dynamics"""
         torques = {}
 
@@ -588,9 +570,7 @@ class AdvancedBiomechanicsEngine:
 
         return np.array([0.0, vertical_force, 0.0])  # [Fx, Fy, Fz]
 
-    def _calculate_joint_loading(
-        self, angles: Dict, weight: float, grf: np.ndarray
-    ) -> Dict[str, float]:
+    def _calculate_joint_loading(self, angles: Dict, weight: float, grf: np.ndarray) -> Dict[str, float]:
         """Calculate joint compression forces"""
         loading = {}
 
@@ -632,9 +612,7 @@ class AdvancedBiomechanicsEngine:
 
         return float(np.clip(efficiency, 0, 100))
 
-    def _calculate_injury_risk_biomechanics(
-        self, torques: Dict, loading: Dict, muscles: Dict
-    ) -> Dict[str, float]:
+    def _calculate_injury_risk_biomechanics(self, torques: Dict, loading: Dict, muscles: Dict) -> Dict[str, float]:
         """Calculate biomechanical injury risk per joint"""
         risk = {}
 
@@ -646,9 +624,7 @@ class AdvancedBiomechanicsEngine:
             loading_risk = min(100, joint_load / 50)
 
             muscle_name = list(muscles.keys())[0] if muscles else None
-            fatigue_risk = 30 * (
-                muscles[muscle_name].fatigue_indicator if muscle_name in muscles else 0
-            )
+            fatigue_risk = 30 * (muscles[muscle_name].fatigue_indicator if muscle_name in muscles else 0)
 
             joint_risk = torque_risk * 0.4 + loading_risk * 0.4 + fatigue_risk * 0.2
             risk[joint] = float(joint_risk)

@@ -133,9 +133,7 @@ async def predict_injury_risk(request: InjuryPredictionRequest) -> Dict[str, Any
                 "confidence": prediction.confidence,
                 "contributing_factors": prediction.contributing_factors,
                 "recommendations": prediction.recommendations,
-                "next_prediction": (
-                    prediction.next_prediction.isoformat() if prediction.next_prediction else None
-                ),
+                "next_prediction": (prediction.next_prediction.isoformat() if prediction.next_prediction else None),
             },
         }
     except Exception as e:
@@ -275,9 +273,7 @@ async def generate_report(request: ReportRequest) -> Dict[str, Any]:
 
         elif request.report_type == "trend":
             # Generate trend report
-            risk_history = analyzer.injury_tracker.get_user_risk_history(
-                request.user_id, limit=request.days_history
-            )
+            risk_history = analyzer.injury_tracker.get_user_risk_history(request.user_id, limit=request.days_history)
 
             report_data = analyzer.report_generator.generate_trend_report(
                 user_id=request.user_id,
@@ -384,9 +380,7 @@ async def analyze_group_synchronization(
         if len(tracked) < 2:
             raise HTTPException(status_code=400, detail="Need at least 2 people for group analysis")
 
-        sync_metrics = analyzer.group_analyzer.analyze_group_sync(
-            list(tracked.values()), f"group_{request.session_id}"
-        )
+        sync_metrics = analyzer.group_analyzer.analyze_group_sync(list(tracked.values()), f"group_{request.session_id}")
 
         if not sync_metrics:
             raise HTTPException(status_code=500, detail="Sync analysis failed")
@@ -422,9 +416,7 @@ async def recognize_action(request: FrameAnalysisRequest) -> Dict[str, Any]:
         action_type, confidence = analyzer.action_classifier.classify_action(request.keypoints)
 
         # Form assessment
-        form_score, issues = analyzer.form_assessor.assess_squat_form(
-            analyzer.biomechanics_engine._extract_joint_angles(request.keypoints)
-        )
+        form_score, issues = analyzer.form_assessor.assess_squat_form(analyzer.biomechanics_engine._extract_joint_angles(request.keypoints))
 
         # Rep count
         reps = analyzer.rep_counter.update(90)  # Sample angle
@@ -446,9 +438,7 @@ async def recognize_action(request: FrameAnalysisRequest) -> Dict[str, Any]:
 
 
 @router.post("/session/analyze-comprehensive")
-async def analyze_session_comprehensive(
-    request: SessionAnalysisRequest, background_tasks: BackgroundTasks
-) -> Dict[str, Any]:
+async def analyze_session_comprehensive(request: SessionAnalysisRequest, background_tasks: BackgroundTasks) -> Dict[str, Any]:
     """
     Comprehensive multi-tier session analysis
 
@@ -544,9 +534,7 @@ async def initialize_analyzer() -> Dict[str, Any]:
 
         return {
             "success": success,
-            "message": (
-                "Analyzer initialized successfully" if success else "Initialization failed"
-            ),
+            "message": ("Analyzer initialized successfully" if success else "Initialization failed"),
             "timestamp": datetime.utcnow().isoformat(),
         }
     except Exception as e:

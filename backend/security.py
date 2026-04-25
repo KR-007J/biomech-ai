@@ -174,9 +174,7 @@ class RequestValidator:
     }
 
     @classmethod
-    def validate_request_size(
-        cls, endpoint: str, content_length: int
-    ) -> Tuple[bool, Optional[str]]:
+    def validate_request_size(cls, endpoint: str, content_length: int) -> Tuple[bool, Optional[str]]:
         """Validate request size against limits"""
         limit = cls.ENDPOINT_SIZE_LIMITS.get(endpoint, cls.MAX_REQUEST_SIZE)
 

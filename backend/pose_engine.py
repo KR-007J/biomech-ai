@@ -49,9 +49,7 @@ class PoseEngine:
                 self.pose = None
                 self.mp_drawing = None
 
-    def process_frame(
-        self, frame: np.ndarray
-    ) -> Tuple[Optional[Dict[str, Dict[str, float]]], Optional[Any]]:
+    def process_frame(self, frame: np.ndarray) -> Tuple[Optional[Dict[str, Dict[str, float]]], Optional[Any]]:
         """
         Process a single frame and extract pose landmarks.
 
@@ -107,9 +105,7 @@ class PoseEngine:
 
         try:
             annotated_image = frame.copy()
-            self.mp_drawing.draw_landmarks(
-                annotated_image, landmarks, self.mp_pose.POSE_CONNECTIONS
-            )
+            self.mp_drawing.draw_landmarks(annotated_image, landmarks, self.mp_pose.POSE_CONNECTIONS)
             return annotated_image
         except Exception as e:
             logger.error(f"Error drawing landmarks: {e}")

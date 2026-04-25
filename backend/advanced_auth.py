@@ -373,12 +373,8 @@ class AuthenticationService:
                 return {"error": "Account inactive"}
 
             # Create tokens
-            access_token = await self._create_token(
-                user.user_id, user.tenant_id, TokenType.ACCESS, ip_address, 3600
-            )
-            refresh_token = await self._create_token(
-                user.user_id, user.tenant_id, TokenType.REFRESH, ip_address, 604800
-            )
+            access_token = await self._create_token(user.user_id, user.tenant_id, TokenType.ACCESS, ip_address, 3600)
+            refresh_token = await self._create_token(user.user_id, user.tenant_id, TokenType.REFRESH, ip_address, 604800)
 
             # Store refresh token
             self.refresh_tokens[user.user_id] = refresh_token.token_id
@@ -450,9 +446,7 @@ class AuthenticationService:
             tenant_id = payload.get("tenant_id")
 
             # Create new access token
-            access_token = await self._create_token(
-                user_id, tenant_id, TokenType.ACCESS, None, 3600
-            )
+            access_token = await self._create_token(user_id, tenant_id, TokenType.ACCESS, None, 3600)
 
             logger.info(f"Token refreshed for user: {user_id}")
 
@@ -515,9 +509,7 @@ class AuthenticationService:
         header = base64.b64encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()).decode()
         body = base64.b64encode(json.dumps(payload).encode()).decode()
 
-        signature = hmac.new(
-            self.secret_key.encode(), f"{header}.{body}".encode(), hashlib.sha256
-        ).digest()
+        signature = hmac.new(self.secret_key.encode(), f"{header}.{body}".encode(), hashlib.sha256).digest()
         signature = base64.b64encode(signature).decode()
 
         return f"{header}.{body}.{signature}"
@@ -532,9 +524,7 @@ class AuthenticationService:
             header, body, signature = parts
 
             # Verify signature
-            expected_sig = hmac.new(
-                self.secret_key.encode(), f"{header}.{body}".encode(), hashlib.sha256
-            ).digest()
+            expected_sig = hmac.new(self.secret_key.encode(), f"{header}.{body}".encode(), hashlib.sha256).digest()
             expected_sig = base64.b64encode(expected_sig).decode()
 
             if not hmac.compare_digest(signature, expected_sig):
@@ -604,9 +594,7 @@ class AuthenticationService:
             logger.error(f"API key creation failed: {str(e)}")
             return {"error": str(e)}
 
-    async def validate_api_key(
-        self, api_key: str, ip_address: str = None
-    ) -> Tuple[bool, Optional[Dict]]:
+    async def validate_api_key(self, api_key: str, ip_address: str = None) -> Tuple[bool, Optional[Dict]]:
         """Validate API key"""
         try:
             key_hash = hashlib.sha256(api_key.encode()).hexdigest()

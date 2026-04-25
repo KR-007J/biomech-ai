@@ -160,9 +160,7 @@ class MovementFeatureExtractor:
 
         # Lateral spread (width)
         if "left_shoulder" in keypoints and "right_shoulder" in keypoints:
-            features["shoulder_width"] = abs(
-                keypoints["right_shoulder"]["x"] - keypoints["left_shoulder"]["x"]
-            )
+            features["shoulder_width"] = abs(keypoints["right_shoulder"]["x"] - keypoints["left_shoulder"]["x"])
 
         # Torso angle
         if all(k in keypoints for k in ["left_shoulder", "left_hip"]):
@@ -318,9 +316,7 @@ class ActionClassifier:
             angles = MovementFeatureExtractor.extract_joint_angles(keypoints)
             body_pos = MovementFeatureExtractor.extract_body_position(keypoints)
             motion = MovementFeatureExtractor.extract_motion_features(
-                self.keypoint_history[-5:]
-                if len(self.keypoint_history) >= 5
-                else self.keypoint_history
+                self.keypoint_history[-5:] if len(self.keypoint_history) >= 5 else self.keypoint_history
             )
 
             # Score each exercise type

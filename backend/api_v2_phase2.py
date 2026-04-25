@@ -219,9 +219,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
 
                 elif message_type == "ping":
                     # Heartbeat response
-                    await websocket.send_json(
-                        {"type": "pong", "timestamp": datetime.utcnow().isoformat()}
-                    )
+                    await websocket.send_json({"type": "pong", "timestamp": datetime.utcnow().isoformat()})
 
                 else:
                     await websocket.send_json(
@@ -263,9 +261,7 @@ async def broadcast_to_channel(channel: str, message: Dict[str, Any]):
 async def register_webhook(request: WebhookRegistrationRequest):
     """Register webhook endpoint"""
     try:
-        webhook_id = await event_system.register_webhook(
-            url=request.url, secret=request.secret, events=request.events
-        )
+        webhook_id = await event_system.register_webhook(url=request.url, secret=request.secret, events=request.events)
 
         return {
             "webhook_id": webhook_id,
@@ -300,8 +296,7 @@ async def get_webhook_status(webhook_id: str):
         "url": webhook.url,
         "events": webhook.events,
         "is_active": not webhook.circuit_breaker_open,
-        "success_rate": webhook.success_count
-        / max(webhook.success_count + webhook.failure_count, 1),
+        "success_rate": webhook.success_count / max(webhook.success_count + webhook.failure_count, 1),
         "last_delivery": (webhook.last_delivery.isoformat() if webhook.last_delivery else None),
     }
 
@@ -325,18 +320,14 @@ async def publish_event(event_type: str, resource_id: str, data: Dict[str, Any] 
 
 
 @router.post("/graphql")
-async def graphql_endpoint(
-    query: str, variables: Dict[str, Any] = None, operation_name: str = None
-):
+async def graphql_endpoint(query: str, variables: Dict[str, Any] = None, operation_name: str = None):
     """GraphQL query endpoint"""
     try:
         if not query:
             raise HTTPException(status_code=400, detail="Query is required")
 
         # Execute query
-        result = graphql_server.execute_query(
-            query=query, variables=variables or {}, operation_name=operation_name
-        )
+        result = graphql_server.execute_query(query=query, variables=variables or {}, operation_name=operation_name)
 
         if result.get("errors"):
             return JSONResponse(status_code=400, content={"errors": result["errors"]})
@@ -440,9 +431,7 @@ async def list_models():
 async def create_cohort(request: CohortCreationRequest):
     """Create analytics cohort"""
     try:
-        cohort_id = analytics_engine.create_cohort(
-            name=request.name, criteria=request.criteria, group_by=request.group_by
-        )
+        cohort_id = analytics_engine.create_cohort(name=request.name, criteria=request.criteria, group_by=request.group_by)
 
         return {"cohort_id": cohort_id, "status": "created", "name": request.name}
 
@@ -615,9 +604,7 @@ async def get_blocked_users():
 
 
 @router.post("/integrate/analysis-job")
-async def integrate_analysis_with_job_queue(
-    payload: FeedbackRequest, background_tasks: BackgroundTasks
-):
+async def integrate_analysis_with_job_queue(payload: FeedbackRequest, background_tasks: BackgroundTasks):
     """Integrate analysis with async job queue for long-running tasks"""
     try:
         # Submit analysis as async job

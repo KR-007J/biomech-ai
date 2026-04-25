@@ -198,9 +198,7 @@ class ABTestingEngine:
         logger.info(f"Experiment started: {experiment_id}")
         return True
 
-    def allocate_user(
-        self, experiment_id: str, user_id: str, strategy: Optional[str] = None
-    ) -> Optional[str]:
+    def allocate_user(self, experiment_id: str, user_id: str, strategy: Optional[str] = None) -> Optional[str]:
         """Allocate user to variant"""
         if not (exp := self.experiments.get(experiment_id)):
             return None
@@ -214,17 +212,11 @@ class ABTestingEngine:
         configured_strategy = strategy
         if configured_strategy is None:
             configured_strategy = next(
-                (
-                    rule["allocation_strategy"]
-                    for rule in exp.exclusion_rules
-                    if "allocation_strategy" in rule
-                ),
+                (rule["allocation_strategy"] for rule in exp.exclusion_rules if "allocation_strategy" in rule),
                 AllocationStrategy.RANDOM.value,
             )
 
-        allocator = self.allocation_strategies.get(
-            str(configured_strategy).lower(), self._allocate_random
-        )
+        allocator = self.allocation_strategies.get(str(configured_strategy).lower(), self._allocate_random)
         variant_id = None
         variants = list(exp.variants.keys())
         if len(variants) == 2:
@@ -265,9 +257,7 @@ class ABTestingEngine:
                 return variant_id  # Explore untested variant
 
             conversion_rate = variant.conversion_count / variant.user_count
-            ucb = conversion_rate + math.sqrt(
-                2 * math.log(sum(v.user_count for v in exp.variants.values())) / variant.user_count
-            )
+            ucb = conversion_rate + math.sqrt(2 * math.log(sum(v.user_count for v in exp.variants.values())) / variant.user_count)
 
             if ucb > best_ucb:
                 best_ucb = ucb
@@ -275,19 +265,13 @@ class ABTestingEngine:
 
         return best_variant
 
-    def record_conversion(
-        self, experiment_id: str, user_id: str, metric_value: float = 1.0
-    ) -> bool:
+    def record_conversion(self, experiment_id: str, user_id: str, metric_value: float = 1.0) -> bool:
         """Record user conversion/metric"""
         allocation_key = f"{experiment_id}:{user_id}"
         if variant_id := self.user_allocations.get(allocation_key):
             if exp := self.experiments.get(experiment_id):
                 if variant := exp.variants.get(variant_id):
-                    numeric_value = (
-                        float(bool(metric_value))
-                        if isinstance(metric_value, bool)
-                        else float(metric_value)
-                    )
+                    numeric_value = float(bool(metric_value)) if isinstance(metric_value, bool) else float(metric_value)
                     if numeric_value > 0:
                         variant.conversion_count += 1
                     variant.metric_sum += numeric_value
@@ -315,30 +299,16 @@ class ABTestingEngine:
 
         variant_a = variants_list[0]
         variant_b = variants_list[1]
-        conv_rate_a = (
-            variant_a.conversion_count / variant_a.user_count if variant_a.user_count > 0 else 0
-        )
-        conv_rate_b = (
-            variant_b.conversion_count / variant_b.user_count if variant_b.user_count > 0 else 0
-        )
+        conv_rate_a = variant_a.conversion_count / variant_a.user_count if variant_a.user_count > 0 else 0
+        conv_rate_b = variant_b.conversion_count / variant_b.user_count if variant_b.user_count > 0 else 0
         lift = ((conv_rate_b - conv_rate_a) / conv_rate_a) if conv_rate_a > 0 else 0
-        se_a = (
-            math.sqrt(conv_rate_a * (1 - conv_rate_a) / variant_a.user_count)
-            if variant_a.user_count > 0
-            else 0
-        )
-        se_b = (
-            math.sqrt(conv_rate_b * (1 - conv_rate_b) / variant_b.user_count)
-            if variant_b.user_count > 0
-            else 0
-        )
+        se_a = math.sqrt(conv_rate_a * (1 - conv_rate_a) / variant_a.user_count) if variant_a.user_count > 0 else 0
+        se_b = math.sqrt(conv_rate_b * (1 - conv_rate_b) / variant_b.user_count) if variant_b.user_count > 0 else 0
         se_diff = math.sqrt(se_a**2 + se_b**2)
         z_score = (conv_rate_b - conv_rate_a) / se_diff if se_diff > 0 else 0
         p_value = self._calculate_p_value(z_score)
         is_significant = p_value < (1 - exp.confidence_level)
-        required_size = self._calculate_sample_size(
-            exp.minimum_detectable_effect, exp.confidence_level, exp.statistical_power
-        )
+        required_size = self._calculate_sample_size(exp.minimum_detectable_effect, exp.confidence_level, exp.statistical_power)
 
         exp.results = ExperimentResult(
             variant_a_id=variant_a.variant_id,
@@ -384,9 +354,7 @@ class ABTestingEngine:
         # Simplified calculation
         return min(1.0, max(0.0, 1 - abs(z_score) * 0.1))
 
-    def _calculate_sample_size(
-        self, effect_size: float, confidence_level: float, power: float
-    ) -> int:
+    def _calculate_sample_size(self, effect_size: float, confidence_level: float, power: float) -> int:
         """Calculate required sample size per variant"""
         # Simplified formula
         1 - confidence_level
@@ -412,9 +380,7 @@ class ABTestingEngine:
 
         variant_stats = {}
         for variant_id, variant in exp.variants.items():
-            conversion_rate = (
-                variant.conversion_count / variant.user_count if variant.user_count > 0 else 0
-            )
+            conversion_rate = variant.conversion_count / variant.user_count if variant.user_count > 0 else 0
             variant_stats[variant_id] = {
                 "name": variant.name,
                 "users": variant.user_count,

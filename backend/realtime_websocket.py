@@ -241,9 +241,7 @@ class RealtimeWebSocketHub:
 
     async def broadcast_to_channel(self, channel: str, message: Dict[str, Any]) -> int:
         """Compatibility broadcaster using dict payloads."""
-        return await self.broadcast_message(
-            WSMessage(channel=channel, data=message, type=MessageType.BROADCAST)
-        )
+        return await self.broadcast_message(WSMessage(channel=channel, data=message, type=MessageType.BROADCAST))
 
     async def send_to_user(self, user_id: str, message: WSMessage) -> int:
         """Send message to specific user (all their connections)"""
@@ -318,9 +316,7 @@ class RealtimeWebSocketHub:
             for handler in self.handlers[message.type]:
                 try:
                     result = (
-                        await handler(connection_id, message)
-                        if asyncio.iscoroutinefunction(handler)
-                        else handler(connection_id, message)
+                        await handler(connection_id, message) if asyncio.iscoroutinefunction(handler) else handler(connection_id, message)
                     )
                     if result:
                         return result

@@ -141,9 +141,7 @@ class FraudDetectionEngine:
         self.activity_log: List[Dict] = []
         self.blocked_ips: Set[str] = set()
         self.blocked_users: Set[str] = set()
-        self.velocity_counters: Dict[str, Dict] = defaultdict(
-            lambda: {"count": 0, "reset_time": None}
-        )
+        self.velocity_counters: Dict[str, Dict] = defaultdict(lambda: {"count": 0, "reset_time": None})
         self.suspicious_patterns: List[str] = []
 
     def calculate_risk_score(self, user_id: str, actions: List[Dict[str, Any]]) -> int:
@@ -196,9 +194,7 @@ class FraudDetectionEngine:
             return RiskLevel.MEDIUM
         return RiskLevel.LOW
 
-    def build_behavior_profile(
-        self, user_id: str, normal_actions: List[Dict[str, Any]]
-    ) -> UserBehaviorProfile:
+    def build_behavior_profile(self, user_id: str, normal_actions: List[Dict[str, Any]]) -> UserBehaviorProfile:
         """Build a simplified baseline profile from historical actions."""
         hours = [int(item.get("hour", 0)) for item in normal_actions if "hour" in item]
         locations = [str(item.get("location")) for item in normal_actions if item.get("location")]
@@ -215,9 +211,7 @@ class FraudDetectionEngine:
         self.user_profiles[user_id] = profile
         return profile
 
-    def generate_alert(
-        self, user_id: str, risk_score: float, actions: List[Dict[str, Any]]
-    ) -> Optional[Dict[str, Any]]:
+    def generate_alert(self, user_id: str, risk_score: float, actions: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Compatibility alert payload."""
         risk_level = self.get_risk_level(risk_score)
         if risk_level in {RiskLevel.LOW, RiskLevel.MEDIUM}:
@@ -254,9 +248,7 @@ class FraudDetectionEngine:
         """Return whether a blocked user may continue."""
         return user_id not in self.blocked_users
 
-    async def track_action(
-        self, user_id: str, action_type: ActionType, metadata: Dict[str, Any]
-    ) -> Tuple[FraudRiskLevel, Optional[str]]:
+    async def track_action(self, user_id: str, action_type: ActionType, metadata: Dict[str, Any]) -> Tuple[FraudRiskLevel, Optional[str]]:
         """
         Track user action and analyze for fraud
 
@@ -297,9 +289,7 @@ class FraudDetectionEngine:
 
         # Update profile
         profile.total_sessions += 1
-        profile.actions_count[action_type.value] = (
-            profile.actions_count.get(action_type.value, 0) + 1
-        )
+        profile.actions_count[action_type.value] = profile.actions_count.get(action_type.value, 0) + 1
 
         return risk_level, alert_id
 
@@ -410,9 +400,7 @@ class FraudDetectionEngine:
         # Could integrate with external IP reputation service
         return 0
 
-    async def _check_rules(
-        self, user_id: str, action_type: ActionType, metadata: Dict[str, Any]
-    ) -> int:
+    async def _check_rules(self, user_id: str, action_type: ActionType, metadata: Dict[str, Any]) -> int:
         """Check fraud rules"""
         score = 0
 
@@ -441,9 +429,7 @@ class FraudDetectionEngine:
 
         return score
 
-    async def _check_behavioral_anomaly(
-        self, user_id: str, profile: UserBehaviorProfile, action_type: ActionType
-    ) -> int:
+    async def _check_behavioral_anomaly(self, user_id: str, profile: UserBehaviorProfile, action_type: ActionType) -> int:
         """Check for behavioral anomalies"""
         score = 0
 
@@ -509,9 +495,7 @@ class FraudDetectionEngine:
             return True
         return False
 
-    async def add_fraud_rule(
-        self, name: str, description: str, conditions: List[Dict], risk_score: int
-    ) -> str:
+    async def add_fraud_rule(self, name: str, description: str, conditions: List[Dict], risk_score: int) -> str:
         """Add fraud detection rule"""
         rule_id = f"rule_{len(self.fraud_rules) + 1}"
 
@@ -552,9 +536,7 @@ class FraudDetectionEngine:
         # Average risk from recent alerts
         recent_alerts = [a for a in user_alerts if (datetime.utcnow() - a.timestamp).days <= 7]
         if recent_alerts:
-            avg_risk = sum(risk_mapping.get(a.risk_level, 0) for a in recent_alerts) / len(
-                recent_alerts
-            )
+            avg_risk = sum(risk_mapping.get(a.risk_level, 0) for a in recent_alerts) / len(recent_alerts)
             return avg_risk
 
         return 0.0

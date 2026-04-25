@@ -79,24 +79,12 @@ def get_biomechanical_analysis(
 
     try:
         # Calculate Angles
-        results["angles"]["left_elbow"] = calculate_angle(
-            get_pt("LEFT_SHOULDER"), get_pt("LEFT_ELBOW"), get_pt("LEFT_WRIST")
-        )
-        results["angles"]["right_elbow"] = calculate_angle(
-            get_pt("RIGHT_SHOULDER"), get_pt("RIGHT_ELBOW"), get_pt("RIGHT_WRIST")
-        )
-        results["angles"]["left_knee"] = calculate_angle(
-            get_pt("LEFT_HIP"), get_pt("LEFT_KNEE"), get_pt("LEFT_ANKLE")
-        )
-        results["angles"]["right_knee"] = calculate_angle(
-            get_pt("RIGHT_HIP"), get_pt("RIGHT_KNEE"), get_pt("RIGHT_ANKLE")
-        )
-        results["angles"]["left_hip"] = calculate_angle(
-            get_pt("LEFT_SHOULDER"), get_pt("LEFT_HIP"), get_pt("LEFT_KNEE")
-        )
-        results["angles"]["right_hip"] = calculate_angle(
-            get_pt("RIGHT_SHOULDER"), get_pt("RIGHT_HIP"), get_pt("RIGHT_KNEE")
-        )
+        results["angles"]["left_elbow"] = calculate_angle(get_pt("LEFT_SHOULDER"), get_pt("LEFT_ELBOW"), get_pt("LEFT_WRIST"))
+        results["angles"]["right_elbow"] = calculate_angle(get_pt("RIGHT_SHOULDER"), get_pt("RIGHT_ELBOW"), get_pt("RIGHT_WRIST"))
+        results["angles"]["left_knee"] = calculate_angle(get_pt("LEFT_HIP"), get_pt("LEFT_KNEE"), get_pt("LEFT_ANKLE"))
+        results["angles"]["right_knee"] = calculate_angle(get_pt("RIGHT_HIP"), get_pt("RIGHT_KNEE"), get_pt("RIGHT_ANKLE"))
+        results["angles"]["left_hip"] = calculate_angle(get_pt("LEFT_SHOULDER"), get_pt("LEFT_HIP"), get_pt("LEFT_KNEE"))
+        results["angles"]["right_hip"] = calculate_angle(get_pt("RIGHT_SHOULDER"), get_pt("RIGHT_HIP"), get_pt("RIGHT_KNEE"))
 
         # Calculate Deviations
         for joint, value in results["angles"].items():

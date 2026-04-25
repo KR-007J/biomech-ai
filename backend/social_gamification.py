@@ -318,9 +318,7 @@ class SocialGamificationEngine:
             logger.error(f"Progress update failed: {str(e)}")
             return {"error": str(e)}
 
-    async def unlock_achievement(
-        self, user_id: str, category: str, name: str, description: str
-    ) -> Dict[str, Any]:
+    async def unlock_achievement(self, user_id: str, category: str, name: str, description: str) -> Dict[str, Any]:
         """
         Unlock achievement for user
 
@@ -345,9 +343,7 @@ class SocialGamificationEngine:
                 AchievementCategory.MILESTONE: {"points": 200, "rarity": "legendary"},
             }
 
-            data = category_data.get(
-                AchievementCategory(category), {"points": 50, "rarity": "common"}
-            )
+            data = category_data.get(AchievementCategory(category), {"points": 50, "rarity": "common"})
 
             achievement = Achievement(
                 achievement_id=achievement_id,
@@ -407,11 +403,7 @@ class SocialGamificationEngine:
             if not user:
                 return {"error": "User not found"}
 
-            achievements = [
-                self.achievements.get(aid).to_dict()
-                for aid in user.achievements
-                if aid in self.achievements
-            ]
+            achievements = [self.achievements.get(aid).to_dict() for aid in user.achievements if aid in self.achievements]
 
             return {
                 "user_id": user_id,

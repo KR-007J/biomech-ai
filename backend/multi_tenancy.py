@@ -356,19 +356,9 @@ class MultiTenancyManager:
 
             # Calculate usage percentages
             usage_percent = {
-                "users": (
-                    (usage.current_users / quota.max_users * 100) if quota.max_users > 0 else 0
-                ),
-                "storage": (
-                    (usage.storage_used_gb / quota.max_storage_gb * 100)
-                    if quota.max_storage_gb > 0
-                    else 0
-                ),
-                "api_calls": (
-                    (usage.api_calls_this_month / quota.max_api_calls_monthly * 100)
-                    if quota.max_api_calls_monthly > 0
-                    else 0
-                ),
+                "users": ((usage.current_users / quota.max_users * 100) if quota.max_users > 0 else 0),
+                "storage": ((usage.storage_used_gb / quota.max_storage_gb * 100) if quota.max_storage_gb > 0 else 0),
+                "api_calls": ((usage.api_calls_this_month / quota.max_api_calls_monthly * 100) if quota.max_api_calls_monthly > 0 else 0),
             }
 
             return {
@@ -431,9 +421,7 @@ class MultiTenancyManager:
         except Exception as e:
             logger.error(f"Data storage failed: {str(e)}")
 
-    async def generate_billing_invoice(
-        self, tenant_id: str, period_start: datetime, period_end: datetime
-    ) -> Dict[str, Any]:
+    async def generate_billing_invoice(self, tenant_id: str, period_start: datetime, period_end: datetime) -> Dict[str, Any]:
         """
         Generate billing invoice
 
