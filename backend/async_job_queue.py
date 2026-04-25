@@ -82,9 +82,7 @@ class AsyncJobQueue:
     - Dead-letter queue for failed jobs
     """
 
-    def __init__(
-        self, max_queue_size: int = 10000, max_concurrent_jobs: Optional[int] = None
-    ):
+    def __init__(self, max_queue_size: int = 10000, max_concurrent_jobs: Optional[int] = None):
         self.max_queue_size = max_queue_size
         self.max_concurrent_jobs = max_concurrent_jobs or max_queue_size
         self.jobs: Dict[str, JobMetadata] = {}
@@ -133,9 +131,7 @@ class AsyncJobQueue:
         self.stats.total_jobs += 1
         self.stats.pending_jobs += 1
 
-        logger.info(
-            f"Job {job_id} submitted: {task_name or job_type} (priority={priority.name})"
-        )
+        logger.info(f"Job {job_id} submitted: {task_name or job_type} (priority={priority.name})")
         return job_id
 
     async def process_job(self, job_id: str) -> bool:
@@ -146,8 +142,7 @@ class AsyncJobQueue:
 
         if metadata.depends_on:
             deps_satisfied = all(
-                self.jobs.get(dep_id)
-                and self.jobs[dep_id].status == JobStatus.COMPLETED
+                self.jobs.get(dep_id) and self.jobs[dep_id].status == JobStatus.COMPLETED
                 for dep_id in metadata.depends_on
             )
             if not deps_satisfied:
@@ -416,9 +411,7 @@ class AsyncTasks:
         )
 
     @staticmethod
-    async def generate_report_async(
-        queue: AsyncJobQueue, user_id: str, report_type: str
-    ) -> str:
+    async def generate_report_async(queue: AsyncJobQueue, user_id: str, report_type: str) -> str:
         """Queue report generation"""
         return await queue.submit_job(
             "generate_report",

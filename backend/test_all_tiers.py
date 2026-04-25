@@ -97,8 +97,7 @@ class TestTier4Mobile:
     @pytest.mark.asyncio
     async def test_mobile_device_registration(self):
         """Test device registration"""
-        from backend.mobile_app_backend import (MobileAppBackend,
-                                                RegisterDeviceRequest)
+        from backend.mobile_app_backend import MobileAppBackend, RegisterDeviceRequest
 
         backend = MobileAppBackend()
 
@@ -145,9 +144,7 @@ class TestTier5Enterprise:
 
         auth = AuthenticationService()
 
-        result = await auth.register_user(
-            "testuser", "test@example.com", "SecurePass123"
-        )
+        result = await auth.register_user("testuser", "test@example.com", "SecurePass123")
 
         assert result.get("success") is True
 
@@ -297,9 +294,7 @@ class TestTier8Security:
 
         engine = ComplianceEngine()
 
-        result = await engine.log_data_access(
-            "user1", "read", "session", "session1", "192.168.1.1"
-        )
+        result = await engine.log_data_access("user1", "read", "session", "session1", "192.168.1.1")
         assert result is True
 
     @pytest.mark.asyncio
@@ -328,9 +323,7 @@ class TestTier9SportScience:
 
         engine = SportsScienceEngine()
 
-        result = await engine.create_athlete_profile(
-            "John Doe", "running", 30, "M", 180, 75, 5
-        )
+        result = await engine.create_athlete_profile("John Doe", "running", 30, "M", 180, 75, 5)
         assert result.get("success") is True
 
     @pytest.mark.asyncio
@@ -348,9 +341,7 @@ class TestTier9SportScience:
             }
         }
 
-        result = await engine.analyze_gait_pro(
-            "session1", "person1", "running", pose_data
-        )
+        result = await engine.analyze_gait_pro("session1", "person1", "running", pose_data)
         assert result.get("gait_analysis") is not None
 
 
@@ -388,9 +379,7 @@ class TestIntegration:
 
         sports = SportsScienceEngine()
 
-        profile = await sports.create_athlete_profile(
-            "Athlete", "running", 25, "M", 180, 75, 3
-        )
+        profile = await sports.create_athlete_profile("Athlete", "running", 25, "M", 180, 75, 3)
         assert profile.get("success") is True
 
 

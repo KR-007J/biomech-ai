@@ -108,12 +108,7 @@ class GraphQLQueryParser:
                 in_query = True
                 continue
 
-            if (
-                in_query
-                and line
-                and not line.startswith("{")
-                and not line.startswith("}")
-            ):
+            if in_query and line and not line.startswith("{") and not line.startswith("}"):
                 # Parse field
                 if ":" in line:
                     var_name, var_type = line.split(":", 1)
@@ -123,9 +118,7 @@ class GraphQLQueryParser:
 
         return parsed
 
-    def validate_query(
-        self, query: Dict, schema: GraphQLSchema
-    ) -> tuple[bool, Optional[str]]:
+    def validate_query(self, query: Dict, schema: GraphQLSchema) -> tuple[bool, Optional[str]]:
         """Validate query against schema"""
         for field in query.get("fields", []):
             if field not in schema.query_type.fields:
@@ -277,9 +270,7 @@ class GraphQLServer:
                 "poseAccuracy": GraphQLField("poseAccuracy", "Float"),
                 "injuryRisk": GraphQLField("injuryRisk", "Float"),
                 "formScore": GraphQLField("formScore", "Float"),
-                "recommendations": GraphQLField(
-                    "recommendations", "String", list_type=True
-                ),
+                "recommendations": GraphQLField("recommendations", "String", list_type=True),
             },
         )
 
@@ -360,9 +351,7 @@ class GraphQLServer:
                     "Boolean",
                     args={
                         "userId": GraphQLArg("userId", "ID", nullable=False),
-                        "achievementId": GraphQLArg(
-                            "achievementId", "ID", nullable=False
-                        ),
+                        "achievementId": GraphQLArg("achievementId", "ID", nullable=False),
                     },
                 ),
             },

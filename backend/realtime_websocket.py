@@ -76,9 +76,7 @@ class WSMessage:
             type=MessageType(data.get("type", "update")),
             channel=data.get("channel", ""),
             data=data.get("data", {}),
-            timestamp=datetime.fromisoformat(
-                data.get("timestamp", datetime.utcnow().isoformat())
-            ),
+            timestamp=datetime.fromisoformat(data.get("timestamp", datetime.utcnow().isoformat())),
             sender_id=data.get("sender_id"),
             priority=data.get("priority", 0),
         )
@@ -314,9 +312,7 @@ class RealtimeWebSocketHub:
             self.handlers[message_type] = []
         self.handlers[message_type].append(handler)
 
-    async def handle_message(
-        self, connection_id: str, message: WSMessage
-    ) -> Optional[WSMessage]:
+    async def handle_message(self, connection_id: str, message: WSMessage) -> Optional[WSMessage]:
         """Handle incoming message from client"""
         if message.type in self.handlers:
             for handler in self.handlers[message.type]:
@@ -333,9 +329,7 @@ class RealtimeWebSocketHub:
 
         return None
 
-    async def get_channel_history(
-        self, channel: str, limit: int = 100
-    ) -> List[WSMessage]:
+    async def get_channel_history(self, channel: str, limit: int = 100) -> List[WSMessage]:
         """Get message history for channel"""
         if channel in self.message_history:
             return self.message_history[channel][-limit:]
@@ -355,12 +349,8 @@ class RealtimeWebSocketHub:
             "total_connections": len(self.connections),
             "total_channels": len(self.channels),
             "total_messages": sum(s.message_count for s in self.channel_stats.values()),
-            "total_bytes_sent": sum(
-                s.total_bytes_sent for s in self.channel_stats.values()
-            ),
-            "channels": {
-                name: asdict(stats) for name, stats in self.channel_stats.items()
-            },
+            "total_bytes_sent": sum(s.total_bytes_sent for s in self.channel_stats.values()),
+            "channels": {name: asdict(stats) for name, stats in self.channel_stats.items()},
         }
 
     async def broadcast_system_alert(self, alert_message: str, priority: int = 2):

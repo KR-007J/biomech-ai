@@ -139,9 +139,7 @@ class FormCorrection:
             "joint": self.joint,
             "suggested_angle": self.suggested_angle,
             "current_angle": self.current_angle,
-            "haptic_feedback": (
-                self.haptic_feedback.to_dict() if self.haptic_feedback else None
-            ),
+            "haptic_feedback": (self.haptic_feedback.to_dict() if self.haptic_feedback else None),
             "audio_cue": self.audio_cue,
             "visual_hint": self.visual_hint,
         }
@@ -240,9 +238,7 @@ class MobileAppBackend:
             self.devices[device_id] = device_profile
 
             # Generate device token
-            token_data = (
-                f"{device_id}:{request.user_id}:{datetime.utcnow().isoformat()}"
-            )
+            token_data = f"{device_id}:{request.user_id}:{datetime.utcnow().isoformat()}"
             device_token = base64.b64encode(token_data.encode()).decode()
 
             logger.info(f"Device registered: {device_id} ({request.device_type})")
@@ -297,13 +293,9 @@ class MobileAppBackend:
 
             # Keep only last 30 days
             cutoff = datetime.utcnow() - timedelta(days=30)
-            self.sync_history[device_id] = [
-                t for t in self.sync_history[device_id] if t > cutoff
-            ]
+            self.sync_history[device_id] = [t for t in self.sync_history[device_id] if t > cutoff]
 
-            logger.info(
-                f"Sync completed for device {device_id}: {len(uploaded_sessions)} uploaded"
-            )
+            logger.info(f"Sync completed for device {device_id}: {len(uploaded_sessions)} uploaded")
 
             return {
                 "sync_id": str(uuid.uuid4()),
@@ -343,9 +335,7 @@ class MobileAppBackend:
             }
         ]
 
-    async def get_form_corrections(
-        self, request: FormCorrectionRequest
-    ) -> Dict[str, Any]:
+    async def get_form_corrections(self, request: FormCorrectionRequest) -> Dict[str, Any]:
         """
         Get real-time form corrections for mobile display
 
@@ -452,9 +442,7 @@ class MobileAppBackend:
 
         return corrections
 
-    async def get_offline_analysis_model(
-        self, device_profile: DeviceProfile
-    ) -> Dict[str, Any]:
+    async def get_offline_analysis_model(self, device_profile: DeviceProfile) -> Dict[str, Any]:
         """
         Get lightweight model for offline device processing
 
@@ -568,9 +556,7 @@ class MobileAppBackend:
             "intensity_level": "high",
         }
 
-    async def push_notification_settings(
-        self, user_id: str, settings: Dict
-    ) -> Dict[str, bool]:
+    async def push_notification_settings(self, user_id: str, settings: Dict) -> Dict[str, bool]:
         """
         Update push notification preferences
 
@@ -624,9 +610,7 @@ class OfflineDataManager:
 
             data = json.dumps(session.to_dict())
             compressed = gzip.compress(data.encode())
-            logger.info(
-                f"Session {session.session_id} compressed: {len(compressed)} bytes"
-            )
+            logger.info(f"Session {session.session_id} compressed: {len(compressed)} bytes")
             return compressed
         except Exception as e:
             logger.error(f"Compression failed: {str(e)}")

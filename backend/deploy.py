@@ -11,9 +11,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -66,9 +64,7 @@ class DeploymentManager:
     def install_dependencies(self) -> bool:
         """Install Python dependencies"""
         logger.info("Installing dependencies...")
-        return self.run_command(
-            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"]
-        )
+        return self.run_command([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
 
     def setup_database(self) -> bool:
         """Initialize database"""
@@ -97,9 +93,7 @@ class DeploymentManager:
         logger.info("Validating code...")
 
         # Type checking
-        if not self.run_command(
-            [sys.executable, "-m", "mypy", ".", "--ignore-missing-imports"]
-        ):
+        if not self.run_command([sys.executable, "-m", "mypy", ".", "--ignore-missing-imports"]):
             logger.warning("Type checking failed")
             return False
 
@@ -176,9 +170,7 @@ class DeploymentManager:
             logger.info(f"✅ {step_name} complete")
 
         logger.info(f"\n✅ Deployment to {self.env} successful!")
-        logger.info(
-            f"API available at: http://{self.config['host']}:{self.config['port']}"
-        )
+        logger.info(f"API available at: http://{self.config['host']}:{self.config['port']}")
         logger.info(f"Docs at: http://{self.config['host']}:{self.config['port']}/docs")
         return True
 
@@ -269,9 +261,7 @@ def main():
         help="Deployment environment",
     )
     parser.add_argument("--no-tests", action="store_true", help="Skip running tests")
-    parser.add_argument(
-        "--no-validation", action="store_true", help="Skip code validation"
-    )
+    parser.add_argument("--no-validation", action="store_true", help="Skip code validation")
 
     args = parser.parse_args()
 

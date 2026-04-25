@@ -446,9 +446,7 @@ class SportsScienceEngine:
             "pre_swing",
         ]
 
-    async def _interpret_gait(
-        self, analysis: GaitAnalysisData, sport: str
-    ) -> Dict[str, Any]:
+    async def _interpret_gait(self, analysis: GaitAnalysisData, sport: str) -> Dict[str, Any]:
         """Interpret gait analysis results"""
         interpretations = []
 
@@ -459,9 +457,7 @@ class SportsScienceEngine:
                 if analysis.cadence_steps_per_min < standard.poor_value:
                     interpretations.append("Cadence too low - may reduce efficiency")
                 elif analysis.cadence_steps_per_min > standard.elite_value:
-                    interpretations.append(
-                        "Cadence excellent - high running efficiency"
-                    )
+                    interpretations.append("Cadence excellent - high running efficiency")
 
         if analysis.symmetry_index < 90:
             interpretations.append(
@@ -484,9 +480,7 @@ class SportsScienceEngine:
         try:
             standards = self.standards.get(sport, [])
 
-            filtered = [
-                s for s in standards if s.age_group == age_group and s.gender == gender
-            ]
+            filtered = [s for s in standards if s.age_group == age_group and s.gender == gender]
 
             return {
                 "sport": sport,
@@ -505,9 +499,7 @@ class SportsScienceEngine:
             logger.error(f"Standards fetch failed: {str(e)}")
             return {"error": str(e)}
 
-    async def enable_accessibility_feature(
-        self, user_id: str, feature: str
-    ) -> Dict[str, bool]:
+    async def enable_accessibility_feature(self, user_id: str, feature: str) -> Dict[str, bool]:
         """Enable accessibility feature"""
         try:
             # In production, store user preferences

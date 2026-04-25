@@ -107,9 +107,7 @@ class DistributedCache:
         self.replication_map: Dict[str, List[str]] = {}  # key -> replicas
         self.tenant_keys: Dict[str, List[str]] = {}  # tenant_id -> keys
 
-        logger.info(
-            f"Distributed cache initialized ({max_memory_mb}MB, {eviction_policy})"
-        )
+        logger.info(f"Distributed cache initialized ({max_memory_mb}MB, {eviction_policy})")
 
     async def set(
         self,
@@ -160,9 +158,7 @@ class DistributedCache:
                 self.tenant_keys[tenant_id].append(tenant_prefixed_key)
 
             # Replicate (async)
-            asyncio.create_task(
-                self._replicate(tenant_prefixed_key, value, ttl_seconds)
-            )
+            asyncio.create_task(self._replicate(tenant_prefixed_key, value, ttl_seconds))
 
             logger.debug(f"Cache SET: {tenant_prefixed_key} (TTL: {ttl_seconds}s)")
             return True
@@ -280,9 +276,7 @@ class DistributedCache:
             logger.error(f"Cache INCR failed: {str(e)}")
             return None
 
-    async def push_to_list(
-        self, key: str, value: Any, tenant_id: Optional[str] = None
-    ) -> int:
+    async def push_to_list(self, key: str, value: Any, tenant_id: Optional[str] = None) -> int:
         """Push value to list"""
         try:
             tenant_prefixed_key = f"{tenant_id}:{key}" if tenant_id else key
@@ -317,16 +311,12 @@ class DistributedCache:
             logger.error(f"Cache LIST GET failed: {str(e)}")
             return None
 
-    async def add_node(
-        self, node_id: str, host: str, port: int, is_master: bool = False
-    ) -> bool:
+    async def add_node(self, node_id: str, host: str, port: int, is_master: bool = False) -> bool:
         """Add cluster node"""
         try:
             node = CacheNode(node_id=node_id, host=host, port=port, is_master=is_master)
             self.nodes[node_id] = node
-            logger.info(
-                f"Cache node added: {node_id} ({host}:{port}, master={is_master})"
-            )
+            logger.info(f"Cache node added: {node_id} ({host}:{port}, master={is_master})")
             return True
         except Exception as e:
             logger.error(f"Node addition failed: {str(e)}")
@@ -337,14 +327,10 @@ class DistributedCache:
         try:
             if self.eviction_policy == "lru":
                 # Least Recently Used
-                sorted_entries = sorted(
-                    self.cache.items(), key=lambda x: x[1].last_accessed
-                )
+                sorted_entries = sorted(self.cache.items(), key=lambda x: x[1].last_accessed)
             elif self.eviction_policy == "lfu":
                 # Least Frequently Used
-                sorted_entries = sorted(
-                    self.cache.items(), key=lambda x: x[1].access_count
-                )
+                sorted_entries = sorted(self.cache.items(), key=lambda x: x[1].access_count)
             elif self.eviction_policy == "ttl":
                 # Shortest TTL first
                 sorted_entries = sorted(
@@ -367,9 +353,7 @@ class DistributedCache:
                 self.stats.evictions += 1
 
             self.stats.used_memory_mb -= freed
-            logger.info(
-                f"Evicted {len([e for e in sorted_entries[:freed]])} entries ({freed}MB)"
-            )
+            logger.info(f"Evicted {len([e for e in sorted_entries[:freed]])} entries ({freed}MB)")
             return freed >= space_needed_mb
         except Exception as e:
             logger.error(f"Eviction failed: {str(e)}")

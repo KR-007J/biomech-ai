@@ -92,10 +92,7 @@ class Challenge:
         return min(100, (self.current_value / self.target_value) * 100)
 
     def is_expired(self) -> bool:
-        return (
-            datetime.utcnow() > self.expires_at
-            and self.status != ChallengeStatus.COMPLETED
-        )
+        return datetime.utcnow() > self.expires_at and self.status != ChallengeStatus.COMPLETED
 
     def to_dict(self) -> Dict:
         return {
@@ -174,9 +171,7 @@ class SocialGamificationEngine:
     async def create_user_profile(self, user_id: str, username: str) -> Dict[str, Any]:
         """Create social profile for user"""
         try:
-            profile = UserProfile(
-                user_id=user_id, username=username, level=1, total_points=0
-            )
+            profile = UserProfile(user_id=user_id, username=username, level=1, total_points=0)
             self.users[user_id] = profile
             self.user_challenges[user_id] = []
             self.user_achievements[user_id] = []
@@ -294,9 +289,7 @@ class SocialGamificationEngine:
             logger.error(f"Challenge creation failed: {str(e)}")
             return {"error": str(e)}
 
-    async def update_challenge_progress(
-        self, challenge_id: str, value: float
-    ) -> Dict[str, Any]:
+    async def update_challenge_progress(self, challenge_id: str, value: float) -> Dict[str, Any]:
         """Update challenge progress"""
         try:
             challenge = self.challenges.get(challenge_id)
@@ -446,8 +439,7 @@ class SocialGamificationEngine:
             active_challenges = [
                 self.challenges.get(cid).to_dict()
                 for cid in self.user_challenges.get(user_id, [])
-                if cid in self.challenges
-                and self.challenges[cid].status == ChallengeStatus.ACTIVE
+                if cid in self.challenges and self.challenges[cid].status == ChallengeStatus.ACTIVE
             ]
 
             # Get rank

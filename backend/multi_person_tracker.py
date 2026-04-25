@@ -143,9 +143,7 @@ class MultiPersonTracker:
 
         return tracked_persons
 
-    def _data_association(
-        self, detections: List[DetectedPerson]
-    ) -> Dict[str, Optional[int]]:
+    def _data_association(self, detections: List[DetectedPerson]) -> Dict[str, Optional[int]]:
         """
         Associate detections to existing tracks
 
@@ -181,9 +179,7 @@ class MultiPersonTracker:
                     # Appearance distance
                     appearance_cost = 0
                     if track.features is not None and detection.features is not None:
-                        appearance_cost = np.linalg.norm(
-                            track.features - detection.features
-                        )
+                        appearance_cost = np.linalg.norm(track.features - detection.features)
                         appearance_cost = min(appearance_cost, 2.0)  # Cap at 2.0
 
                     # Combined cost
@@ -220,9 +216,7 @@ class MultiPersonTracker:
         inter_x_max = min(x1_max, x2_max)
         inter_y_max = min(y1_max, y2_max)
 
-        inter_area = max(0, inter_x_max - inter_x_min) * max(
-            0, inter_y_max - inter_y_min
-        )
+        inter_area = max(0, inter_x_max - inter_x_min) * max(0, inter_y_max - inter_y_min)
 
         # Union
         box1_area = (x1_max - x1_min) * (y1_max - y1_min)
@@ -249,9 +243,7 @@ class MultiPersonTracker:
         """Get currently active tracks"""
         return list(self.active_tracks.values())
 
-    def get_track_history(
-        self, track_id: str, frames_back: int = 30
-    ) -> List[DetectedPerson]:
+    def get_track_history(self, track_id: str, frames_back: int = 30) -> List[DetectedPerson]:
         """Get historical positions for track"""
         history = []
 
@@ -282,9 +274,7 @@ class PersonReIdentificationEngine:
         """
         track_id = str(uuid.uuid4())[:8]
 
-        profile = PersonProfile(
-            track_id=track_id, user_name=user_name, features_history=[features]
-        )
+        profile = PersonProfile(track_id=track_id, user_name=user_name, features_history=[features])
 
         self.profiles[track_id] = profile
         self.feature_storage[track_id] = [features]
@@ -322,9 +312,7 @@ class PersonReIdentificationEngine:
 
         return None, 0
 
-    def update_features(
-        self, track_id: str, features: np.ndarray, max_features: int = 50
-    ) -> None:
+    def update_features(self, track_id: str, features: np.ndarray, max_features: int = 50) -> None:
         """Update feature set for person"""
         if track_id not in self.feature_storage:
             self.feature_storage[track_id] = []
@@ -333,9 +321,7 @@ class PersonReIdentificationEngine:
 
         # Keep recent features only
         if len(self.feature_storage[track_id]) > max_features:
-            self.feature_storage[track_id] = self.feature_storage[track_id][
-                -max_features:
-            ]
+            self.feature_storage[track_id] = self.feature_storage[track_id][-max_features:]
 
         # Update profile
         if track_id in self.profiles:
@@ -495,15 +481,9 @@ if __name__ == "__main__":
 
     # Simulate 3 people detected in frame
     persons = [
-        DetectedPerson(
-            person_id="p1", bounding_box=(0.1, 0.2, 0.3, 0.6), confidence=0.95
-        ),
-        DetectedPerson(
-            person_id="p2", bounding_box=(0.5, 0.2, 0.7, 0.6), confidence=0.92
-        ),
-        DetectedPerson(
-            person_id="p3", bounding_box=(0.75, 0.2, 0.95, 0.6), confidence=0.88
-        ),
+        DetectedPerson(person_id="p1", bounding_box=(0.1, 0.2, 0.3, 0.6), confidence=0.95),
+        DetectedPerson(person_id="p2", bounding_box=(0.5, 0.2, 0.7, 0.6), confidence=0.92),
+        DetectedPerson(person_id="p3", bounding_box=(0.75, 0.2, 0.95, 0.6), confidence=0.88),
     ]
 
     tracked = tracker.update(persons, datetime.utcnow())

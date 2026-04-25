@@ -131,9 +131,7 @@ class MovementFeatureExtractor:
 
         # Smoothness trend (inverse - lower smoothness is worse)
         recent_smoothness = [s.movement_smoothness for s in sessions[-window:]]
-        smoothness_trend = np.polyfit(
-            range(len(recent_smoothness)), recent_smoothness, 1
-        )[0]
+        smoothness_trend = np.polyfit(range(len(recent_smoothness)), recent_smoothness, 1)[0]
 
         # Fatigue accumulation
         fatigue_trend = np.mean([s.fatigue_indicator for s in sessions[-window:]])
@@ -193,15 +191,11 @@ class InjuryPredictorLSTM:
                         name="lstm_1",
                     ),
                     layers.Dropout(0.2),
-                    layers.LSTM(
-                        64, activation="relu", return_sequences=False, name="lstm_2"
-                    ),
+                    layers.LSTM(64, activation="relu", return_sequences=False, name="lstm_2"),
                     layers.Dropout(0.2),
                     layers.Dense(32, activation="relu", name="dense_1"),
                     layers.Dense(16, activation="relu", name="dense_2"),
-                    layers.Dense(
-                        1, activation="sigmoid", name="output"
-                    ),  # Probability output
+                    layers.Dense(1, activation="sigmoid", name="output"),  # Probability output
                 ]
             )
 
@@ -215,9 +209,7 @@ class InjuryPredictorLSTM:
             logger.info("✅ LSTM model architecture built")
             return model
         except ImportError:
-            logger.warning(
-                "TensorFlow not installed. Install via: pip install tensorflow"
-            )
+            logger.warning("TensorFlow not installed. Install via: pip install tensorflow")
             return None
 
     def train(
@@ -292,9 +284,7 @@ class InjuryPredictorLSTM:
             logger.error(f"Training error: {e}")
             return {}
 
-    def predict(
-        self, user_sessions: List[SessionData], weeks_ahead: int = 2
-    ) -> PredictionResult:
+    def predict(self, user_sessions: List[SessionData], weeks_ahead: int = 2) -> PredictionResult:
         """
         Predict injury probability for future period
 
@@ -323,9 +313,7 @@ class InjuryPredictorLSTM:
             sessions = sorted(user_sessions, key=lambda s: s.timestamp)
 
             # Extract features
-            X = self.feature_extractor.extract_temporal_features(
-                sessions, self.lookback_window
-            )
+            X = self.feature_extractor.extract_temporal_features(sessions, self.lookback_window)
             X = X.reshape(1, self.lookback_window, -1)
 
             # Predict
@@ -338,9 +326,7 @@ class InjuryPredictorLSTM:
             # Contributing factors
             factors = []
             if degradation["risk_trend"] > 0.05:
-                factors.append(
-                    f"Risk increasing at {degradation['risk_trend']:.3f}/session"
-                )
+                factors.append(f"Risk increasing at {degradation['risk_trend']:.3f}/session")
             if degradation["fatigue_level"] > 0.7:
                 factors.append("High fatigue accumulation detected")
             if sessions[-1].movement_smoothness < 0.6:
@@ -357,9 +343,7 @@ class InjuryPredictorLSTM:
                 recommendations.append("Increase rest days by 1")
                 recommendations.append("Focus on core and stabilizer muscles")
             else:
-                recommendations.append(
-                    "Continue current training with standard precautions"
-                )
+                recommendations.append("Continue current training with standard precautions")
                 recommendations.append("Monitor for form degradation")
 
             return PredictionResult(
@@ -383,9 +367,7 @@ class InjuryPredictorLSTM:
                 risk_trajectory="unknown",
                 confidence=0.3,
                 contributing_factors=[str(e)],
-                recommendations=[
-                    "Error in prediction model. Manual review recommended."
-                ],
+                recommendations=["Error in prediction model. Manual review recommended."],
             )
 
     def save_model(self, path: str) -> bool:
@@ -428,9 +410,7 @@ class InjuryRiskTracker:
         self.user_sessions[session.user_id].append(session)
         logger.info(f"Added session for user {session.user_id}")
 
-    def get_prediction(
-        self, user_id: str, weeks_ahead: int = 2
-    ) -> Optional[PredictionResult]:
+    def get_prediction(self, user_id: str, weeks_ahead: int = 2) -> Optional[PredictionResult]:
         """Get latest prediction for user"""
         if user_id not in self.user_sessions:
             return None
@@ -449,9 +429,7 @@ class InjuryRiskTracker:
         if user_id not in self.user_sessions:
             return {}
 
-        sessions = sorted(
-            self.user_sessions[user_id][-limit:], key=lambda s: s.timestamp
-        )
+        sessions = sorted(self.user_sessions[user_id][-limit:], key=lambda s: s.timestamp)
 
         risk_scores = [s.avg_risk_score for s in sessions]
         timestamps = [s.timestamp.isoformat() for s in sessions]
@@ -503,10 +481,7 @@ def example_predictor_usage():
     if prediction:
         print(f"Injury Probability: {prediction.injury_probability:.2%}")
         print(f"Risk Trajectory: {prediction.risk_trajectory}")
-        print(
-            f"Recommendations:\n"
-            + "\n".join(f"  - {r}" for r in prediction.recommendations)
-        )
+        print(f"Recommendations:\n" + "\n".join(f"  - {r}" for r in prediction.recommendations))
 
     # Get history
     history = tracker.get_user_risk_history("user_123")

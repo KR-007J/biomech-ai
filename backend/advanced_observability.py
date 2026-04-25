@@ -131,9 +131,7 @@ class Alert:
             "name": self.name,
             "severity": self.severity,
             "is_active": self.is_active,
-            "triggered_at": (
-                self.triggered_at.isoformat() if self.triggered_at else None
-            ),
+            "triggered_at": (self.triggered_at.isoformat() if self.triggered_at else None),
         }
 
 
@@ -240,9 +238,7 @@ class DistributedTracingEngine:
             logger.error(f"Span start failed: {str(e)}")
             return ""
 
-    def end_span(
-        self, span_id: str, status: str = "OK", error: Optional[str] = None
-    ) -> bool:
+    def end_span(self, span_id: str, status: str = "OK", error: Optional[str] = None) -> bool:
         """End span"""
         try:
             span = self.spans.get(span_id)
@@ -271,9 +267,7 @@ class DistributedTracingEngine:
                 return {"error": "Trace not found"}
 
             trace.end_time = datetime.utcnow()
-            trace.total_duration_ms = (
-                trace.end_time - trace.start_time
-            ).total_seconds() * 1000
+            trace.total_duration_ms = (trace.end_time - trace.start_time).total_seconds() * 1000
 
             # Calculate critical path
             critical_path = max((s.duration_ms for s in trace.spans), default=0)
@@ -300,9 +294,7 @@ class DistributedTracingEngine:
         except Exception as e:
             logger.error(f"Attribute add failed: {str(e)}")
 
-    def record_metric(
-        self, metric_name: str, value: float, labels: Dict[str, str] = None
-    ) -> bool:
+    def record_metric(self, metric_name: str, value: float, labels: Dict[str, str] = None) -> bool:
         """Record metric"""
         try:
             metric = Metric(
@@ -400,9 +392,7 @@ class DistributedTracingEngine:
             logger.error(f"Alert check failed: {str(e)}")
             return []
 
-    def _evaluate_condition(
-        self, condition: str, value: float, threshold: float
-    ) -> bool:
+    def _evaluate_condition(self, condition: str, value: float, threshold: float) -> bool:
         """Evaluate alert condition"""
         if condition == "greater_than":
             return value > threshold

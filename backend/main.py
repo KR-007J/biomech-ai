@@ -17,22 +17,27 @@ from typing import Any, Dict, Optional
 
 # Monitoring
 import sentry_sdk
+
 # Environment
 from dotenv import load_dotenv
+
 # FastAPI
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+
 # AI & ML
 from google import genai
 from prometheus_client import generate_latest
 from sentry_sdk.integrations.fastapi import FastApiIntegration
+
 # Rate limiting
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.middleware.gzip import GZipMiddleware
+
 # Database
 from supabase import Client, create_client
 
@@ -42,12 +47,20 @@ from async_tasks import TaskManager, get_task_manager
 from cache import CacheManager, get_cache_manager
 from metrics import REGISTRY as METRICS_REGISTRY
 from metrics import MetricsCollector
+
 # Custom modules
 from pose_engine import PoseEngine
 from risk_engine import analyze_injury_risk
+
 # Data models
-from schemas import (AnalysisResponse, CoachFeedback, FeedbackRequest,
-                     HealthResponse, ProfileData, SessionData)
+from schemas import (
+    AnalysisResponse,
+    CoachFeedback,
+    FeedbackRequest,
+    HealthResponse,
+    ProfileData,
+    SessionData,
+)
 from security import APIKeyManager, RequestValidator, get_security_headers
 
 # ==================== CONFIGURATION ====================
@@ -372,9 +385,7 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
                             confidence=0.96,
                         )
                         processing_status = "AI_AUGMENTED"
-                        MetricsCollector.record_ai_feedback(
-                            "success", time.time() - start_time
-                        )
+                        MetricsCollector.record_ai_feedback("success", time.time() - start_time)
             except TimeoutError:
                 logger.warning(f"Gemini timeout for {analysis_id}")
                 MetricsCollector.record_ai_feedback("timeout", time.time() - start_time)
@@ -402,9 +413,7 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
                 "processing_time_sec": round(duration, 3),
                 "total_processing_time": f"{round(duration, 2)}s",
                 "avg_latency_per_frame": f"{round((duration / 30) * 1000, 1) if duration > 0 else 0}ms",  # Estimated
-                "estimated_accuracy": (
-                    "96.4%" if processing_status == "AI_AUGMENTED" else "85.0%"
-                ),
+                "estimated_accuracy": ("96.4%" if processing_status == "AI_AUGMENTED" else "85.0%"),
                 "engine_status": processing_status,
                 "source": "live",
             },
@@ -418,9 +427,7 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
         )
 
         # Record metrics
-        MetricsCollector.record_analysis(
-            exercise_type, duration, risk_info["risk_level"]
-        )
+        MetricsCollector.record_analysis(exercise_type, duration, risk_info["risk_level"])
 
         # Sync to database
         if supabase and user_id:

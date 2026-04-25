@@ -20,6 +20,7 @@ import pytest
 
 from ab_testing import ABTestingEngine, AllocationStrategy
 from advanced_analytics import AdvancedAnalyticsEngine
+
 # Phase 2 modules
 from async_job_queue import AsyncJobQueue, JobPriority
 from fraud_detection import FraudDetectionEngine
@@ -328,9 +329,7 @@ class TestPhase2Integration:
         assert is_valid
 
         # Test invalid signature
-        is_invalid = event_system._verify_signature(
-            "invalid-sig", event, "my-secret-key"
-        )
+        is_invalid = event_system._verify_signature("invalid-sig", event, "my-secret-key")
         assert not is_invalid
 
     @pytest.mark.asyncio
@@ -474,9 +473,7 @@ class TestPhase2Integration:
         # Create cohort
         cohort_id = analytics_engine.create_cohort(
             name="new_users_q1_2026",
-            criteria={
-                "registration_date": {"start": "2026-01-01", "end": "2026-03-31"}
-            },
+            criteria={"registration_date": {"start": "2026-01-01", "end": "2026-03-31"}},
             group_by="month",
         )
 
@@ -493,9 +490,7 @@ class TestPhase2Integration:
         ]
 
         # Calculate retention
-        retention = analytics_engine.calculate_retention(
-            cohort_id, users, days=[1, 7, 30]
-        )
+        retention = analytics_engine.calculate_retention(cohort_id, users, days=[1, 7, 30])
 
         assert "day_1" in retention
         assert "day_7" in retention
@@ -619,10 +614,7 @@ class TestPhase2Integration:
 
         assert "control" in results
         assert "variant" in results
-        assert (
-            results["variant"]["conversion_rate"]
-            > results["control"]["conversion_rate"]
-        )
+        assert results["variant"]["conversion_rate"] > results["control"]["conversion_rate"]
         assert "p_value" in results["variant"]
         assert "confidence_interval" in results["variant"]
 
@@ -746,9 +738,7 @@ class TestPhase2EndToEndIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_model_update_with_webhook_notification(
-        self, model_registry, event_system
-    ):
+    async def test_model_update_with_webhook_notification(self, model_registry, event_system):
         """✅ Model update triggers webhook events"""
         # Register webhook for model events
         webhook_id = await event_system.register_webhook(
@@ -783,9 +773,7 @@ class TestPhase2EndToEndIntegration:
             ab_engine.record_conversion(experiment_id, user_id, converted)
 
             # Track in analytics
-            users.append(
-                {"id": user_id, "variant": variant, "converted": converted}
-            )  # 70% vs 50%
+            users.append({"id": user_id, "variant": variant, "converted": converted})  # 70% vs 50%
 
         # Analyze experiment
         results = ab_engine.analyze_results(experiment_id)
@@ -800,9 +788,7 @@ class TestPhase2EndToEndIntegration:
         )
 
         assert len(segments["converted"]) > 0
-        assert (
-            results["new_ui"]["conversion_rate"] > results["old_ui"]["conversion_rate"]
-        )
+        assert results["new_ui"]["conversion_rate"] > results["old_ui"]["conversion_rate"]
 
 
 if __name__ == "__main__":

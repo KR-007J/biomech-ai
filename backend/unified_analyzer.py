@@ -13,14 +13,19 @@ from dataclasses import asdict
 from datetime import datetime
 from typing import Any, Dict, List
 
-from action_recognizer import (ActionClassifier, ExerciseType,
-                               FormQualityAssessor, RepetitionCounter)
-from analytics_engine import (ComparativeAnalyticsEngine,
-                              MovementSignatureGenerator, TimeSeriesAnalyzer)
+from action_recognizer import ActionClassifier, ExerciseType, FormQualityAssessor, RepetitionCounter
+from analytics_engine import (
+    ComparativeAnalyticsEngine,
+    MovementSignatureGenerator,
+    TimeSeriesAnalyzer,
+)
 from biomechanics_advanced import AdvancedBiomechanicsEngine
 from ensemble_analyzer import EnsembleAnalyzer, ModelType
-from multi_person_tracker import (GroupExerciseAnalyzer, MultiPersonTracker,
-                                  PersonReIdentificationEngine)
+from multi_person_tracker import (
+    GroupExerciseAnalyzer,
+    MultiPersonTracker,
+    PersonReIdentificationEngine,
+)
 from predictive_models import InjuryRiskTracker, SessionData
 from reports_generator import ReportConfig, ReportGenerator
 
@@ -32,9 +37,7 @@ class UnifiedBiomechanicsAnalyzer:
 
     def __init__(self):
         # Tier 1: ML & Biomechanics
-        self.ensemble = EnsembleAnalyzer(
-            models=[ModelType.MEDIAPIPE, ModelType.YOLOV8_POSE]
-        )
+        self.ensemble = EnsembleAnalyzer(models=[ModelType.MEDIAPIPE, ModelType.YOLOV8_POSE])
         self.biomechanics_engine = AdvancedBiomechanicsEngine()
         self.injury_tracker = InjuryRiskTracker()
 
@@ -64,9 +67,7 @@ class UnifiedBiomechanicsAnalyzer:
         try:
             # Initialize ensemble
             if not await self.ensemble.initialize():
-                logger.warning(
-                    "⚠️  Ensemble initialization failed, falling back to basic analysis"
-                )
+                logger.warning("⚠️  Ensemble initialization failed, falling back to basic analysis")
 
             self.is_initialized = True
             logger.info("✅ All components initialized successfully")
@@ -107,14 +108,10 @@ class UnifiedBiomechanicsAnalyzer:
             keypoints = frame_data.get("keypoints", {})
             if keypoints:
                 ensemble_results = await self.ensemble.detect(frame_data.get("frame"))
-                result["ensemble_detections"] = self._serialize_ensemble(
-                    ensemble_results
-                )
+                result["ensemble_detections"] = self._serialize_ensemble(ensemble_results)
 
                 # Use consensus keypoints
-                consensus_keypoints = self._extract_consensus_keypoints(
-                    ensemble_results
-                )
+                consensus_keypoints = self._extract_consensus_keypoints(ensemble_results)
             else:
                 consensus_keypoints = keypoints
 
@@ -150,9 +147,7 @@ class UnifiedBiomechanicsAnalyzer:
                         result["group_sync"] = asdict(group_sync)
 
             # 4. TIER 3: Action recognition
-            action_type, confidence = self.action_classifier.classify_action(
-                consensus_keypoints
-            )
+            action_type, confidence = self.action_classifier.classify_action(consensus_keypoints)
             result["action"] = {
                 "type": action_type.value,
                 "confidence": float(confidence),
@@ -160,9 +155,7 @@ class UnifiedBiomechanicsAnalyzer:
 
             # 5. Rep counting for exercises
             if action_type != ExerciseType.UNKNOWN:
-                primary_angle = consensus_keypoints.get("left_knee", {}).get(
-                    "angle", 90
-                )
+                primary_angle = consensus_keypoints.get("left_knee", {}).get("angle", 90)
                 if isinstance(primary_angle, dict):
                     primary_angle = 90
                 reps = self.rep_counter.update(float(primary_angle))
@@ -233,9 +226,7 @@ class UnifiedBiomechanicsAnalyzer:
             )
 
             self.injury_tracker.add_session(session_obj)
-            injury_prediction = self.injury_tracker.get_prediction(
-                user_id, weeks_ahead=2
-            )
+            injury_prediction = self.injury_tracker.get_prediction(user_id, weeks_ahead=2)
 
             # 4. TIER 2: Generate report
             report_config = ReportConfig(
@@ -272,9 +263,7 @@ class UnifiedBiomechanicsAnalyzer:
                     "energy_expenditure": aggregated.get("energy_expenditure", 0),
                     "joint_loading": aggregated.get("joint_loading", {}),
                 },
-                "injury_prediction": (
-                    asdict(injury_prediction) if injury_prediction else None
-                ),
+                "injury_prediction": (asdict(injury_prediction) if injury_prediction else None),
                 # Tier 2 results
                 "trends": asdict(trend) if trend else None,
                 "anomalies": [asdict(a) for a in anomalies] if anomalies else [],
@@ -303,9 +292,7 @@ class UnifiedBiomechanicsAnalyzer:
         """
         try:
             # Get user risk history
-            risk_history = self.injury_tracker.get_user_risk_history(
-                user_id, limit=days
-            )
+            risk_history = self.injury_tracker.get_user_risk_history(user_id, limit=days)
 
             # Get trends
             trends = {}
@@ -324,9 +311,7 @@ class UnifiedBiomechanicsAnalyzer:
                 "generated_at": datetime.utcnow().isoformat(),
                 "risk_history": risk_history,
                 "trends": trends,
-                "latest_prediction": (
-                    asdict(latest_prediction) if latest_prediction else None
-                ),
+                "latest_prediction": (asdict(latest_prediction) if latest_prediction else None),
                 "summary": {
                     "current_risk": risk_history.get("current_risk", 0),
                     "trend_direction": risk_history.get("trend", "stable"),
@@ -339,9 +324,7 @@ class UnifiedBiomechanicsAnalyzer:
             logger.error(f"Dashboard generation error: {e}")
             return {"error": str(e), "user_id": user_id}
 
-    def _extract_consensus_keypoints(
-        self, ensemble_results: Dict
-    ) -> Dict[str, Dict[str, float]]:
+    def _extract_consensus_keypoints(self, ensemble_results: Dict) -> Dict[str, Dict[str, float]]:
         """Extract consensus keypoints from ensemble"""
         consensus = {}
 
@@ -415,9 +398,7 @@ class UnifiedBiomechanicsAnalyzer:
 
         # Primary exercise
         primary_exercise = (
-            max(exercises_detected, key=exercises_detected.get)
-            if exercises_detected
-            else "unknown"
+            max(exercises_detected, key=exercises_detected.get) if exercises_detected else "unknown"
         )
 
         return {
@@ -453,13 +434,10 @@ class UnifiedBiomechanicsAnalyzer:
         return {
             "frames_processed": self.frame_count,
             "active_sessions": len(self.session_data),
-            "ensemble_status": (
-                "ready" if self.ensemble.detectors else "not_initialized"
-            ),
+            "ensemble_status": ("ready" if self.ensemble.detectors else "not_initialized"),
             "models_active": len(self.ensemble.detectors),
             "analytics_points": {
-                metric: len(points)
-                for metric, points in self.analytics.data_history.items()
+                metric: len(points) for metric, points in self.analytics.data_history.items()
             },
         }
 

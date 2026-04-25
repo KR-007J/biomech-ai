@@ -46,9 +46,7 @@ class CacheManager:
             self.redis_enabled = True
             logger.info("✅ Redis cache connected successfully")
         except Exception as e:
-            logger.warning(
-                f"⚠️  Redis not available, falling back to in-memory cache: {e}"
-            )
+            logger.warning(f"⚠️  Redis not available, falling back to in-memory cache: {e}")
             self.redis_enabled = False
 
     def _generate_key(self, key_prefix: str, identifier: str) -> str:
@@ -125,9 +123,7 @@ class CacheManager:
             keys = self.redis_client.keys(pattern)
             if keys:
                 self.redis_client.delete(*keys)
-                logger.debug(
-                    f"Invalidated {len(keys)} cache entries matching pattern: {pattern}"
-                )
+                logger.debug(f"Invalidated {len(keys)} cache entries matching pattern: {pattern}")
             return len(keys)
         except Exception as e:
             logger.error(f"Pattern invalidation error: {e}")

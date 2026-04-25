@@ -211,18 +211,10 @@ class AdvancedAnalyticsEngine:
 
         if active_day0 > 0:
             metrics.day0_retention = 100.0
-            metrics.day1_retention = (
-                len(day_buckets.get(1, set())) / active_day0
-            ) * 100
-            metrics.day7_retention = (
-                len(day_buckets.get(7, set())) / active_day0
-            ) * 100
-            metrics.day30_retention = (
-                len(day_buckets.get(30, set())) / active_day0
-            ) * 100
-            metrics.day90_retention = (
-                len(day_buckets.get(90, set())) / active_day0
-            ) * 100
+            metrics.day1_retention = (len(day_buckets.get(1, set())) / active_day0) * 100
+            metrics.day7_retention = (len(day_buckets.get(7, set())) / active_day0) * 100
+            metrics.day30_retention = (len(day_buckets.get(30, set())) / active_day0) * 100
+            metrics.day90_retention = (len(day_buckets.get(90, set())) / active_day0) * 100
 
         return metrics
 
@@ -267,9 +259,7 @@ class AdvancedAnalyticsEngine:
         logger.info(f"Funnel analyzed: {funnel_name}")
         return funnel_result
 
-    async def create_segment(
-        self, segment_name: str, conditions: List[Dict[str, Any]]
-    ) -> str:
+    async def create_segment(self, segment_name: str, conditions: List[Dict[str, Any]]) -> str:
         """Create dynamic user segment"""
         segment_users = set(self.users.keys())
 
@@ -316,9 +306,7 @@ class AdvancedAnalyticsEngine:
             return {}
 
         users_list = list(cohort.users)
-        event_count = sum(
-            1 for e in self.events + self.event_buffer if e.user_id in cohort.users
-        )
+        event_count = sum(1 for e in self.events + self.event_buffer if e.user_id in cohort.users)
 
         avg_ltv = 0.0
         if users_list:
@@ -368,10 +356,7 @@ def _compat_calculate_retention(
     self, cohort_id: str, users: List[Dict[str, Any]], days: List[int]
 ) -> Dict[str, float]:
     total = len(users) or 1
-    return {
-        f"day_{day}": round(max(0.0, 1 - (day / (max(days) + total))), 2)
-        for day in days
-    }
+    return {f"day_{day}": round(max(0.0, 1 - (day / (max(days) + total))), 2) for day in days}
 
 
 def _compat_analyze_funnel(

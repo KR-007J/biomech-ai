@@ -340,9 +340,7 @@ class AuthenticationService:
             logger.error(f"Registration failed: {str(e)}")
             return {"error": str(e)}
 
-    async def login(
-        self, username: str, password: str, ip_address: str = None
-    ) -> Dict[str, Any]:
+    async def login(self, username: str, password: str, ip_address: str = None) -> Dict[str, Any]:
         """
         Authenticate user
 
@@ -405,9 +403,7 @@ class AuthenticationService:
             logger.error(f"Login failed: {str(e)}")
             return {"error": str(e)}
 
-    async def verify_token(
-        self, token: str, ip_address: str = None
-    ) -> Tuple[bool, Optional[Dict]]:
+    async def verify_token(self, token: str, ip_address: str = None) -> Tuple[bool, Optional[Dict]]:
         """
         Verify JWT token
 
@@ -516,9 +512,7 @@ class AuthenticationService:
         payload = jwt_obj.to_dict()
         payload.update(jwt_obj.payload)
 
-        header = base64.b64encode(
-            json.dumps({"alg": "HS256", "typ": "JWT"}).encode()
-        ).decode()
+        header = base64.b64encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()).decode()
         body = base64.b64encode(json.dumps(payload).encode()).decode()
 
         signature = hmac.new(
@@ -672,18 +666,14 @@ class AuthenticationService:
     def _hash_password(self, password: str) -> str:
         """Hash password"""
         salt = secrets.token_hex(16)
-        pwd_hash = hashlib.pbkdf2_hmac(
-            "sha256", password.encode(), salt.encode(), 100000
-        )
+        pwd_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000)
         return f"{salt}${pwd_hash.hex()}"
 
     def _verify_password(self, password: str, password_hash: str) -> bool:
         """Verify password"""
         try:
             salt, pwd_hash = password_hash.split("$")
-            verify_hash = hashlib.pbkdf2_hmac(
-                "sha256", password.encode(), salt.encode(), 100000
-            )
+            verify_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000)
             return verify_hash.hex() == pwd_hash
         except:
             return False

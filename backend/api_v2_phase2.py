@@ -18,13 +18,13 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import (APIRouter, BackgroundTasks, HTTPException, WebSocket,
-                     WebSocketDisconnect)
+from fastapi import APIRouter, BackgroundTasks, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from ab_testing import ABTestingEngine, AllocationStrategy
 from advanced_analytics import AdvancedAnalyticsEngine
+
 # Phase 2 modules
 from async_job_queue import AsyncJobQueue, JobPriority
 from fraud_detection import FraudDetectionEngine
@@ -60,9 +60,7 @@ class JobSubmissionRequest(BaseModel):
     payload: Dict[str, Any] = Field(..., description="Job-specific data")
     priority: str = Field("NORMAL", description="Job priority")
     user_id: Optional[str] = None
-    dependencies: List[str] = Field(
-        default_factory=list, description="Job dependencies"
-    )
+    dependencies: List[str] = Field(default_factory=list, description="Job dependencies")
 
 
 class WebhookRegistrationRequest(BaseModel):
@@ -103,18 +101,14 @@ class CohortCreationRequest(BaseModel):
 
 
 @router.post("/jobs/submit")
-async def submit_async_job(
-    request: JobSubmissionRequest, background_tasks: BackgroundTasks
-):
+async def submit_async_job(request: JobSubmissionRequest, background_tasks: BackgroundTasks):
     """Submit job to async queue"""
     try:
         # Validate priority
         try:
             priority = JobPriority[request.priority.upper()]
         except KeyError:
-            raise HTTPException(
-                status_code=400, detail=f"Invalid priority: {request.priority}"
-            )
+            raise HTTPException(status_code=400, detail=f"Invalid priority: {request.priority}")
 
         # Submit job
         job_id = await job_queue.submit_job(
@@ -213,9 +207,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     for channel in channels:
                         await websocket_hub.subscribe(connection_id, channel)
 
-                    await websocket.send_json(
-                        {"type": "subscribed", "channels": channels}
-                    )
+                    await websocket.send_json({"type": "subscribed", "channels": channels})
 
                 elif message_type == "unsubscribe":
                     # Unsubscribe from channels
@@ -223,9 +215,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     for channel in channels:
                         await websocket_hub.unsubscribe(connection_id, channel)
 
-                    await websocket.send_json(
-                        {"type": "unsubscribed", "channels": channels}
-                    )
+                    await websocket.send_json({"type": "unsubscribed", "channels": channels})
 
                 elif message_type == "ping":
                     # Heartbeat response
@@ -312,9 +302,7 @@ async def get_webhook_status(webhook_id: str):
         "is_active": not webhook.circuit_breaker_open,
         "success_rate": webhook.success_count
         / max(webhook.success_count + webhook.failure_count, 1),
-        "last_delivery": (
-            webhook.last_delivery.isoformat() if webhook.last_delivery else None
-        ),
+        "last_delivery": (webhook.last_delivery.isoformat() if webhook.last_delivery else None),
     }
 
 
@@ -419,10 +407,7 @@ async def deploy_model(model_id: str, traffic_percentage: int = 100):
 @router.get("/models/{model_id}/compare")
 async def compare_models(model_id: str, baseline_model_id: str):
     """Compare model performance"""
-    if (
-        model_id not in model_registry.models
-        or baseline_model_id not in model_registry.models
-    ):
+    if model_id not in model_registry.models or baseline_model_id not in model_registry.models:
         raise HTTPException(status_code=404, detail="Model not found")
 
     comparison = model_registry.compare_models(model_id, baseline_model_id)
@@ -472,9 +457,7 @@ async def get_cohort_retention(cohort_id: str, users: List[Dict[str, Any]]):
     if cohort_id not in analytics_engine.cohorts:
         raise HTTPException(status_code=404, detail="Cohort not found")
 
-    retention = analytics_engine.calculate_retention(
-        cohort_id, users, days=[1, 7, 30, 90]
-    )
+    retention = analytics_engine.calculate_retention(cohort_id, users, days=[1, 7, 30, 90])
 
     return retention
 
@@ -514,9 +497,7 @@ async def create_experiment(request: ExperimentCreationRequest):
         try:
             strategy = AllocationStrategy[request.strategy.upper()]
         except KeyError:
-            raise HTTPException(
-                status_code=400, detail=f"Invalid strategy: {request.strategy}"
-            )
+            raise HTTPException(status_code=400, detail=f"Invalid strategy: {request.strategy}")
 
         experiment_id = ab_engine.create_experiment(
             name=request.name,

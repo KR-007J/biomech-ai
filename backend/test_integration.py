@@ -11,9 +11,7 @@ class TestEndToEndAnalysisFlow:
     """End-to-end biomechanical analysis flow tests"""
 
     @pytest.mark.integration
-    def test_complete_analysis_workflow(
-        self, client, sample_feedback_request, mock_supabase
-    ):
+    def test_complete_analysis_workflow(self, client, sample_feedback_request, mock_supabase):
         """✅ Complete analysis workflow succeeds"""
         # Step 1: Submit analyze request
         response = client.post("/generate-feedback", json=sample_feedback_request)

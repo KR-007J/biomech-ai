@@ -7,8 +7,7 @@ and operational health tracking.
 
 import logging
 
-from prometheus_client import (CollectorRegistry, Counter, Gauge, Histogram,
-                               Info)
+from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, Info
 
 logger = logging.getLogger(__name__)
 

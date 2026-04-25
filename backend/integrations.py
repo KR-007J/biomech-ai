@@ -67,9 +67,7 @@ class IntegrationManager:
         """Trigger event and notify all subscribed integrations"""
         asyncio.create_task(self._dispatch_event(event_type, data))
 
-    async def _dispatch_event(
-        self, event_type: IntegrationEventType, data: Dict[str, Any]
-    ):
+    async def _dispatch_event(self, event_type: IntegrationEventType, data: Dict[str, Any]):
         """Dispatch event to subscribed integrations"""
         tasks = []
 
@@ -100,9 +98,7 @@ class IntegrationManager:
     def _sign_payload(self, payload: Dict[str, Any], secret: str) -> str:
         """Sign webhook payload with HMAC-SHA256"""
         payload_json = json.dumps(payload, sort_keys=True)
-        signature = hmac.new(
-            secret.encode(), payload_json.encode(), hashlib.sha256
-        ).hexdigest()
+        signature = hmac.new(secret.encode(), payload_json.encode(), hashlib.sha256).hexdigest()
         return signature
 
     async def _send_webhook(self, url: str, payload: Dict[str, Any], signature: str):
@@ -116,9 +112,7 @@ class IntegrationManager:
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    url, json=payload, headers=headers, timeout=10
-                ) as resp:
+                async with session.post(url, json=payload, headers=headers, timeout=10) as resp:
                     if resp.status >= 200 and resp.status < 300:
                         logger.debug(f"Webhook sent successfully to {url}")
                     else:
@@ -128,13 +122,9 @@ class IntegrationManager:
         except Exception as e:
             logger.error(f"Webhook error: {e}")
 
-    def verify_webhook_signature(
-        self, payload: str, signature: str, secret: str
-    ) -> bool:
+    def verify_webhook_signature(self, payload: str, signature: str, secret: str) -> bool:
         """Verify incoming webhook signature"""
-        expected_signature = hmac.new(
-            secret.encode(), payload.encode(), hashlib.sha256
-        ).hexdigest()
+        expected_signature = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()
 
         return hmac.compare_digest(signature, f"sha256={expected_signature}")
 

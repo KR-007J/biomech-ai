@@ -141,9 +141,7 @@ class ABTestingEngine:
         minimum_detectable_effect: float = 0.10,
     ) -> str:
         """Create an experiment and optionally seed variants."""
-        experiment_id = (
-            f"exp_{len(self.experiments) + 1}_{int(datetime.utcnow().timestamp())}"
-        )
+        experiment_id = f"exp_{len(self.experiments) + 1}_{int(datetime.utcnow().timestamp())}"
         experiment = ABTest(
             experiment_id=experiment_id,
             name=name,
@@ -156,9 +154,7 @@ class ABTestingEngine:
         self.experiments[experiment_id] = experiment
 
         variant_names = variants or []
-        per_variant_traffic = (
-            traffic_percentage / len(variant_names) if variant_names else 100.0
-        )
+        per_variant_traffic = traffic_percentage / len(variant_names) if variant_names else 100.0
         for variant_name in variant_names:
             self.add_variant(experiment_id, variant_name, per_variant_traffic, {})
 
@@ -270,9 +266,7 @@ class ABTestingEngine:
 
             conversion_rate = variant.conversion_count / variant.user_count
             ucb = conversion_rate + math.sqrt(
-                2
-                * math.log(sum(v.user_count for v in exp.variants.values()))
-                / variant.user_count
+                2 * math.log(sum(v.user_count for v in exp.variants.values())) / variant.user_count
             )
 
             if ucb > best_ucb:
@@ -311,9 +305,7 @@ class ABTestingEngine:
                     return True
         return False
 
-    def analyze_results(
-        self, experiment_id: str
-    ) -> Optional[Dict[str, Dict[str, Any]]]:
+    def analyze_results(self, experiment_id: str) -> Optional[Dict[str, Dict[str, Any]]]:
         """Analyze experiment results with per-variant summaries."""
         if not (exp := self.experiments.get(experiment_id)):
             return None
@@ -324,14 +316,10 @@ class ABTestingEngine:
         variant_a = variants_list[0]
         variant_b = variants_list[1]
         conv_rate_a = (
-            variant_a.conversion_count / variant_a.user_count
-            if variant_a.user_count > 0
-            else 0
+            variant_a.conversion_count / variant_a.user_count if variant_a.user_count > 0 else 0
         )
         conv_rate_b = (
-            variant_b.conversion_count / variant_b.user_count
-            if variant_b.user_count > 0
-            else 0
+            variant_b.conversion_count / variant_b.user_count if variant_b.user_count > 0 else 0
         )
         lift = ((conv_rate_b - conv_rate_a) / conv_rate_a) if conv_rate_a > 0 else 0
         se_a = (
@@ -425,9 +413,7 @@ class ABTestingEngine:
         variant_stats = {}
         for variant_id, variant in exp.variants.items():
             conversion_rate = (
-                variant.conversion_count / variant.user_count
-                if variant.user_count > 0
-                else 0
+                variant.conversion_count / variant.user_count if variant.user_count > 0 else 0
             )
             variant_stats[variant_id] = {
                 "name": variant.name,

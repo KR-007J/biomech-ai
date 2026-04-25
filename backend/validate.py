@@ -71,16 +71,12 @@ def run_validation():
                 f"{res['confidence']:.2f} | {res['latency']:.2f}s | {res['status']}"
             )
         except Exception as e:
-            print(
-                f"{video:<25} | ERROR      | 0.00   | ---    | FAIL ({str(e)[:15]}...)"
-            )
+            print(f"{video:<25} | ERROR      | 0.00   | ---    | FAIL ({str(e)[:15]}...)")
 
     if results:
         avg_lat = total_latency / len(results)
         avg_conf = total_confidence / len(results)
-        pass_rate = (
-            len([r for r in results if r["status"] == "PASS"]) / len(results)
-        ) * 100
+        pass_rate = (len([r for r in results if r["status"] == "PASS"]) / len(results)) * 100
 
         print("-" * 65)
         print("\nAUDIT SYSTEM SUMMARY:")

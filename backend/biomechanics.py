@@ -100,9 +100,7 @@ def get_biomechanical_analysis(
 
         # Calculate Deviations
         for joint, value in results["angles"].items():
-            base_joint = (
-                "knee" if "knee" in joint else ("elbow" if "elbow" in joint else "hip")
-            )
+            base_joint = "knee" if "knee" in joint else ("elbow" if "elbow" in joint else "hip")
             ideal = IDEAL_RANGES[base_joint]
             if value < ideal["min"]:
                 results["deviations"][joint] = float(round(value - ideal["min"], 2))

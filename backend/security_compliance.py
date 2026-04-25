@@ -143,9 +143,7 @@ class ComplianceEngine:
             },
         }
 
-    async def generate_encryption_key(
-        self, algorithm: str = "AES-256"
-    ) -> Dict[str, Any]:
+    async def generate_encryption_key(self, algorithm: str = "AES-256") -> Dict[str, Any]:
         """
         Generate encryption key
 
@@ -202,9 +200,7 @@ class ComplianceEngine:
             import hashlib
 
             iv = secrets.token_bytes(16)
-            ciphertext = hashlib.sha256(
-                (str(key.key_material) + plaintext).encode()
-            ).hexdigest()
+            ciphertext = hashlib.sha256((str(key.key_material) + plaintext).encode()).hexdigest()
 
             return {
                 "encrypted": True,
@@ -216,9 +212,7 @@ class ComplianceEngine:
             logger.error(f"Encryption failed: {str(e)}")
             return {"error": str(e)}
 
-    async def decrypt_data(
-        self, key_id: str, ciphertext: str, iv: str
-    ) -> Dict[str, Any]:
+    async def decrypt_data(self, key_id: str, ciphertext: str, iv: str) -> Dict[str, Any]:
         """
         Decrypt data
 
@@ -345,9 +339,7 @@ class ComplianceEngine:
             deleted_count = 0
 
             # Remove consents
-            consents_to_delete = [
-                c for c in self.consents.values() if c.user_id == user_id
-            ]
+            consents_to_delete = [c for c in self.consents.values() if c.user_id == user_id]
             for consent in consents_to_delete:
                 del self.consents[consent.consent_id]
                 deleted_count += 1
@@ -357,9 +349,7 @@ class ComplianceEngine:
                 if log.user_id == user_id:
                     log.user_id = "DELETED_USER"
 
-            logger.info(
-                f"Right to be forgotten: {user_id} (deleted {deleted_count} records)"
-            )
+            logger.info(f"Right to be forgotten: {user_id} (deleted {deleted_count} records)")
 
             return {
                 "success": True,
@@ -391,9 +381,7 @@ class ComplianceEngine:
                 "name": framework_data.get("name"),
                 "requirements": requirements,
                 "audit_log_entries": len(self.audit_logs),
-                "active_keys": len(
-                    [k for k in self.encryption_keys.values() if k.is_active]
-                ),
+                "active_keys": len([k for k in self.encryption_keys.values() if k.is_active]),
                 "consents_count": len(self.consents),
                 "report_date": datetime.utcnow().isoformat(),
             }
