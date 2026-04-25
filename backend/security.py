@@ -222,7 +222,9 @@ class RequestValidator:
 class TokenManager:
     """JWT token generation and validation for authentication"""
 
-    SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me-in-production")
+    SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+    if not SECRET_KEY:
+        raise ValueError("JWT_SECRET_KEY environment variable must be set")
     ALGORITHM = "HS256"
     TOKEN_EXPIRY_HOURS = 24
 

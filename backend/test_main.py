@@ -38,7 +38,7 @@ class TestMetricsValidation:
     @pytest.mark.unit
     def test_valid_metrics(self, sample_metrics_data):
         """✅ Valid metrics pass validation"""
-        from main import MetricsData
+        from schemas import MetricsData
 
         metrics = MetricsData(**sample_metrics_data)
         assert metrics.angles["knee"] == 85.3
@@ -47,7 +47,7 @@ class TestMetricsValidation:
     @pytest.mark.unit
     def test_invalid_pose_confidence_high(self, sample_metrics_data):
         """❌ Pose confidence > 1.0 fails"""
-        from main import MetricsData
+        from schemas import MetricsData
 
         sample_metrics_data["pose_confidence"] = 1.5
         with pytest.raises(ValueError):
@@ -56,7 +56,7 @@ class TestMetricsValidation:
     @pytest.mark.unit
     def test_invalid_pose_confidence_negative(self, sample_metrics_data):
         """❌ Negative pose confidence fails"""
-        from main import MetricsData
+        from schemas import MetricsData
 
         sample_metrics_data["pose_confidence"] = -0.1
         with pytest.raises(ValueError):
@@ -65,7 +65,7 @@ class TestMetricsValidation:
     @pytest.mark.unit
     def test_missing_angles(self, sample_metrics_data):
         """❌ Missing angles field fails"""
-        from main import MetricsData
+        from schemas import MetricsData
 
         del sample_metrics_data["angles"]
         with pytest.raises(ValueError):

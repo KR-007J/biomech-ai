@@ -15,6 +15,12 @@ from fastapi.testclient import TestClient
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+# Set test environment variables
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-for-testing-only")
+os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
+os.environ.setdefault("SUPABASE_URL", "https://test.supabase.co")
+os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-key")
+
 from async_tasks import TaskManager
 from cache import CacheManager
 from main import app

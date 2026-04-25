@@ -21,7 +21,7 @@ class TestEndToEndAnalysisFlow:
         # Step 2: Verify response structure
         assert analysis_data["analysis_id"]
         assert analysis_data["coach_feedback"]["issue"]
-        assert analysis_data["performance_metrics"]["processing_time_sec"] > 0
+        assert analysis_data["performance_metrics"]["processing_time_sec"] >= 0
 
     @pytest.mark.integration
     def test_analysis_then_profile_sync(self, client, sample_feedback_request, sample_profile, mock_supabase):

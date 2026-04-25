@@ -294,7 +294,7 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
 
     try:
         # ✅ Phase 2.2 - Request Validation
-        is_valid, error_msg = RequestValidator.validate_json_payload(payload.dict())
+        is_valid, error_msg = RequestValidator.validate_json_payload(payload.model_dump())
         if not is_valid:
             logger.error(f"Validation failed: {error_msg}")
             raise HTTPException(status_code=400, detail=error_msg)
@@ -322,7 +322,7 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
         MetricsCollector.record_cache_miss("redis")
 
         # Biomechanical analysis
-        metrics_dict = payload.metrics.dict()
+        metrics_dict = payload.metrics.model_dump()
         exercise_type = payload.exercise_type
         user_id = payload.user_id
 
@@ -417,7 +417,7 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
         # ✅ Phase 2.5 - Cache result
         cache_manager.set(
             cache_key,
-            {"summary": response.summary, "feedback": response.coach_feedback.dict()},
+            {"summary": response.summary, "feedback": response.coach_feedback.model_dump()},
             ttl=300,
         )
 
@@ -433,7 +433,7 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
                         "user_id": user_id,
                         "exercise": exercise_type,
                         "summary": response.summary,
-                        "feedback": response.coach_feedback.dict(),
+                        "feedback": response.coach_feedback.model_dump(),
                         "created_at": datetime.now().isoformat(),
                     }
                 ).execute()
@@ -594,7 +594,7 @@ if __name__ == "__main__":
 
     uvicorn.run(
         app,
-        host="0.0.0.0",
+        host=os.getenv("HOST", "127.0.0.1"),
         port=int(os.getenv("PORT", 8000)),
         workers=int(os.getenv("WORKERS", 1)),
     )
