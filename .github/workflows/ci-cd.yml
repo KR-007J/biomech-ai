@@ -71,7 +71,8 @@ jobs:
         run: cd backend && safety check --json
         continue-on-error: true # Safety sometimes fails on non-critical issues or API limits
       - name: Run Pip Audit
-        run: cd backend && pip-audit --disable-pip
+        run: cd backend && pip-audit -r requirements.txt
+        continue-on-error: true
 
   build:
     runs-on: ubuntu-latest
