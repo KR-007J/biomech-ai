@@ -13,25 +13,26 @@ Integrates all Phase 2 modules into the main API:
 - Fraud detection integration
 """
 
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
+import asyncio
+import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, BackgroundTasks, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional, Any
-from datetime import datetime
-import logging
-import asyncio
-import json
+
+from ab_testing import ABTestingEngine, AllocationStrategy
+from advanced_analytics import AdvancedAnalyticsEngine
 
 # Phase 2 modules
 from async_job_queue import AsyncJobQueue, JobPriority
-from realtime_websocket import RealtimeWebSocketHub, RealtimeEvents
-from webhook_events import EventSystem, Event
+from fraud_detection import FraudDetectionEngine
 from graphql_api import GraphQLServer
 from model_versioning import ModelRegistry
-from advanced_analytics import AdvancedAnalyticsEngine
-from ab_testing import ABTestingEngine, AllocationStrategy
-from fraud_detection import FraudDetectionEngine
+from realtime_websocket import RealtimeWebSocketHub
 from schemas import FeedbackRequest
+from webhook_events import Event, EventSystem
 
 logger = logging.getLogger(__name__)
 
@@ -51,42 +52,53 @@ router = APIRouter(prefix="/api/v2", tags=["Phase 2 Advanced Features"])
 
 # ==================== DATA MODELS ====================
 
+
 class JobSubmissionRequest(BaseModel):
     """Async job submission request"""
+
     job_type: str = Field(..., description="Type of job (analysis, report, etc.)")
     payload: Dict[str, Any] = Field(..., description="Job-specific data")
     priority: str = Field("NORMAL", description="Job priority")
     user_id: Optional[str] = None
     dependencies: List[str] = Field(default_factory=list, description="Job dependencies")
 
+
 class WebhookRegistrationRequest(BaseModel):
     """Webhook registration request"""
+
     url: str = Field(..., description="Webhook endpoint URL")
     secret: str = Field(..., description="HMAC secret for signature verification")
     events: List[str] = Field(..., description="Events to subscribe to")
 
+
 class ModelRegistrationRequest(BaseModel):
     """Model registration request"""
+
     name: str
     version: str
     model_type: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
+
 class ExperimentCreationRequest(BaseModel):
     """A/B experiment creation request"""
+
     name: str
     variants: List[str]
     traffic_percentage: int = 100
     strategy: str = "RANDOM"
 
+
 class CohortCreationRequest(BaseModel):
     """Analytics cohort creation request"""
+
     name: str
     criteria: Dict[str, Any]
     group_by: str = "month"
 
 
 # ==================== TIER 10: ASYNC JOB QUEUE ENDPOINTS ====================
+
 
 @router.post("/jobs/submit")
 async def submit_async_job(request: JobSubmissionRequest, background_tasks: BackgroundTasks):
@@ -104,7 +116,7 @@ async def submit_async_job(request: JobSubmissionRequest, background_tasks: Back
             payload=request.payload,
             priority=priority,
             user_id=request.user_id,
-            dependencies=request.dependencies
+            dependencies=request.dependencies,
         )
 
         # Start processing in background
@@ -113,12 +125,13 @@ async def submit_async_job(request: JobSubmissionRequest, background_tasks: Back
         return {
             "job_id": job_id,
             "status": "submitted",
-            "message": "Job submitted to queue"
+            "message": "Job submitted to queue",
         }
 
     except Exception as e:
         logger.error(f"Job submission error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/jobs/{job_id}")
 async def get_job_status(job_id: str):
@@ -136,13 +149,15 @@ async def get_job_status(job_id: str):
         "started_at": job.started_at.isoformat() if job.started_at else None,
         "completed_at": job.completed_at.isoformat() if job.completed_at else None,
         "result": job.result,
-        "error": job.error
+        "error": job.error,
     }
+
 
 @router.get("/jobs/stats")
 async def get_job_queue_stats():
     """Get job queue statistics"""
     return job_queue.get_stats()
+
 
 @router.delete("/jobs/{job_id}")
 async def cancel_job(job_id: str):
@@ -155,6 +170,7 @@ async def cancel_job(job_id: str):
 
 
 # ==================== TIER 11: WEBSOCKET ENDPOINTS ====================
+
 
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: str):
@@ -169,11 +185,13 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
         logger.info(f"WebSocket connected: {connection_id} for user {user_id}")
 
         # Send welcome message
-        await websocket.send_json({
-            "type": "connection_established",
-            "connection_id": connection_id,
-            "channels": []
-        })
+        await websocket.send_json(
+            {
+                "type": "connection_established",
+                "connection_id": connection_id,
+                "channels": [],
+            }
+        )
 
         # Message handling loop
         while True:
@@ -189,10 +207,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     for channel in channels:
                         await websocket_hub.subscribe(connection_id, channel)
 
-                    await websocket.send_json({
-                        "type": "subscribed",
-                        "channels": channels
-                    })
+                    await websocket.send_json({"type": "subscribed", "channels": channels})
 
                 elif message_type == "unsubscribe":
                     # Unsubscribe from channels
@@ -200,23 +215,19 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     for channel in channels:
                         await websocket_hub.unsubscribe(connection_id, channel)
 
-                    await websocket.send_json({
-                        "type": "unsubscribed",
-                        "channels": channels
-                    })
+                    await websocket.send_json({"type": "unsubscribed", "channels": channels})
 
                 elif message_type == "ping":
                     # Heartbeat response
-                    await websocket.send_json({
-                        "type": "pong",
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
+                    await websocket.send_json({"type": "pong", "timestamp": datetime.utcnow().isoformat()})
 
                 else:
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": f"Unknown message type: {message_type}"
-                    })
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "message": f"Unknown message type: {message_type}",
+                        }
+                    )
 
             except asyncio.TimeoutError:
                 # Send ping to keep connection alive
@@ -231,6 +242,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
         # Cleanup connection
         await websocket_hub.remove_connection(connection_id)
 
+
 @router.post("/ws/broadcast/{channel}")
 async def broadcast_to_channel(channel: str, message: Dict[str, Any]):
     """Broadcast message to WebSocket channel"""
@@ -244,25 +256,23 @@ async def broadcast_to_channel(channel: str, message: Dict[str, Any]):
 
 # ==================== TIER 12: WEBHOOK ENDPOINTS ====================
 
+
 @router.post("/webhooks/register")
 async def register_webhook(request: WebhookRegistrationRequest):
     """Register webhook endpoint"""
     try:
-        webhook_id = await event_system.register_webhook(
-            url=request.url,
-            secret=request.secret,
-            events=request.events
-        )
+        webhook_id = await event_system.register_webhook(url=request.url, secret=request.secret, events=request.events)
 
         return {
             "webhook_id": webhook_id,
             "status": "registered",
-            "events": request.events
+            "events": request.events,
         }
 
     except Exception as e:
         logger.error(f"Webhook registration error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.delete("/webhooks/{webhook_id}")
 async def unregister_webhook(webhook_id: str):
@@ -272,6 +282,7 @@ async def unregister_webhook(webhook_id: str):
         raise HTTPException(status_code=404, detail="Webhook not found")
 
     return {"status": "unregistered"}
+
 
 @router.get("/webhooks/{webhook_id}")
 async def get_webhook_status(webhook_id: str):
@@ -286,18 +297,15 @@ async def get_webhook_status(webhook_id: str):
         "events": webhook.events,
         "is_active": not webhook.circuit_breaker_open,
         "success_rate": webhook.success_count / max(webhook.success_count + webhook.failure_count, 1),
-        "last_delivery": webhook.last_delivery.isoformat() if webhook.last_delivery else None
+        "last_delivery": (webhook.last_delivery.isoformat() if webhook.last_delivery else None),
     }
+
 
 @router.post("/events/publish")
 async def publish_event(event_type: str, resource_id: str, data: Dict[str, Any] = None):
     """Publish custom event"""
     try:
-        event = Event(
-            event_type=event_type,
-            resource_id=resource_id,
-            data=data or {}
-        )
+        event = Event(event_type=event_type, resource_id=resource_id, data=data or {})
 
         await event_system.publish_event(event)
 
@@ -310,6 +318,7 @@ async def publish_event(event_type: str, resource_id: str, data: Dict[str, Any] 
 
 # ==================== TIER 13: GRAPHQL ENDPOINT ====================
 
+
 @router.post("/graphql")
 async def graphql_endpoint(query: str, variables: Dict[str, Any] = None, operation_name: str = None):
     """GraphQL query endpoint"""
@@ -318,37 +327,29 @@ async def graphql_endpoint(query: str, variables: Dict[str, Any] = None, operati
             raise HTTPException(status_code=400, detail="Query is required")
 
         # Execute query
-        result = graphql_server.execute_query(
-            query=query,
-            variables=variables or {},
-            operation_name=operation_name
-        )
+        result = graphql_server.execute_query(query=query, variables=variables or {}, operation_name=operation_name)
 
         if result.get("errors"):
-            return JSONResponse(
-                status_code=400,
-                content={"errors": result["errors"]}
-            )
+            return JSONResponse(status_code=400, content={"errors": result["errors"]})
 
         return result
 
     except Exception as e:
         logger.error(f"GraphQL error: {e}")
-        return JSONResponse(
-            status_code=500,
-            content={"errors": [{"message": str(e)}]}
-        )
+        return JSONResponse(status_code=500, content={"errors": [{"message": str(e)}]})
+
 
 @router.get("/graphql/schema")
 async def get_graphql_schema():
     """Get GraphQL schema introspection"""
     return {
         "schema": str(graphql_server.schema),
-        "types": graphql_server.get_available_types()
+        "types": graphql_server.get_available_types(),
     }
 
 
 # ==================== TIER 14: MODEL VERSIONING ENDPOINTS ====================
+
 
 @router.post("/models/register")
 async def register_model(request: ModelRegistrationRequest):
@@ -358,18 +359,19 @@ async def register_model(request: ModelRegistrationRequest):
             name=request.name,
             version=request.version,
             model_type=request.model_type,
-            metadata=request.metadata
+            metadata=request.metadata,
         )
 
         return {
             "model_id": model_id,
             "status": "registered",
-            "version": request.version
+            "version": request.version,
         }
 
     except Exception as e:
         logger.error(f"Model registration error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/models/{model_id}/approve")
 async def approve_model(model_id: str, approver: str):
@@ -381,6 +383,7 @@ async def approve_model(model_id: str, approver: str):
 
     return {"status": "approved"}
 
+
 @router.post("/models/{model_id}/deploy")
 async def deploy_model(model_id: str, traffic_percentage: int = 100):
     """Deploy model to production"""
@@ -390,6 +393,7 @@ async def deploy_model(model_id: str, traffic_percentage: int = 100):
     model_registry.deploy_model(model_id, traffic_percentage)
 
     return {"status": "deployed", "traffic_percentage": traffic_percentage}
+
 
 @router.get("/models/{model_id}/compare")
 async def compare_models(model_id: str, baseline_model_id: str):
@@ -401,43 +405,40 @@ async def compare_models(model_id: str, baseline_model_id: str):
 
     return comparison
 
+
 @router.get("/models")
 async def list_models():
     """List all registered models"""
     models = []
     for model_id, model in model_registry.models.items():
-        models.append({
-            "id": model_id,
-            "name": model.name,
-            "version": model.version,
-            "status": model.status.value,
-            "created_at": model.created_at.isoformat()
-        })
+        models.append(
+            {
+                "id": model_id,
+                "name": model.name,
+                "version": model.version,
+                "status": model.status.value,
+                "created_at": model.created_at.isoformat(),
+            }
+        )
 
     return {"models": models}
 
 
 # ==================== TIER 15: ADVANCED ANALYTICS ENDPOINTS ====================
 
+
 @router.post("/analytics/cohorts")
 async def create_cohort(request: CohortCreationRequest):
     """Create analytics cohort"""
     try:
-        cohort_id = analytics_engine.create_cohort(
-            name=request.name,
-            criteria=request.criteria,
-            group_by=request.group_by
-        )
+        cohort_id = analytics_engine.create_cohort(name=request.name, criteria=request.criteria, group_by=request.group_by)
 
-        return {
-            "cohort_id": cohort_id,
-            "status": "created",
-            "name": request.name
-        }
+        return {"cohort_id": cohort_id, "status": "created", "name": request.name}
 
     except Exception as e:
         logger.error(f"Cohort creation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/analytics/cohorts/{cohort_id}/retention")
 async def get_cohort_retention(cohort_id: str, users: List[Dict[str, Any]]):
@@ -449,6 +450,7 @@ async def get_cohort_retention(cohort_id: str, users: List[Dict[str, Any]]):
 
     return retention
 
+
 @router.post("/analytics/funnel")
 async def analyze_funnel(steps: List[str], user_journeys: List[Dict[str, Any]]):
     """Analyze conversion funnel"""
@@ -459,6 +461,7 @@ async def analyze_funnel(steps: List[str], user_journeys: List[Dict[str, Any]]):
     except Exception as e:
         logger.error(f"Funnel analysis error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/analytics/segment")
 async def create_segments(users: List[Dict[str, Any]], criteria: Dict[str, Any]):
@@ -474,6 +477,7 @@ async def create_segments(users: List[Dict[str, Any]], criteria: Dict[str, Any])
 
 # ==================== TIER 16: A/B TESTING ENDPOINTS ====================
 
+
 @router.post("/experiments")
 async def create_experiment(request: ExperimentCreationRequest):
     """Create A/B experiment"""
@@ -488,18 +492,19 @@ async def create_experiment(request: ExperimentCreationRequest):
             name=request.name,
             variants=request.variants,
             traffic_percentage=request.traffic_percentage,
-            strategy=strategy
+            strategy=strategy,
         )
 
         return {
             "experiment_id": experiment_id,
             "status": "created",
-            "variants": request.variants
+            "variants": request.variants,
         }
 
     except Exception as e:
         logger.error(f"Experiment creation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/experiments/{experiment_id}/start")
 async def start_experiment(experiment_id: str):
@@ -511,6 +516,7 @@ async def start_experiment(experiment_id: str):
 
     return {"status": "started"}
 
+
 @router.get("/experiments/{experiment_id}/allocate/{user_id}")
 async def allocate_user_variant(experiment_id: str, user_id: str):
     """Allocate user to experiment variant"""
@@ -521,6 +527,7 @@ async def allocate_user_variant(experiment_id: str, user_id: str):
 
     return {"variant": variant}
 
+
 @router.post("/experiments/{experiment_id}/convert/{user_id}")
 async def record_conversion(experiment_id: str, user_id: str, converted: bool = True):
     """Record conversion for user"""
@@ -530,6 +537,7 @@ async def record_conversion(experiment_id: str, user_id: str, converted: bool = 
     ab_engine.record_conversion(experiment_id, user_id, converted)
 
     return {"status": "recorded"}
+
 
 @router.get("/experiments/{experiment_id}/results")
 async def get_experiment_results(experiment_id: str):
@@ -544,6 +552,7 @@ async def get_experiment_results(experiment_id: str):
 
 # ==================== TIER 17: FRAUD DETECTION ENDPOINTS ====================
 
+
 @router.post("/fraud/check")
 async def check_fraud_risk(user_id: str, actions: List[Dict[str, Any]]):
     """Check user for fraud risk"""
@@ -553,12 +562,13 @@ async def check_fraud_risk(user_id: str, actions: List[Dict[str, Any]]):
         return {
             "user_id": user_id,
             "risk_score": risk_score,
-            "risk_level": fraud_engine.get_risk_level(risk_score).value
+            "risk_level": fraud_engine.get_risk_level(risk_score).value,
         }
 
     except Exception as e:
         logger.error(f"Fraud check error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/fraud/profile/{user_id}")
 async def get_fraud_profile(user_id: str):
@@ -572,8 +582,9 @@ async def get_fraud_profile(user_id: str):
         "typical_login_hour": profile.typical_login_hour,
         "typical_location": profile.typical_location,
         "typical_device": profile.typical_device,
-        "risk_factors": profile.risk_factors
+        "risk_factors": profile.risk_factors,
     }
+
 
 @router.post("/fraud/block/{user_id}")
 async def block_user(user_id: str, reason: str = "Suspicious activity"):
@@ -582,6 +593,7 @@ async def block_user(user_id: str, reason: str = "Suspicious activity"):
 
     return {"blocked": blocked, "reason": reason}
 
+
 @router.get("/fraud/blocked")
 async def get_blocked_users():
     """Get list of blocked users"""
@@ -589,6 +601,7 @@ async def get_blocked_users():
 
 
 # ==================== INTEGRATION ENDPOINTS ====================
+
 
 @router.post("/integrate/analysis-job")
 async def integrate_analysis_with_job_queue(payload: FeedbackRequest, background_tasks: BackgroundTasks):
@@ -601,26 +614,28 @@ async def integrate_analysis_with_job_queue(payload: FeedbackRequest, background
                 "metrics": payload.metrics.dict(),
                 "exercise_type": payload.exercise_type,
                 "user_id": payload.user_id,
-                "session_id": payload.session_id
+                "session_id": payload.session_id,
             },
             priority=JobPriority.HIGH,
-            user_id=payload.user_id
+            user_id=payload.user_id,
         )
 
         # Start processing
         background_tasks.add_task(job_queue.process_job, job_id)
 
         # Publish event
-        await event_system.publish_event(Event(
-            event_type="analysis.started",
-            resource_id=payload.session_id or payload.user_id,
-            data={"job_id": job_id}
-        ))
+        await event_system.publish_event(
+            Event(
+                event_type="analysis.started",
+                resource_id=payload.session_id or payload.user_id,
+                data={"job_id": job_id},
+            )
+        )
 
         return {
             "job_id": job_id,
             "status": "processing",
-            "message": "Analysis submitted to async queue"
+            "message": "Analysis submitted to async queue",
         }
 
     except Exception as e:

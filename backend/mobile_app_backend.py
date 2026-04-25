@@ -4,17 +4,17 @@ Provides APIs and services for React Native mobile applications
 Supports iOS/Android with offline capabilities and background processing
 """
 
-import asyncio
+import base64
+import hashlib
+import json
+import logging
 import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Any, Tuple
-import logging
-import json
-from dataclasses import dataclass, field, asdict
-from pydantic import BaseModel, Field
-import hashlib
-import base64
+from typing import Any, Dict, List, Optional, Tuple
+
+from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +23,10 @@ logger = logging.getLogger(__name__)
 # DATA MODELS
 # ============================================================================
 
+
 class SyncStatus(str, Enum):
     """Synchronization status for offline data"""
+
     SYNCED = "synced"
     PENDING = "pending"
     FAILED = "failed"
@@ -33,6 +35,7 @@ class SyncStatus(str, Enum):
 
 class DeviceType(str, Enum):
     """Supported device types"""
+
     IOS = "ios"
     ANDROID = "android"
     WEB = "web"
@@ -41,6 +44,7 @@ class DeviceType(str, Enum):
 @dataclass
 class DeviceProfile:
     """Device configuration and capabilities"""
+
     device_id: str
     device_type: DeviceType
     device_name: str
@@ -52,7 +56,7 @@ class DeviceProfile:
     has_accelerometer: bool = False
     storage_capacity_mb: int = 512
     last_sync: datetime = field(default_factory=datetime.utcnow)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "device_id": self.device_id,
@@ -65,13 +69,14 @@ class DeviceProfile:
             "has_gyro": self.has_gyro,
             "has_accelerometer": self.has_accelerometer,
             "storage_capacity_mb": self.storage_capacity_mb,
-            "last_sync": self.last_sync.isoformat()
+            "last_sync": self.last_sync.isoformat(),
         }
 
 
 @dataclass
 class LocalSession:
     """Session data stored locally on device"""
+
     session_id: str
     user_id: str
     start_time: datetime
@@ -81,7 +86,7 @@ class LocalSession:
     local_size_bytes: int = 0
     sync_attempts: int = 0
     is_archived: bool = False
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "session_id": self.session_id,
@@ -92,30 +97,32 @@ class LocalSession:
             "sync_status": self.sync_status.value,
             "local_size_bytes": self.local_size_bytes,
             "sync_attempts": self.sync_attempts,
-            "is_archived": self.is_archived
+            "is_archived": self.is_archived,
         }
 
 
 @dataclass
 class HapticFeedback:
     """Haptic feedback for form corrections"""
+
     feedback_type: str  # "light", "medium", "heavy", "pattern"
     duration_ms: int
     intensity: float  # 0.0 to 1.0
     pattern: Optional[List[int]] = None  # ms intervals for pattern
-    
+
     def to_dict(self) -> Dict:
         return {
             "type": self.feedback_type,
             "duration_ms": self.duration_ms,
             "intensity": self.intensity,
-            "pattern": self.pattern
+            "pattern": self.pattern,
         }
 
 
 @dataclass
 class FormCorrection:
     """Real-time form correction suggestion"""
+
     issue: str
     severity: str  # "info", "warning", "critical"
     joint: str
@@ -124,7 +131,7 @@ class FormCorrection:
     haptic_feedback: Optional[HapticFeedback] = None
     audio_cue: Optional[str] = None
     visual_hint: Optional[str] = None
-    
+
     def to_dict(self) -> Dict:
         return {
             "issue": self.issue,
@@ -132,15 +139,16 @@ class FormCorrection:
             "joint": self.joint,
             "suggested_angle": self.suggested_angle,
             "current_angle": self.current_angle,
-            "haptic_feedback": self.haptic_feedback.to_dict() if self.haptic_feedback else None,
+            "haptic_feedback": (self.haptic_feedback.to_dict() if self.haptic_feedback else None),
             "audio_cue": self.audio_cue,
-            "visual_hint": self.visual_hint
+            "visual_hint": self.visual_hint,
         }
 
 
 # ============================================================================
 # REQUEST/RESPONSE MODELS
 # ============================================================================
+
 
 class RegisterDeviceRequest(BaseModel):
     user_id: str
@@ -163,6 +171,7 @@ class SyncRequest(BaseModel):
 
 class OfflineAnalysisRequest(BaseModel):
     """Request for processing data locally on device"""
+
     frame_data: Dict
     analysis_type: str  # "quick", "full", "background"
     include_haptic: bool = True
@@ -178,16 +187,17 @@ class FormCorrectionRequest(BaseModel):
 # MOBILE APP BACKEND SERVICE
 # ============================================================================
 
+
 class MobileAppBackend:
     """
     Backend service for mobile applications
     Manages device registration, offline sync, and mobile-specific features
     """
-    
+
     def __init__(self, cache_service=None, db_service=None, analytics_engine=None):
         """
         Initialize mobile backend
-        
+
         Args:
             cache_service: Cache service for storing device data
             db_service: Database service for persistence
@@ -201,14 +211,14 @@ class MobileAppBackend:
         self.offline_queue: List[Dict] = []
         self.sync_history: Dict[str, List[datetime]] = {}
         logger.info("Mobile app backend initialized")
-    
+
     async def register_device(self, request: RegisterDeviceRequest) -> Dict[str, Any]:
         """
         Register a new mobile device
-        
+
         Args:
             request: Device registration details
-            
+
         Returns:
             Device profile with access token
         """
@@ -222,131 +232,126 @@ class MobileAppBackend:
                 app_version=request.app_version,
                 capabilities=request.capabilities,
                 has_gyro=request.has_gyro,
-                has_accelerometer=request.has_accelerometer
+                has_accelerometer=request.has_accelerometer,
             )
-            
+
             self.devices[device_id] = device_profile
-            
+
             # Generate device token
             token_data = f"{device_id}:{request.user_id}:{datetime.utcnow().isoformat()}"
             device_token = base64.b64encode(token_data.encode()).decode()
-            
+
             logger.info(f"Device registered: {device_id} ({request.device_type})")
-            
+
             return {
                 "device_id": device_id,
                 "device_token": device_token,
                 "device_profile": device_profile.to_dict(),
                 "sync_interval_seconds": 300,
-                "max_local_storage_mb": device_profile.storage_capacity_mb
+                "max_local_storage_mb": device_profile.storage_capacity_mb,
             }
         except Exception as e:
             logger.error(f"Device registration failed: {str(e)}")
             return {"error": str(e)}
-    
+
     async def handle_sync(self, request: SyncRequest) -> Dict[str, Any]:
         """
         Handle bidirectional sync of offline data
-        
+
         Args:
             request: Sync request with local sessions
-            
+
         Returns:
             Sync result with server updates
         """
         try:
             device_id = request.device_id
             user_id = request.user_id
-            
+
             # Process uploaded sessions
             uploaded_sessions = []
             failed_sessions = []
-            
+
             for session_data in request.sessions:
                 try:
                     session_id = session_data.get("session_id")
                     sync_status = await self._upload_session(user_id, session_data)
-                    uploaded_sessions.append({
-                        "session_id": session_id,
-                        "status": sync_status.value
-                    })
+                    uploaded_sessions.append({"session_id": session_id, "status": sync_status.value})
                 except Exception as e:
                     logger.error(f"Session upload failed: {str(e)}")
                     failed_sessions.append(session_data.get("session_id"))
-            
+
             # Get pending updates for device
             pending_updates = await self._get_pending_updates(user_id)
-            
+
             # Update device sync record
             if device_id not in self.sync_history:
                 self.sync_history[device_id] = []
             self.sync_history[device_id].append(datetime.utcnow())
-            
+
             # Keep only last 30 days
             cutoff = datetime.utcnow() - timedelta(days=30)
-            self.sync_history[device_id] = [
-                t for t in self.sync_history[device_id] if t > cutoff
-            ]
-            
+            self.sync_history[device_id] = [t for t in self.sync_history[device_id] if t > cutoff]
+
             logger.info(f"Sync completed for device {device_id}: {len(uploaded_sessions)} uploaded")
-            
+
             return {
                 "sync_id": str(uuid.uuid4()),
                 "uploaded_sessions": uploaded_sessions,
                 "failed_sessions": failed_sessions,
                 "pending_updates": pending_updates,
                 "next_sync_seconds": 300,
-                "server_time": datetime.utcnow().isoformat()
+                "server_time": datetime.utcnow().isoformat(),
             }
         except Exception as e:
             logger.error(f"Sync failed: {str(e)}")
             return {"error": str(e), "sync_id": None}
-    
+
     async def _upload_session(self, user_id: str, session_data: Dict) -> SyncStatus:
         """Upload local session to server"""
         try:
             # Validate session data
             if not session_data.get("session_id"):
                 raise ValueError("Missing session_id")
-            
+
             # Store in cache/database
             if isinstance(self.cache, dict):
                 self.cache[f"session:{session_data['session_id']}"] = session_data
-            
+
             return SyncStatus.SYNCED
         except Exception as e:
             logger.error(f"Upload failed: {str(e)}")
             return SyncStatus.FAILED
-    
+
     async def _get_pending_updates(self, user_id: str) -> List[Dict]:
         """Get pending updates for user"""
         return [
             {
                 "type": "model_update",
                 "version": "v2.1",
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
         ]
-    
+
     async def get_form_corrections(self, request: FormCorrectionRequest) -> Dict[str, Any]:
         """
         Get real-time form corrections for mobile display
-        
+
         Args:
             request: Current frame data and exercise info
-            
+
         Returns:
             Form corrections with haptic/audio/visual feedback
         """
         try:
             frame = request.frame
             exercise_type = request.exercise_type
-            
+
             corrections: List[FormCorrection] = []
-            
+
             # Extract joint angles
             angles = frame.get("angles", {})
-            
+
             # Exercise-specific checks
             if exercise_type == "squat":
                 corrections.extend(self._check_squat_form(angles))
@@ -354,88 +359,94 @@ class MobileAppBackend:
                 corrections.extend(self._check_deadlift_form(angles))
             elif exercise_type == "bench_press":
                 corrections.extend(self._check_bench_form(angles))
-            
+
             # Convert to mobile-friendly format
             corrections_dict = [c.to_dict() for c in corrections]
-            
+
             return {
                 "corrections": corrections_dict,
                 "exercise_type": exercise_type,
                 "quality_score": max(0, 100 - len(corrections) * 15),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
         except Exception as e:
             logger.error(f"Form correction failed: {str(e)}")
             return {"error": str(e), "corrections": []}
-    
+
     def _check_squat_form(self, angles: Dict) -> List[FormCorrection]:
         """Check squat-specific form issues"""
         corrections = []
-        
+
         knee_angle = angles.get("left_knee", 90)
-        hip_angle = angles.get("left_hip", 90)
-        
+        angles.get("left_hip", 90)
+
         if knee_angle > 100:  # Too shallow
-            corrections.append(FormCorrection(
-                issue="Depth too shallow",
-                severity="warning",
-                joint="knee",
-                suggested_angle=80,
-                current_angle=knee_angle,
-                haptic_feedback=HapticFeedback("medium", 200, 0.6),
-                audio_cue="squat_deeper",
-                visual_hint="Go lower"
-            ))
-        
+            corrections.append(
+                FormCorrection(
+                    issue="Depth too shallow",
+                    severity="warning",
+                    joint="knee",
+                    suggested_angle=80,
+                    current_angle=knee_angle,
+                    haptic_feedback=HapticFeedback("medium", 200, 0.6),
+                    audio_cue="squat_deeper",
+                    visual_hint="Go lower",
+                )
+            )
+
         return corrections
-    
+
     def _check_deadlift_form(self, angles: Dict) -> List[FormCorrection]:
         """Check deadlift-specific form issues"""
         corrections = []
-        
+
         back_angle = angles.get("back_angle", 45)
-        hip_angle = angles.get("hip_angle", 45)
-        
+        angles.get("hip_angle", 45)
+
         if back_angle > 60:  # Too much rounding
-            corrections.append(FormCorrection(
-                issue="Back rounding detected",
-                severity="critical",
-                joint="spine",
-                suggested_angle=45,
-                current_angle=back_angle,
-                haptic_feedback=HapticFeedback("heavy", 300, 0.9),
-                audio_cue="straighten_back",
-                visual_hint="Keep back straight"
-            ))
-        
+            corrections.append(
+                FormCorrection(
+                    issue="Back rounding detected",
+                    severity="critical",
+                    joint="spine",
+                    suggested_angle=45,
+                    current_angle=back_angle,
+                    haptic_feedback=HapticFeedback("heavy", 300, 0.9),
+                    audio_cue="straighten_back",
+                    visual_hint="Keep back straight",
+                )
+            )
+
         return corrections
-    
+
     def _check_bench_form(self, angles: Dict) -> List[FormCorrection]:
         """Check bench press form issues"""
         corrections = []
-        
+
         shoulder_angle = angles.get("shoulder_abduction", 90)
-        elbow_angle = angles.get("elbow_angle", 90)
-        
+        angles.get("elbow_angle", 90)
+
         if shoulder_angle > 120:  # Too wide
-            corrections.append(FormCorrection(
-                issue="Grip too wide",
-                severity="info",
-                joint="shoulder",
-                suggested_angle=90,
-                current_angle=shoulder_angle,
-                haptic_feedback=HapticFeedback("light", 100, 0.3)
-            ))
-        
+            corrections.append(
+                FormCorrection(
+                    issue="Grip too wide",
+                    severity="info",
+                    joint="shoulder",
+                    suggested_angle=90,
+                    current_angle=shoulder_angle,
+                    haptic_feedback=HapticFeedback("light", 100, 0.3),
+                )
+            )
+
         return corrections
-    
+
     async def get_offline_analysis_model(self, device_profile: DeviceProfile) -> Dict[str, Any]:
         """
         Get lightweight model for offline device processing
-        
+
         Args:
             device_profile: Device capabilities
-            
+
         Returns:
             Model weights and configuration for local inference
         """
@@ -447,46 +458,52 @@ class MobileAppBackend:
             else:
                 model_type = "lite"
                 model_size_mb = 35
-            
+
             # Return model metadata (actual weights managed separately)
             return {
                 "model_type": model_type,
                 "model_size_mb": model_size_mb,
                 "supported_exercises": [
-                    "squat", "deadlift", "bench_press", "pull_up",
-                    "push_up", "running", "walking", "jumping"
+                    "squat",
+                    "deadlift",
+                    "bench_press",
+                    "pull_up",
+                    "push_up",
+                    "running",
+                    "walking",
+                    "jumping",
                 ],
                 "analysis_types": ["quick", "full"],
                 "inference_time_ms": 80 if model_type == "full" else 40,
                 "accuracy_estimate": 92 if model_type == "full" else 85,
                 "download_url": f"/api/v2/models/offline_{model_type}.tar.gz",
-                "checksum": hashlib.sha256(f"model_{model_type}".encode()).hexdigest()
+                "checksum": hashlib.sha256(f"model_{model_type}".encode()).hexdigest(),
             }
         except Exception as e:
             logger.error(f"Model retrieval failed: {str(e)}")
             return {"error": str(e)}
-    
+
     async def get_dashboard_data(self, user_id: str, device_id: str) -> Dict[str, Any]:
         """
         Get mobile dashboard data
-        
+
         Args:
             user_id: User identifier
             device_id: Device identifier
-            
+
         Returns:
             Optimized data for mobile display
         """
         try:
             # Get recent sessions
             recent_sessions = await self._get_recent_sessions(user_id)
-            
+
             # Get summary stats
             stats = await self._get_summary_stats(user_id)
-            
+
             # Get today's workout
             today_workout = await self._get_today_workout(user_id)
-            
+
             return {
                 "user_id": user_id,
                 "device_id": device_id,
@@ -494,12 +511,12 @@ class MobileAppBackend:
                 "recent_sessions": recent_sessions,
                 "today_workout": today_workout,
                 "sync_status": "synced",
-                "last_updated": datetime.utcnow().isoformat()
+                "last_updated": datetime.utcnow().isoformat(),
             }
         except Exception as e:
             logger.error(f"Dashboard fetch failed: {str(e)}")
             return {"error": str(e)}
-    
+
     async def _get_recent_sessions(self, user_id: str) -> List[Dict]:
         """Get recent sessions for user"""
         return [
@@ -508,11 +525,11 @@ class MobileAppBackend:
                 "duration_minutes": 45,
                 "exercise_count": 5,
                 "quality_score": 88,
-                "timestamp": (datetime.utcnow() - timedelta(hours=i)).isoformat()
+                "timestamp": (datetime.utcnow() - timedelta(hours=i)).isoformat(),
             }
             for i in range(5)
         ]
-    
+
     async def _get_summary_stats(self, user_id: str) -> Dict:
         """Get summary statistics"""
         return {
@@ -520,9 +537,9 @@ class MobileAppBackend:
             "total_minutes": 240,
             "avg_quality_score": 87,
             "reps_completed": 320,
-            "exercises_performed": 12
+            "exercises_performed": 12,
         }
-    
+
     async def _get_today_workout(self, user_id: str) -> Optional[Dict]:
         """Get scheduled workout for today"""
         return {
@@ -531,20 +548,20 @@ class MobileAppBackend:
             "exercises": [
                 {"type": "squat", "sets": 3, "reps": 8},
                 {"type": "deadlift", "sets": 3, "reps": 5},
-                {"type": "bench_press", "sets": 4, "reps": 6}
+                {"type": "bench_press", "sets": 4, "reps": 6},
             ],
             "estimated_duration_minutes": 60,
-            "intensity_level": "high"
+            "intensity_level": "high",
         }
-    
+
     async def push_notification_settings(self, user_id: str, settings: Dict) -> Dict[str, bool]:
         """
         Update push notification preferences
-        
+
         Args:
             user_id: User identifier
             settings: Notification settings
-            
+
         Returns:
             Confirmation of settings saved
         """
@@ -552,7 +569,7 @@ class MobileAppBackend:
             key = f"notifications:{user_id}"
             if isinstance(self.cache, dict):
                 self.cache[key] = settings
-            
+
             logger.info(f"Notification settings updated for {user_id}")
             return {"success": True, "settings_saved": True}
         except Exception as e:
@@ -564,30 +581,31 @@ class MobileAppBackend:
 # OFFLINE DATA MANAGER
 # ============================================================================
 
+
 class OfflineDataManager:
     """
     Manages offline data on mobile devices
     Handles compression, encryption, and sync
     """
-    
+
     def __init__(self):
         self.local_cache: Dict[str, Any] = {}
         self.compression_enabled = True
         logger.info("Offline data manager initialized")
-    
+
     def compress_session(self, session: LocalSession) -> bytes:
         """
         Compress session data for storage
-        
+
         Args:
             session: Session to compress
-            
+
         Returns:
             Compressed binary data
         """
         try:
             import gzip
-            
+
             data = json.dumps(session.to_dict())
             compressed = gzip.compress(data.encode())
             logger.info(f"Session {session.session_id} compressed: {len(compressed)} bytes")
@@ -595,46 +613,46 @@ class OfflineDataManager:
         except Exception as e:
             logger.error(f"Compression failed: {str(e)}")
             return b""
-    
+
     def decompress_session(self, compressed_data: bytes) -> Optional[Dict]:
         """
         Decompress session data
-        
+
         Args:
             compressed_data: Compressed binary data
-            
+
         Returns:
             Decompressed session data
         """
         try:
             import gzip
-            
+
             decompressed = gzip.decompress(compressed_data)
             session_data = json.loads(decompressed.decode())
             return session_data
         except Exception as e:
             logger.error(f"Decompression failed: {str(e)}")
             return None
-    
+
     async def cleanup_old_sessions(self, days_to_keep: int = 30) -> int:
         """
         Clean up old sessions to free space
-        
+
         Args:
             days_to_keep: Keep sessions from last N days
-            
+
         Returns:
             Number of sessions deleted
         """
         cutoff = datetime.utcnow() - timedelta(days=days_to_keep)
         deleted = 0
-        
+
         for key in list(self.local_cache.keys()):
             if "session" in key:
                 # In production, check session timestamp
                 # For now, just track deletion count
                 deleted += 1
-        
+
         logger.info(f"Cleaned up {deleted} old sessions")
         return deleted
 
@@ -643,25 +661,26 @@ class OfflineDataManager:
 # BACKGROUND PROCESSING
 # ============================================================================
 
+
 class BackgroundProcessor:
     """
     Handles background processing on mobile devices
     Processes workouts asynchronously without blocking UI
     """
-    
+
     def __init__(self):
         self.processing_queue: List[Dict] = []
         self.completed_tasks: Dict[str, Dict] = {}
         logger.info("Background processor initialized")
-    
+
     async def queue_analysis(self, session_id: str, priority: str = "normal") -> Dict:
         """
         Queue session for background analysis
-        
+
         Args:
             session_id: Session to analyze
             priority: "high", "normal", "low"
-            
+
         Returns:
             Task ID and status
         """
@@ -673,37 +692,37 @@ class BackgroundProcessor:
                 "priority": priority,
                 "status": "queued",
                 "created_at": datetime.utcnow().isoformat(),
-                "progress": 0
+                "progress": 0,
             }
             self.processing_queue.append(task)
-            
+
             logger.info(f"Analysis queued: {task_id} for session {session_id}")
-            
+
             return {
                 "task_id": task_id,
                 "status": "queued",
-                "estimated_completion_seconds": 120
+                "estimated_completion_seconds": 120,
             }
         except Exception as e:
             logger.error(f"Queue failed: {str(e)}")
             return {"error": str(e)}
-    
+
     async def get_task_status(self, task_id: str) -> Dict:
         """Get status of background task"""
         try:
             # Check completed tasks
             if task_id in self.completed_tasks:
                 return self.completed_tasks[task_id]
-            
+
             # Check processing queue
             for task in self.processing_queue:
                 if task["task_id"] == task_id:
                     return {
                         "task_id": task_id,
                         "status": task["status"],
-                        "progress": task["progress"]
+                        "progress": task["progress"],
                     }
-            
+
             return {"error": "Task not found"}
         except Exception as e:
             logger.error(f"Status check failed: {str(e)}")

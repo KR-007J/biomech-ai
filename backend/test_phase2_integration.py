@@ -13,22 +13,21 @@ Comprehensive integration tests for advanced platform features:
 - Fraud detection
 """
 
-import pytest
-import asyncio
-import json
-import time
-from unittest.mock import patch, MagicMock, AsyncMock
 from datetime import datetime, timedelta
+from unittest.mock import patch
+
+import pytest
+
+from ab_testing import ABTestingEngine, AllocationStrategy
+from advanced_analytics import AdvancedAnalyticsEngine
 
 # Phase 2 modules
-from async_job_queue import AsyncJobQueue, JobMetadata, JobPriority
-from realtime_websocket import RealtimeWebSocketHub, RealtimeEvents
-from webhook_events import EventSystem, Event, Webhook
+from async_job_queue import AsyncJobQueue, JobPriority
+from fraud_detection import FraudDetectionEngine
 from graphql_api import GraphQLServer
-from model_versioning import ModelRegistry, ModelVersion, ExperimentRun
-from advanced_analytics import AdvancedAnalyticsEngine
-from ab_testing import ABTestingEngine, AllocationStrategy
-from fraud_detection import FraudDetectionEngine, RiskLevel
+from model_versioning import ModelRegistry
+from realtime_websocket import RealtimeWebSocketHub
+from webhook_events import Event, EventSystem
 
 
 @pytest.fixture
@@ -124,7 +123,7 @@ class TestPhase2Integration:
             job_type="analysis",
             payload={"session_id": "test-123"},
             priority=JobPriority.HIGH,
-            user_id="user-456"
+            user_id="user-456",
         )
 
         assert job_id
@@ -146,16 +145,10 @@ class TestPhase2Integration:
     async def test_job_dependencies(self, job_queue):
         """✅ Job dependency resolution"""
         # Submit parent job
-        parent_id = await job_queue.submit_job(
-            job_type="batch_analysis",
-            payload={"batch_size": 10}
-        )
+        parent_id = await job_queue.submit_job(job_type="batch_analysis", payload={"batch_size": 10})
 
         # Submit dependent job
-        child_id = await job_queue.submit_job(
-            job_type="report_generation",
-            dependencies=[parent_id]
-        )
+        child_id = await job_queue.submit_job(job_type="report_generation", dependencies=[parent_id])
 
         # Child should not process until parent completes
         await job_queue.process_job(child_id)
@@ -281,11 +274,12 @@ class TestPhase2Integration:
     @pytest.mark.asyncio
     async def test_event_publishing_and_delivery(self, event_system):
         """✅ Event publishing and webhook delivery"""
+        webhook_secret = "unit-test-webhook-token"
         # Register webhook
         webhook_id = await event_system.register_webhook(
             url="https://example.com/webhook",
-            secret="test-secret",
-            events=["user.created", "session.completed"]
+            secret=webhook_secret,
+            events=["user.created", "session.completed"],
         )
 
         assert webhook_id in event_system.webhooks
@@ -294,7 +288,7 @@ class TestPhase2Integration:
         event = Event(
             event_type="user.created",
             resource_id="user-123",
-            data={"email": "test@example.com"}
+            data={"email": "test@example.com"},
         )
 
         await event_system.publish_event(event)
@@ -305,7 +299,7 @@ class TestPhase2Integration:
         assert stored_event.event_type == "user.created"
 
         # Simulate delivery (mock HTTP call)
-        with patch('aiohttp.ClientSession.post') as mock_post:
+        with patch("aiohttp.ClientSession.post") as mock_post:
             mock_post.return_value.__aenter__.return_value.status = 200
 
             await event_system._deliver_webhook(webhook_id, event)
@@ -318,36 +312,32 @@ class TestPhase2Integration:
     @pytest.mark.asyncio
     async def test_webhook_signature_verification(self, event_system):
         """✅ Webhook HMAC signature verification"""
-        webhook_id = await event_system.register_webhook(
-            url="https://example.com/webhook",
-            secret="my-secret-key"
-        )
+        webhook_secret = "unit-test-signing-token"
+        webhook_id = await event_system.register_webhook(url="https://example.com/webhook", secret=webhook_secret)
 
         event = Event(event_type="test.event", resource_id="test-123")
 
         # Generate signature
-        signature = event_system._generate_signature(event, "my-secret-key")
+        signature = event_system._generate_signature(event, webhook_secret)
 
         # Verify signature
-        is_valid = event_system._verify_signature(signature, event, "my-secret-key")
+        is_valid = event_system._verify_signature(signature, event, webhook_secret)
         assert is_valid
 
         # Test invalid signature
-        is_invalid = event_system._verify_signature("invalid-sig", event, "my-secret-key")
+        is_invalid = event_system._verify_signature("invalid-sig", event, webhook_secret)
         assert not is_invalid
 
     @pytest.mark.asyncio
     async def test_webhook_circuit_breaker(self, event_system):
         """✅ Circuit breaker pattern for failing webhooks"""
-        webhook_id = await event_system.register_webhook(
-            url="https://failing.example.com/webhook",
-            secret="test"
-        )
+        webhook_secret = "unit-test-failing-webhook-token"
+        webhook_id = await event_system.register_webhook(url="https://failing.example.com/webhook", secret=webhook_secret)
 
         event = Event(event_type="test.event", resource_id="test-123")
 
         # Simulate 5 failures
-        with patch('aiohttp.ClientSession.post') as mock_post:
+        with patch("aiohttp.ClientSession.post") as mock_post:
             mock_post.return_value.__aenter__.return_value.status = 500
 
             for _ in range(6):  # One more than threshold
@@ -398,16 +388,14 @@ class TestPhase2Integration:
         }
         """
 
-        variables = {
-            "userId": "user-123",
-            "exerciseType": "squats"
-        }
+        variables = {"userId": "user-123", "exerciseType": "squats"}
 
         # Mock resolver
-        with patch.object(graphql_server, '_execute_mutation', return_value={
-            "id": "session-456",
-            "status": "created"
-        }) as mock_execute:
+        with patch.object(
+            graphql_server,
+            "_execute_mutation",
+            return_value={"id": "session-456", "status": "created"},
+        ) as mock_execute:
             result = graphql_server.execute_mutation(mutation, variables)
 
             mock_execute.assert_called_once()
@@ -422,7 +410,7 @@ class TestPhase2Integration:
             name="ensemble_v1",
             version="1.0.0",
             model_type="ENSEMBLE",
-            metadata={"accuracy": 0.95}
+            metadata={"accuracy": 0.95},
         )
 
         assert model_id in model_registry.models
@@ -458,7 +446,7 @@ class TestPhase2Integration:
         experiment_id = model_registry.start_experiment(
             name="accuracy_optimization",
             model_type="ENSEMBLE",
-            parameters={"learning_rate": 0.001}
+            parameters={"learning_rate": 0.001},
         )
 
         assert experiment_id in model_registry.experiments
@@ -481,7 +469,7 @@ class TestPhase2Integration:
         cohort_id = analytics_engine.create_cohort(
             name="new_users_q1_2026",
             criteria={"registration_date": {"start": "2026-01-01", "end": "2026-03-31"}},
-            group_by="month"
+            group_by="month",
         )
 
         assert cohort_id in analytics_engine.cohorts
@@ -493,7 +481,7 @@ class TestPhase2Integration:
         users = [
             {"id": "user-1", "registration_date": "2026-01-15", "sessions": 10},
             {"id": "user-2", "registration_date": "2026-02-10", "sessions": 8},
-            {"id": "user-3", "registration_date": "2026-03-20", "sessions": 12}
+            {"id": "user-3", "registration_date": "2026-03-20", "sessions": 12},
         ]
 
         # Calculate retention
@@ -510,10 +498,16 @@ class TestPhase2Integration:
 
         # Simulate user progression
         user_journeys = [
-            {"user_id": "user-1", "steps": ["landing_page", "sign_up", "first_session", "payment"]},
-            {"user_id": "user-2", "steps": ["landing_page", "sign_up", "first_session"]},
+            {
+                "user_id": "user-1",
+                "steps": ["landing_page", "sign_up", "first_session", "payment"],
+            },
+            {
+                "user_id": "user-2",
+                "steps": ["landing_page", "sign_up", "first_session"],
+            },
             {"user_id": "user-3", "steps": ["landing_page", "sign_up"]},
-            {"user_id": "user-4", "steps": ["landing_page"]}
+            {"user_id": "user-4", "steps": ["landing_page"]},
         ]
 
         # Analyze funnel
@@ -529,22 +523,25 @@ class TestPhase2Integration:
             {"id": "user-1", "sessions_per_week": 5, "avg_score": 85, "age": 25},
             {"id": "user-2", "sessions_per_week": 2, "avg_score": 92, "age": 30},
             {"id": "user-3", "sessions_per_week": 7, "avg_score": 78, "age": 22},
-            {"id": "user-4", "sessions_per_week": 1, "avg_score": 88, "age": 35}
+            {"id": "user-4", "sessions_per_week": 1, "avg_score": 88, "age": 35},
         ]
 
         # Create segments
-        segments = analytics_engine.create_segments(users, {
-            "high_engagement": lambda u: u["sessions_per_week"] >= 5,
-            "high_performer": lambda u: u["avg_score"] >= 90,
-            "young_adult": lambda u: u["age"] < 30
-        })
+        segments = analytics_engine.create_segments(
+            users,
+            {
+                "high_engagement": lambda u: u["sessions_per_week"] >= 5,
+                "high_performer": lambda u: u["avg_score"] >= 90,
+                "young_adult": lambda u: u["age"] < 30,
+            },
+        )
 
         assert "high_engagement" in segments
         assert "high_performer" in segments
         assert "young_adult" in segments
 
         assert len(segments["high_engagement"]) == 2  # users 1 and 3
-        assert len(segments["high_performer"]) == 1   # user 2
+        assert len(segments["high_performer"]) == 1  # user 2
 
     # ==================== TIER 16: A/B TESTING ====================
 
@@ -555,7 +552,7 @@ class TestPhase2Integration:
             name="ui_button_color_test",
             variants=["red_button", "blue_button"],
             traffic_percentage=100,
-            strategy=AllocationStrategy.RANDOM
+            strategy=AllocationStrategy.RANDOM,
         )
 
         assert experiment_id in ab_engine.experiments
@@ -575,7 +572,7 @@ class TestPhase2Integration:
         experiment_id = ab_engine.create_experiment(
             name="allocation_test",
             variants=["A", "B"],
-            strategy=AllocationStrategy.STRATIFIED
+            strategy=AllocationStrategy.STRATIFIED,
         )
 
         ab_engine.start_experiment(experiment_id)
@@ -592,10 +589,7 @@ class TestPhase2Integration:
 
     def test_experiment_results_analysis(self, ab_engine):
         """✅ Statistical analysis of experiment results"""
-        experiment_id = ab_engine.create_experiment(
-            name="conversion_test",
-            variants=["control", "variant"]
-        )
+        experiment_id = ab_engine.create_experiment(name="conversion_test", variants=["control", "variant"])
 
         ab_engine.start_experiment(experiment_id)
 
@@ -625,9 +619,13 @@ class TestPhase2Integration:
 
         # Simulate suspicious actions
         actions = [
-            {"type": "api_call", "count": 150, "timeframe": "minute"},  # Velocity breach
-            {"type": "location_change", "from": "US", "to": "RU"},       # Geo anomaly
-            {"type": "device_change", "new_device": True},             # Device anomaly
+            {
+                "type": "api_call",
+                "count": 150,
+                "timeframe": "minute",
+            },  # Velocity breach
+            {"type": "location_change", "from": "US", "to": "RU"},  # Geo anomaly
+            {"type": "device_change", "new_device": True},  # Device anomaly
         ]
 
         # Calculate risk score
@@ -644,7 +642,7 @@ class TestPhase2Integration:
         normal_actions = [
             {"hour": 9, "location": "US", "device": "mobile", "sessions": 3},
             {"hour": 10, "location": "US", "device": "mobile", "sessions": 2},
-            {"hour": 11, "location": "US", "device": "mobile", "sessions": 4}
+            {"hour": 11, "location": "US", "device": "mobile", "sessions": 4},
         ]
 
         fraud_engine.build_behavior_profile(user_id, normal_actions)
@@ -661,9 +659,13 @@ class TestPhase2Integration:
 
         # Simulate critical fraud indicators
         actions = [
-            {"type": "api_call", "count": 200, "timeframe": "minute"},  # Major velocity breach
-            {"type": "location_change", "from": "US", "to": "UNKNOWN"}, # Geo anomaly
-            {"type": "unusual_time", "hour": 3},                       # Unusual hour
+            {
+                "type": "api_call",
+                "count": 200,
+                "timeframe": "minute",
+            },  # Major velocity breach
+            {"type": "location_change", "from": "US", "to": "UNKNOWN"},  # Geo anomaly
+            {"type": "unusual_time", "hour": 3},  # Unusual hour
         ]
 
         risk_score = fraud_engine.calculate_risk_score(user_id, actions)
@@ -703,6 +705,7 @@ class TestPhase2Integration:
 
 # ==================== END-TO-END INTEGRATION TESTS ====================
 
+
 class TestPhase2EndToEndIntegration:
     """End-to-end integration tests combining multiple Phase 2 features"""
 
@@ -711,14 +714,13 @@ class TestPhase2EndToEndIntegration:
     async def test_analysis_job_with_websocket_updates(self, job_queue, websocket_hub):
         """✅ Job processing with real-time WebSocket updates"""
         # Setup WebSocket connection
-        connection_id = "conn-job-updates"
         user_id = "user-job-test"
 
         # Submit analysis job
         job_id = await job_queue.submit_job(
             job_type="biomech_analysis",
             payload={"session_id": "session-123", "frames": 100},
-            user_id=user_id
+            user_id=user_id,
         )
 
         # Process job (would normally send WebSocket updates)
@@ -734,7 +736,7 @@ class TestPhase2EndToEndIntegration:
         # Register webhook for model events
         webhook_id = await event_system.register_webhook(
             url="https://ml-platform.example.com/webhook",
-            events=["model.approved", "model.deployed"]
+            events=["model.approved", "model.deployed"],
         )
 
         # Register and approve model
@@ -750,10 +752,7 @@ class TestPhase2EndToEndIntegration:
     def test_ab_test_with_analytics_tracking(self, ab_engine, analytics_engine):
         """✅ A/B test results integrated with analytics"""
         # Create A/B test
-        experiment_id = ab_engine.create_experiment(
-            name="feature_test",
-            variants=["old_ui", "new_ui"]
-        )
+        experiment_id = ab_engine.create_experiment(name="feature_test", variants=["old_ui", "new_ui"])
         ab_engine.start_experiment(experiment_id)
 
         # Simulate user interactions
@@ -765,20 +764,19 @@ class TestPhase2EndToEndIntegration:
             ab_engine.record_conversion(experiment_id, user_id, converted)
 
             # Track in analytics
-            users.append({
-                "id": user_id,
-                "variant": variant,
-                "converted": converted  # 70% vs 50%
-            })
+            users.append({"id": user_id, "variant": variant, "converted": converted})  # 70% vs 50%
 
         # Analyze experiment
         results = ab_engine.analyze_results(experiment_id)
 
         # Analytics could use this data for segmentation
-        segments = analytics_engine.create_segments(users, {
-            "converted": lambda u: u["converted"],
-            "new_ui_users": lambda u: u["variant"] == "new_ui"
-        })
+        segments = analytics_engine.create_segments(
+            users,
+            {
+                "converted": lambda u: u["converted"],
+                "new_ui_users": lambda u: u["variant"] == "new_ui",
+            },
+        )
 
         assert len(segments["converted"]) > 0
         assert results["new_ui"]["conversion_rate"] > results["old_ui"]["conversion_rate"]

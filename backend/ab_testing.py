@@ -3,20 +3,20 @@ PHASE 2: TIER 16 - A/B TESTING & EXPERIMENTATION PLATFORM
 Experiment design, statistical analysis, variant allocation
 """
 
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime, timedelta
 import logging
-import random
 import math
-from collections import defaultdict
+import random
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class ExperimentStatus(str, Enum):
     """Experiment lifecycle"""
+
     DRAFT = "DRAFT"
     RUNNING = "RUNNING"
     PAUSED = "PAUSED"
@@ -26,6 +26,7 @@ class ExperimentStatus(str, Enum):
 
 class StatisticalTest(str, Enum):
     """Statistical test types"""
+
     T_TEST = "t_test"
     CHI_SQUARE = "chi_square"
     BOOTSTRAP = "bootstrap"
@@ -33,6 +34,7 @@ class StatisticalTest(str, Enum):
 
 class AllocationStrategy(str, Enum):
     """User allocation strategies"""
+
     RANDOM = "random"
     STRATIFIED = "stratified"
     BANDIT = "bandit"
@@ -41,6 +43,7 @@ class AllocationStrategy(str, Enum):
 @dataclass
 class Variant:
     """Experiment variant"""
+
     variant_id: str
     name: str
     traffic_percentage: float  # 0-100
@@ -54,6 +57,7 @@ class Variant:
 @dataclass
 class ExperimentResult:
     """Experiment statistical results"""
+
     variant_a_id: str = ""
     variant_b_id: str = ""
     variant_a_conversion_rate: float = 0.0
@@ -71,6 +75,7 @@ class ExperimentResult:
 @dataclass
 class ABTest:
     """A/B test configuration"""
+
     experiment_id: str = ""
     name: str = ""
     description: str = ""
@@ -78,23 +83,23 @@ class ABTest:
     created_at: datetime = field(default_factory=datetime.utcnow)
     started_at: Optional[datetime] = None
     ended_at: Optional[datetime] = None
-    
+
     # Variants
     variants: Dict[str, Variant] = field(default_factory=dict)
-    
+
     # Target metric
     target_metric: str = ""  # conversion, revenue, engagement, etc.
-    
+
     # Statistical parameters
     confidence_level: float = 0.95
     statistical_power: float = 0.80
     minimum_detectable_effect: float = 0.10  # 10%
     statistical_test: StatisticalTest = StatisticalTest.T_TEST
-    
+
     # Targeting
     target_cohort: Optional[str] = None
     exclusion_rules: List[Dict[str, Any]] = field(default_factory=list)
-    
+
     # Results
     results: Optional[ExperimentResult] = None
 
@@ -102,7 +107,7 @@ class ABTest:
 class ABTestingEngine:
     """
     A/B testing and experimentation platform
-    
+
     Features:
     - Experiment design and planning
     - Variant allocation (random, stratified)
@@ -113,7 +118,7 @@ class ABTestingEngine:
     - Results analysis
     - Sequential testing
     """
-    
+
     def __init__(self):
         self.experiments: Dict[str, ABTest] = {}
         self.user_allocations: Dict[str, str] = {}  # user_id -> variant_id
@@ -133,7 +138,7 @@ class ABTestingEngine:
         description: str = "",
         target_metric: str = "conversion",
         confidence_level: float = 0.95,
-        minimum_detectable_effect: float = 0.10
+        minimum_detectable_effect: float = 0.10,
     ) -> str:
         """Create an experiment and optionally seed variants."""
         experiment_id = f"exp_{len(self.experiments) + 1}_{int(datetime.utcnow().timestamp())}"
@@ -143,7 +148,7 @@ class ABTestingEngine:
             description=description,
             target_metric=target_metric,
             confidence_level=confidence_level,
-            minimum_detectable_effect=minimum_detectable_effect
+            minimum_detectable_effect=minimum_detectable_effect,
         )
         experiment.exclusion_rules.append({"allocation_strategy": strategy.value})
         self.experiments[experiment_id] = experiment
@@ -161,20 +166,20 @@ class ABTestingEngine:
         experiment_id: str,
         variant_name: str,
         traffic_percentage: float,
-        configuration: Dict[str, Any]
+        configuration: Dict[str, Any],
     ) -> bool:
         """Add variant to experiment"""
         if not (exp := self.experiments.get(experiment_id)):
             return False
-        
+
         variant_id = f"{experiment_id}_v{len(exp.variants) + 1}"
         variant = Variant(
             variant_id=variant_id,
             name=variant_name,
             traffic_percentage=traffic_percentage,
-            configuration=configuration
+            configuration=configuration,
         )
-        
+
         exp.variants[variant_id] = variant
         logger.info(f"Variant added: {variant_id}")
         return True
@@ -183,22 +188,17 @@ class ABTestingEngine:
         """Start running experiment"""
         if not (exp := self.experiments.get(experiment_id)):
             return False
-        
+
         if not exp.variants:
             logger.error("Cannot start experiment without variants")
             return False
-        
+
         exp.status = ExperimentStatus.RUNNING
         exp.started_at = datetime.utcnow()
         logger.info(f"Experiment started: {experiment_id}")
         return True
 
-    def allocate_user(
-        self,
-        experiment_id: str,
-        user_id: str,
-        strategy: Optional[str] = None
-    ) -> Optional[str]:
+    def allocate_user(self, experiment_id: str, user_id: str, strategy: Optional[str] = None) -> Optional[str]:
         """Allocate user to variant"""
         if not (exp := self.experiments.get(experiment_id)):
             return None
@@ -212,11 +212,7 @@ class ABTestingEngine:
         configured_strategy = strategy
         if configured_strategy is None:
             configured_strategy = next(
-                (
-                    rule["allocation_strategy"]
-                    for rule in exp.exclusion_rules
-                    if "allocation_strategy" in rule
-                ),
+                (rule["allocation_strategy"] for rule in exp.exclusion_rules if "allocation_strategy" in rule),
                 AllocationStrategy.RANDOM.value,
             )
 
@@ -235,7 +231,7 @@ class ABTestingEngine:
             exp.variants[variant_id].user_count += 1
             return exp.variants[variant_id].name
         return None
-    
+
     def _allocate_random(self, exp: ABTest) -> Optional[str]:
         """Random allocation with uniform distribution."""
         variants = list(exp.variants.keys())
@@ -243,43 +239,33 @@ class ABTestingEngine:
             return None
         # Use random choice for actual randomization
         return random.choice(variants)
-    
+
     def _allocate_stratified(self, exp: ABTest) -> Optional[str]:
         """Stratified allocation (ensures uniform distribution)"""
         # Sort by current user count to balance
-        variants_sorted = sorted(
-            exp.variants.items(),
-            key=lambda x: x[1].user_count
-        )
+        variants_sorted = sorted(exp.variants.items(), key=lambda x: x[1].user_count)
         return variants_sorted[0][0] if variants_sorted else None
-    
+
     def _allocate_bandit(self, exp: ABTest) -> Optional[str]:
         """Multi-armed bandit allocation (favor winning variants)"""
         # Thompson sampling
         best_variant = None
         best_ucb = -1
-        
+
         for variant_id, variant in exp.variants.items():
             if variant.user_count == 0:
                 return variant_id  # Explore untested variant
-            
+
             conversion_rate = variant.conversion_count / variant.user_count
-            ucb = conversion_rate + math.sqrt(2 * math.log(sum(
-                v.user_count for v in exp.variants.values()
-            )) / variant.user_count)
-            
+            ucb = conversion_rate + math.sqrt(2 * math.log(sum(v.user_count for v in exp.variants.values())) / variant.user_count)
+
             if ucb > best_ucb:
                 best_ucb = ucb
                 best_variant = variant_id
-        
+
         return best_variant
-    
-    def record_conversion(
-        self,
-        experiment_id: str,
-        user_id: str,
-        metric_value: float = 1.0
-    ) -> bool:
+
+    def record_conversion(self, experiment_id: str, user_id: str, metric_value: float = 1.0) -> bool:
         """Record user conversion/metric"""
         allocation_key = f"{experiment_id}:{user_id}"
         if variant_id := self.user_allocations.get(allocation_key):
@@ -289,15 +275,17 @@ class ABTestingEngine:
                     if numeric_value > 0:
                         variant.conversion_count += 1
                     variant.metric_sum += numeric_value
-                    variant.metric_sum_sq += numeric_value ** 2
-                    
-                    self.experiment_events.append({
-                        "experiment_id": experiment_id,
-                        "user_id": user_id,
-                        "variant_id": variant_id,
-                        "metric_value": numeric_value,
-                        "timestamp": datetime.utcnow()
-                    })
+                    variant.metric_sum_sq += numeric_value**2
+
+                    self.experiment_events.append(
+                        {
+                            "experiment_id": experiment_id,
+                            "user_id": user_id,
+                            "variant_id": variant_id,
+                            "metric_value": numeric_value,
+                            "timestamp": datetime.utcnow(),
+                        }
+                    )
                     return True
         return False
 
@@ -316,15 +304,11 @@ class ABTestingEngine:
         lift = ((conv_rate_b - conv_rate_a) / conv_rate_a) if conv_rate_a > 0 else 0
         se_a = math.sqrt(conv_rate_a * (1 - conv_rate_a) / variant_a.user_count) if variant_a.user_count > 0 else 0
         se_b = math.sqrt(conv_rate_b * (1 - conv_rate_b) / variant_b.user_count) if variant_b.user_count > 0 else 0
-        se_diff = math.sqrt(se_a ** 2 + se_b ** 2)
+        se_diff = math.sqrt(se_a**2 + se_b**2)
         z_score = (conv_rate_b - conv_rate_a) / se_diff if se_diff > 0 else 0
         p_value = self._calculate_p_value(z_score)
         is_significant = p_value < (1 - exp.confidence_level)
-        required_size = self._calculate_sample_size(
-            exp.minimum_detectable_effect,
-            exp.confidence_level,
-            exp.statistical_power
-        )
+        required_size = self._calculate_sample_size(exp.minimum_detectable_effect, exp.confidence_level, exp.statistical_power)
 
         exp.results = ExperimentResult(
             variant_a_id=variant_a.variant_id,
@@ -336,7 +320,7 @@ class ABTestingEngine:
             is_significant=is_significant,
             confidence_level=exp.confidence_level,
             sample_size_required=required_size,
-            current_sample_size=variant_a.user_count + variant_b.user_count
+            current_sample_size=variant_a.user_count + variant_b.user_count,
         )
         logger.info(f"Results analyzed: {experiment_id}, p-value={p_value:.4f}")
         return {
@@ -345,7 +329,10 @@ class ABTestingEngine:
                 "conversions": variant_a.conversion_count,
                 "conversion_rate": conv_rate_a,
                 "p_value": p_value,
-                "confidence_interval": [max(0.0, conv_rate_a - se_a), min(1.0, conv_rate_a + se_a)],
+                "confidence_interval": [
+                    max(0.0, conv_rate_a - se_a),
+                    min(1.0, conv_rate_a + se_a),
+                ],
                 "is_significant": is_significant,
             },
             variant_b.name: {
@@ -353,32 +340,30 @@ class ABTestingEngine:
                 "conversions": variant_b.conversion_count,
                 "conversion_rate": conv_rate_b,
                 "p_value": p_value,
-                "confidence_interval": [max(0.0, conv_rate_b - se_b), min(1.0, conv_rate_b + se_b)],
+                "confidence_interval": [
+                    max(0.0, conv_rate_b - se_b),
+                    min(1.0, conv_rate_b + se_b),
+                ],
                 "is_significant": is_significant,
                 "lift_vs_control": lift * 100,
             },
         }
-    
+
     def _calculate_p_value(self, z_score: float) -> float:
         """Approximate p-value from z-score"""
         # Simplified calculation
         return min(1.0, max(0.0, 1 - abs(z_score) * 0.1))
-    
-    def _calculate_sample_size(
-        self,
-        effect_size: float,
-        confidence_level: float,
-        power: float
-    ) -> int:
+
+    def _calculate_sample_size(self, effect_size: float, confidence_level: float, power: float) -> int:
         """Calculate required sample size per variant"""
         # Simplified formula
-        alpha = 1 - confidence_level
+        1 - confidence_level
         z_alpha = 1.96  # For 95% confidence
         z_beta = 0.84  # For 80% power
-        
+
         n = int(2 * ((z_alpha + z_beta) / effect_size) ** 2)
         return max(100, n)
-    
+
     def stop_experiment(self, experiment_id: str) -> bool:
         """Stop experiment"""
         if exp := self.experiments.get(experiment_id):
@@ -387,12 +372,12 @@ class ABTestingEngine:
             logger.info(f"Experiment stopped: {experiment_id}")
             return True
         return False
-    
+
     def get_experiment_status(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """Get experiment status"""
         if not (exp := self.experiments.get(experiment_id)):
             return None
-        
+
         variant_stats = {}
         for variant_id, variant in exp.variants.items():
             conversion_rate = variant.conversion_count / variant.user_count if variant.user_count > 0 else 0
@@ -400,16 +385,16 @@ class ABTestingEngine:
                 "name": variant.name,
                 "users": variant.user_count,
                 "conversions": variant.conversion_count,
-                "conversion_rate": conversion_rate
+                "conversion_rate": conversion_rate,
             }
-        
+
         return {
             "experiment_id": experiment_id,
             "name": exp.name,
             "status": exp.status.value,
             "started_at": exp.started_at.isoformat() if exp.started_at else None,
             "variants": variant_stats,
-            "results": exp.results
+            "results": exp.results,
         }
 
 
