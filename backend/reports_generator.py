@@ -10,10 +10,9 @@ Auto-generate professional PDF reports with:
 - Progress tracking
 """
 
-import json
 import logging
-from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime
 from io import BytesIO
 from typing import Any, Dict, List, Optional
 
@@ -57,23 +56,14 @@ class ReportGenerator:
     def try_import_reportlab(self) -> bool:
         """Try importing reportlab for PDF generation"""
         try:
-            from reportlab.lib import colors
-            from reportlab.lib.pagesizes import A4, letter
-            from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-            from reportlab.lib.units import inch
-            from reportlab.platypus import (
-                PageBreak,
-                Paragraph,
-                SimpleDocTemplate,
-                Spacer,
-                Table,
-                TableStyle,
-            )
+            pass
 
             self.has_reportlab = True
             return True
         except ImportError:
-            logger.warning("ReportLab not installed. Install via: pip install reportlab")
+            logger.warning(
+                "ReportLab not installed. Install via: pip install reportlab"
+            )
             self.has_reportlab = False
             return False
 
@@ -83,12 +73,13 @@ class ReportGenerator:
             import matplotlib
 
             matplotlib.use("Agg")  # Non-interactive backend
-            import matplotlib.pyplot as plt
 
             self.has_matplotlib = True
             return True
         except ImportError:
-            logger.warning("Matplotlib not installed. Install via: pip install matplotlib")
+            logger.warning(
+                "Matplotlib not installed. Install via: pip install matplotlib"
+            )
             self.has_matplotlib = False
             return False
 
@@ -128,7 +119,11 @@ class ReportGenerator:
                 "detailed_analysis": self._generate_detailed_analysis(analysis_results),
                 "risk_assessment": self._generate_risk_assessment(analysis_results),
                 "recommendations": self._generate_recommendations(analysis_results),
-                "charts": self._generate_charts(analysis_results) if config.include_charts else {},
+                "charts": (
+                    self._generate_charts(analysis_results)
+                    if config.include_charts
+                    else {}
+                ),
             }
 
             logger.info(f"✅ Session report generated for user {user_id}")
@@ -174,7 +169,9 @@ class ReportGenerator:
                     "consistency": trend_analysis.get("consistency_score", 0),
                 },
                 "trends": self._format_trends(trend_analysis),
-                "key_findings": self._extract_key_findings(historical_data, trend_analysis),
+                "key_findings": self._extract_key_findings(
+                    historical_data, trend_analysis
+                ),
                 "progress_metrics": self._calculate_progress_metrics(historical_data),
                 "forecasts": self._generate_forecasts(trend_analysis),
                 "recommendations": self._generate_trend_recommendations(trend_analysis),
@@ -206,16 +203,12 @@ class ReportGenerator:
         try:
             from reportlab.lib import colors
             from reportlab.lib.pagesizes import A4
-            from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+            from reportlab.lib.styles import (ParagraphStyle,
+                                              getSampleStyleSheet)
             from reportlab.lib.units import inch
-            from reportlab.platypus import (
-                PageBreak,
-                Paragraph,
-                SimpleDocTemplate,
-                Spacer,
-                Table,
-                TableStyle,
-            )
+            from reportlab.platypus import (PageBreak, Paragraph,
+                                            SimpleDocTemplate, Spacer, Table,
+                                            TableStyle)
 
             # Create PDF in memory
             pdf_buffer = BytesIO()

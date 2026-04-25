@@ -3,8 +3,6 @@ PHASE 2: TIER 14 - ML MODEL VERSIONING & MANAGEMENT
 Model versioning, experiment tracking, model registry
 """
 
-import hashlib
-import json
 import logging
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -203,7 +201,9 @@ class ModelRegistry:
                     if traffic_percentage < 100.0:
                         model.status = ModelStatus.DEPLOYED
                         model.traffic_percentage = traffic_percentage
-                        logger.info(f"Canary deployment: {version_id} ({traffic_percentage}%)")
+                        logger.info(
+                            f"Canary deployment: {version_id} ({traffic_percentage}%)"
+                        )
                     else:
                         model.status = ModelStatus.DEPLOYED
                         model.deployed_at = datetime.utcnow()
@@ -213,7 +213,9 @@ class ModelRegistry:
                     return True
         return False
 
-    async def compare_models(self, version_id1: str, version_id2: str) -> Dict[str, Any]:
+    async def compare_models(
+        self, version_id1: str, version_id2: str
+    ) -> Dict[str, Any]:
         """Compare two model versions"""
         model1 = self._get_model_by_id(version_id1)
         model2 = self._get_model_by_id(version_id2)
@@ -222,11 +224,18 @@ class ModelRegistry:
             return {}
 
         return {
-            "model1": {"version_id": model1.version_id, "metrics": asdict(model1.metrics)},
-            "model2": {"version_id": model2.version_id, "metrics": asdict(model2.metrics)},
+            "model1": {
+                "version_id": model1.version_id,
+                "metrics": asdict(model1.metrics),
+            },
+            "model2": {
+                "version_id": model2.version_id,
+                "metrics": asdict(model2.metrics),
+            },
             "deltas": {
                 "accuracy_delta": model2.metrics.accuracy - model1.metrics.accuracy,
-                "latency_delta_ms": model2.metrics.latency_ms - model1.metrics.latency_ms,
+                "latency_delta_ms": model2.metrics.latency_ms
+                - model1.metrics.latency_ms,
                 "f1_delta": model2.metrics.f1_score - model1.metrics.f1_score,
             },
         }
@@ -323,7 +332,9 @@ class ModelRegistry:
                     "accuracy": version.metrics.accuracy,
                     "latency_ms": version.metrics.latency_ms,
                     "status": version.status.value,
-                    "deployed_at": version.deployed_at.isoformat() if version.deployed_at else None,
+                    "deployed_at": (
+                        version.deployed_at.isoformat() if version.deployed_at else None
+                    ),
                 }
             )
 
@@ -352,7 +363,11 @@ class CompatibilityExperiment:
 
 
 def _compat_register_model(
-    self, name: str, version: str, model_type: str, metadata: Optional[Dict[str, Any]] = None
+    self,
+    name: str,
+    version: str,
+    model_type: str,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> str:
     model_id = f"{name}_{version}"
     self.models[model_id] = CompatibilityModel(
@@ -366,7 +381,9 @@ def _compat_register_model(
     return model_id
 
 
-def _compat_approve_model(self, model_id: str, approved_by: Optional[str] = None) -> bool:
+def _compat_approve_model(
+    self, model_id: str, approved_by: Optional[str] = None
+) -> bool:
     if model_id not in self.models:
         return False
     self.models[model_id].status = "APPROVED"
@@ -380,13 +397,17 @@ def _compat_update_metrics(self, model_id: str, metrics: Dict[str, Any]) -> bool
     return True
 
 
-def _compat_compare_models(self, model_id1: str, model_id2: str) -> Dict[str, Dict[str, Any]]:
+def _compat_compare_models(
+    self, model_id1: str, model_id2: str
+) -> Dict[str, Dict[str, Any]]:
     model1 = self.models[model_id1]
     model2 = self.models[model_id2]
     return {model1.name: model1.metrics, model2.name: model2.metrics}
 
 
-def _compat_start_experiment(self, name: str, model_type: str, parameters: Dict[str, Any]) -> str:
+def _compat_start_experiment(
+    self, name: str, model_type: str, parameters: Dict[str, Any]
+) -> str:
     experiment_id = f"{name}_{len(self.experiments) + 1}"
     self.experiments[experiment_id] = CompatibilityExperiment(
         experiment_id=experiment_id,

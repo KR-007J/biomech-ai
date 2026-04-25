@@ -29,8 +29,7 @@ class PoseEngine:
 
         try:
             # Try new MediaPipe tasks API first
-            from mediapipe.tasks import python
-            from mediapipe.tasks.python import vision
+            pass
 
             self.pose = None  # Using new API
             logger.info("Using MediaPipe Tasks API")

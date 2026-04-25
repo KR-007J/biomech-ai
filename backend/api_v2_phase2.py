@@ -14,30 +14,23 @@ Integrates all Phase 2 modules into the main API:
 """
 
 import asyncio
-import json
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import (
-    APIRouter,
-    BackgroundTasks,
-    HTTPException,
-    WebSocket,
-    WebSocketDisconnect,
-)
+from fastapi import (APIRouter, BackgroundTasks, HTTPException, WebSocket,
+                     WebSocketDisconnect)
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from ab_testing import ABTestingEngine, AllocationStrategy
 from advanced_analytics import AdvancedAnalyticsEngine
-
 # Phase 2 modules
 from async_job_queue import AsyncJobQueue, JobPriority
 from fraud_detection import FraudDetectionEngine
 from graphql_api import GraphQLServer
 from model_versioning import ModelRegistry
-from realtime_websocket import RealtimeEvents, RealtimeWebSocketHub
+from realtime_websocket import RealtimeWebSocketHub
 from schemas import FeedbackRequest
 from webhook_events import Event, EventSystem
 
@@ -67,7 +60,9 @@ class JobSubmissionRequest(BaseModel):
     payload: Dict[str, Any] = Field(..., description="Job-specific data")
     priority: str = Field("NORMAL", description="Job priority")
     user_id: Optional[str] = None
-    dependencies: List[str] = Field(default_factory=list, description="Job dependencies")
+    dependencies: List[str] = Field(
+        default_factory=list, description="Job dependencies"
+    )
 
 
 class WebhookRegistrationRequest(BaseModel):
@@ -108,14 +103,18 @@ class CohortCreationRequest(BaseModel):
 
 
 @router.post("/jobs/submit")
-async def submit_async_job(request: JobSubmissionRequest, background_tasks: BackgroundTasks):
+async def submit_async_job(
+    request: JobSubmissionRequest, background_tasks: BackgroundTasks
+):
     """Submit job to async queue"""
     try:
         # Validate priority
         try:
             priority = JobPriority[request.priority.upper()]
         except KeyError:
-            raise HTTPException(status_code=400, detail=f"Invalid priority: {request.priority}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid priority: {request.priority}"
+            )
 
         # Submit job
         job_id = await job_queue.submit_job(
@@ -129,7 +128,11 @@ async def submit_async_job(request: JobSubmissionRequest, background_tasks: Back
         # Start processing in background
         background_tasks.add_task(job_queue.process_job, job_id)
 
-        return {"job_id": job_id, "status": "submitted", "message": "Job submitted to queue"}
+        return {
+            "job_id": job_id,
+            "status": "submitted",
+            "message": "Job submitted to queue",
+        }
 
     except Exception as e:
         logger.error(f"Job submission error: {e}")
@@ -189,7 +192,11 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
 
         # Send welcome message
         await websocket.send_json(
-            {"type": "connection_established", "connection_id": connection_id, "channels": []}
+            {
+                "type": "connection_established",
+                "connection_id": connection_id,
+                "channels": [],
+            }
         )
 
         # Message handling loop
@@ -206,7 +213,9 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     for channel in channels:
                         await websocket_hub.subscribe(connection_id, channel)
 
-                    await websocket.send_json({"type": "subscribed", "channels": channels})
+                    await websocket.send_json(
+                        {"type": "subscribed", "channels": channels}
+                    )
 
                 elif message_type == "unsubscribe":
                     # Unsubscribe from channels
@@ -214,7 +223,9 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     for channel in channels:
                         await websocket_hub.unsubscribe(connection_id, channel)
 
-                    await websocket.send_json({"type": "unsubscribed", "channels": channels})
+                    await websocket.send_json(
+                        {"type": "unsubscribed", "channels": channels}
+                    )
 
                 elif message_type == "ping":
                     # Heartbeat response
@@ -224,7 +235,10 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
 
                 else:
                     await websocket.send_json(
-                        {"type": "error", "message": f"Unknown message type: {message_type}"}
+                        {
+                            "type": "error",
+                            "message": f"Unknown message type: {message_type}",
+                        }
                     )
 
             except asyncio.TimeoutError:
@@ -263,7 +277,11 @@ async def register_webhook(request: WebhookRegistrationRequest):
             url=request.url, secret=request.secret, events=request.events
         )
 
-        return {"webhook_id": webhook_id, "status": "registered", "events": request.events}
+        return {
+            "webhook_id": webhook_id,
+            "status": "registered",
+            "events": request.events,
+        }
 
     except Exception as e:
         logger.error(f"Webhook registration error: {e}")
@@ -294,7 +312,9 @@ async def get_webhook_status(webhook_id: str):
         "is_active": not webhook.circuit_breaker_open,
         "success_rate": webhook.success_count
         / max(webhook.success_count + webhook.failure_count, 1),
-        "last_delivery": webhook.last_delivery.isoformat() if webhook.last_delivery else None,
+        "last_delivery": (
+            webhook.last_delivery.isoformat() if webhook.last_delivery else None
+        ),
     }
 
 
@@ -343,7 +363,10 @@ async def graphql_endpoint(
 @router.get("/graphql/schema")
 async def get_graphql_schema():
     """Get GraphQL schema introspection"""
-    return {"schema": str(graphql_server.schema), "types": graphql_server.get_available_types()}
+    return {
+        "schema": str(graphql_server.schema),
+        "types": graphql_server.get_available_types(),
+    }
 
 
 # ==================== TIER 14: MODEL VERSIONING ENDPOINTS ====================
@@ -360,7 +383,11 @@ async def register_model(request: ModelRegistrationRequest):
             metadata=request.metadata,
         )
 
-        return {"model_id": model_id, "status": "registered", "version": request.version}
+        return {
+            "model_id": model_id,
+            "status": "registered",
+            "version": request.version,
+        }
 
     except Exception as e:
         logger.error(f"Model registration error: {e}")
@@ -392,7 +419,10 @@ async def deploy_model(model_id: str, traffic_percentage: int = 100):
 @router.get("/models/{model_id}/compare")
 async def compare_models(model_id: str, baseline_model_id: str):
     """Compare model performance"""
-    if model_id not in model_registry.models or baseline_model_id not in model_registry.models:
+    if (
+        model_id not in model_registry.models
+        or baseline_model_id not in model_registry.models
+    ):
         raise HTTPException(status_code=404, detail="Model not found")
 
     comparison = model_registry.compare_models(model_id, baseline_model_id)
@@ -442,7 +472,9 @@ async def get_cohort_retention(cohort_id: str, users: List[Dict[str, Any]]):
     if cohort_id not in analytics_engine.cohorts:
         raise HTTPException(status_code=404, detail="Cohort not found")
 
-    retention = analytics_engine.calculate_retention(cohort_id, users, days=[1, 7, 30, 90])
+    retention = analytics_engine.calculate_retention(
+        cohort_id, users, days=[1, 7, 30, 90]
+    )
 
     return retention
 
@@ -482,7 +514,9 @@ async def create_experiment(request: ExperimentCreationRequest):
         try:
             strategy = AllocationStrategy[request.strategy.upper()]
         except KeyError:
-            raise HTTPException(status_code=400, detail=f"Invalid strategy: {request.strategy}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid strategy: {request.strategy}"
+            )
 
         experiment_id = ab_engine.create_experiment(
             name=request.name,
@@ -491,7 +525,11 @@ async def create_experiment(request: ExperimentCreationRequest):
             strategy=strategy,
         )
 
-        return {"experiment_id": experiment_id, "status": "created", "variants": request.variants}
+        return {
+            "experiment_id": experiment_id,
+            "status": "created",
+            "variants": request.variants,
+        }
 
     except Exception as e:
         logger.error(f"Experiment creation error: {e}")

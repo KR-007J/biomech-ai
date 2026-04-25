@@ -75,7 +75,10 @@ class Tenant:
     metadata: Dict = field(default_factory=dict)
 
     def is_trial_expired(self) -> bool:
-        return self.plan == PlanType.FREE and datetime.utcnow() > self.subscription_expires_at
+        return (
+            self.plan == PlanType.FREE
+            and datetime.utcnow() > self.subscription_expires_at
+        )
 
     def to_dict(self) -> Dict:
         return {
@@ -154,7 +157,13 @@ PLAN_QUOTAS = {
         max_api_calls_monthly=500000,
         max_concurrent_sessions=20,
         max_persons_per_session=10,
-        features=["all", "ar_vr", "advanced_analytics", "api_access", "custom_workflows"],
+        features=[
+            "all",
+            "ar_vr",
+            "advanced_analytics",
+            "api_access",
+            "custom_workflows",
+        ],
         support_tier="priority",
     ),
     PlanType.ENTERPRISE: PlanQuota(
@@ -163,7 +172,13 @@ PLAN_QUOTAS = {
         max_api_calls_monthly=50000000,
         max_concurrent_sessions=1000,
         max_persons_per_session=100,
-        features=["all", "sso", "multi_tenancy", "custom_integration", "dedicated_support"],
+        features=[
+            "all",
+            "sso",
+            "multi_tenancy",
+            "custom_integration",
+            "dedicated_support",
+        ],
         support_tier="dedicated",
     ),
 }
@@ -186,7 +201,9 @@ class MultiTenancyManager:
         self.tenant_data: Dict[str, Dict] = {}  # Isolated data per tenant
         logger.info("Multi-tenancy manager initialized")
 
-    async def create_tenant(self, owner_id: str, name: str, plan: str = "free") -> Dict[str, Any]:
+    async def create_tenant(
+        self, owner_id: str, name: str, plan: str = "free"
+    ) -> Dict[str, Any]:
         """
         Create new tenant
 
@@ -204,7 +221,9 @@ class MultiTenancyManager:
 
             # Calculate subscription expiration
             if plan_type == PlanType.FREE:
-                subscription_expires = datetime.utcnow() + timedelta(days=30)  # 30-day trial
+                subscription_expires = datetime.utcnow() + timedelta(
+                    days=30
+                )  # 30-day trial
             else:
                 subscription_expires = datetime.utcnow() + timedelta(days=365)  # 1 year
 
@@ -213,7 +232,11 @@ class MultiTenancyManager:
                 name=name,
                 owner_id=owner_id,
                 plan=plan_type,
-                status=TenantStatus.TRIAL if plan_type == PlanType.FREE else TenantStatus.ACTIVE,
+                status=(
+                    TenantStatus.TRIAL
+                    if plan_type == PlanType.FREE
+                    else TenantStatus.ACTIVE
+                ),
                 created_at=datetime.utcnow(),
                 subscription_expires_at=subscription_expires,
             )
@@ -254,7 +277,9 @@ class MultiTenancyManager:
             tenant.plan = PlanType(new_plan)
             tenant.subscription_expires_at = datetime.utcnow() + timedelta(days=365)
 
-            logger.info(f"Tenant upgraded: {tenant_id} ({old_plan.value} -> {new_plan})")
+            logger.info(
+                f"Tenant upgraded: {tenant_id} ({old_plan.value} -> {new_plan})"
+            )
 
             return {
                 "success": True,
@@ -267,7 +292,9 @@ class MultiTenancyManager:
             logger.error(f"Plan upgrade failed: {str(e)}")
             return {"error": str(e)}
 
-    async def check_quota(self, tenant_id: str, resource: str, amount: int = 1) -> Tuple[bool, str]:
+    async def check_quota(
+        self, tenant_id: str, resource: str, amount: int = 1
+    ) -> Tuple[bool, str]:
         """
         Check if tenant has quota for resource
 
@@ -345,7 +372,9 @@ class MultiTenancyManager:
             # Calculate usage percentages
             usage_percent = {
                 "users": (
-                    (usage.current_users / quota.max_users * 100) if quota.max_users > 0 else 0
+                    (usage.current_users / quota.max_users * 100)
+                    if quota.max_users > 0
+                    else 0
                 ),
                 "storage": (
                     (usage.storage_used_gb / quota.max_storage_gb * 100)
@@ -370,7 +399,9 @@ class MultiTenancyManager:
             logger.error(f"Usage fetch failed: {str(e)}")
             return {"error": str(e)}
 
-    async def get_isolated_data(self, tenant_id: str, resource_path: str) -> Optional[Dict]:
+    async def get_isolated_data(
+        self, tenant_id: str, resource_path: str
+    ) -> Optional[Dict]:
         """
         Get tenant-isolated data
 

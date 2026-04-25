@@ -4,14 +4,12 @@ Backend support for 3D skeleton visualization, live heatmaps, and comparisons
 Generates WebGL/Three.js compatible data
 """
 
-import asyncio
-import json
 import logging
 import math
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +105,9 @@ class ThreeDVisualizationEngine:
             ("right_shoulder", "right_hip"),
         ]
 
-        logger.info(f"3D Visualization engine initialized (max {max_history_frames} frames)")
+        logger.info(
+            f"3D Visualization engine initialized (max {max_history_frames} frames)"
+        )
 
     async def create_skeleton_visualization(self, pose_data: Dict) -> Dict[str, Any]:
         """
@@ -150,10 +150,14 @@ class ThreeDVisualizationEngine:
 
             # Maintain history limit
             if len(self.frame_history[person_id]) > self.max_history:
-                self.frame_history[person_id] = self.frame_history[person_id][-self.max_history :]
+                self.frame_history[person_id] = self.frame_history[person_id][
+                    -self.max_history :
+                ]
 
             # Update trajectory trail
-            await self._update_trajectory_trail(person_id, joints_3d.get("nose", Point3D(0, 0, 0)))
+            await self._update_trajectory_trail(
+                person_id, joints_3d.get("nose", Point3D(0, 0, 0))
+            )
 
             # Generate geometry
             geometry = self._generate_webgl_geometry(frame)
@@ -303,7 +307,9 @@ class ThreeDVisualizationEngine:
             logger.error(f"Comparison view creation failed: {str(e)}")
             return {"error": str(e)}
 
-    def _calculate_alignment_score(self, frame1: SkeletonFrame, frame2: SkeletonFrame) -> float:
+    def _calculate_alignment_score(
+        self, frame1: SkeletonFrame, frame2: SkeletonFrame
+    ) -> float:
         """
         Calculate how well two skeletons align
 
@@ -322,7 +328,9 @@ class ThreeDVisualizationEngine:
                 p1 = frame1.joints[joint_name]
                 p2 = frame2.joints[joint_name]
 
-                distance = math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2)
+                distance = math.sqrt(
+                    (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2 + (p1.z - p2.z) ** 2
+                )
 
                 total_distance += distance
                 joint_count += 1
@@ -366,7 +374,9 @@ class ThreeDVisualizationEngine:
         else:
             return "Significantly different form"
 
-    async def generate_live_heatmap(self, person_id: str, analysis_data: Dict) -> Dict[str, Any]:
+    async def generate_live_heatmap(
+        self, person_id: str, analysis_data: Dict
+    ) -> Dict[str, Any]:
         """
         Generate live joint stress heatmap
 
@@ -535,7 +545,11 @@ class VisualizationExporter:
         """
         try:
             # In production, generate proper glTF format
-            return {"format": "gltf", "model": "base64_encoded_gltf", "file_size_kb": 150}
+            return {
+                "format": "gltf",
+                "model": "base64_encoded_gltf",
+                "file_size_kb": 150,
+            }
         except Exception as e:
             logger.error(f"Export failed: {str(e)}")
             return {"error": str(e)}

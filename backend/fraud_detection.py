@@ -3,7 +3,6 @@ PHASE 2: TIER 17 - FRAUD DETECTION & ANOMALY SYSTEM
 Behavioral analysis, rule engine, ML-based detection
 """
 
-import json
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -202,14 +201,20 @@ class FraudDetectionEngine:
     ) -> UserBehaviorProfile:
         """Build a simplified baseline profile from historical actions."""
         hours = [int(item.get("hour", 0)) for item in normal_actions if "hour" in item]
-        locations = [str(item.get("location")) for item in normal_actions if item.get("location")]
-        devices = [str(item.get("device")) for item in normal_actions if item.get("device")]
+        locations = [
+            str(item.get("location")) for item in normal_actions if item.get("location")
+        ]
+        devices = [
+            str(item.get("device")) for item in normal_actions if item.get("device")
+        ]
         sessions = [int(item.get("sessions", 0)) for item in normal_actions]
 
         profile = UserBehaviorProfile(
             user_id=user_id,
             avg_login_hour=(sum(hours) / len(hours)) if hours else 0.0,
-            typical_geos=[max(set(locations), key=locations.count)] if locations else [],
+            typical_geos=(
+                [max(set(locations), key=locations.count)] if locations else []
+            ),
             typical_devices=[max(set(devices), key=devices.count)] if devices else [],
             total_sessions=sum(sessions),
         )
@@ -278,7 +283,9 @@ class FraudDetectionEngine:
         profile = self.user_profiles[user_id]
 
         # Analyze action
-        risk_level, reason = await self._analyze_action(user_id, profile, action_type, metadata)
+        risk_level, reason = await self._analyze_action(
+            user_id, profile, action_type, metadata
+        )
 
         # Log activity
         self.activity_log.append(
@@ -359,7 +366,9 @@ class FraudDetectionEngine:
             reasons.append(f"Rule violation: {rule_score} points")
 
         # 7. Behavioral anomaly
-        behavior_score = await self._check_behavioral_anomaly(user_id, profile, action_type)
+        behavior_score = await self._check_behavioral_anomaly(
+            user_id, profile, action_type
+        )
         risk_score += behavior_score
         if behavior_score > 0:
             reasons.append(f"Behavioral anomaly: {behavior_score} points")
@@ -426,7 +435,10 @@ class FraudDetectionEngine:
             for condition in rule.conditions:
                 cond_type = condition.get("type")
 
-                if cond_type == "action_type" and condition.get("value") != action_type.value:
+                if (
+                    cond_type == "action_type"
+                    and condition.get("value") != action_type.value
+                ):
                     match = False
                     break
 
@@ -460,7 +472,11 @@ class FraudDetectionEngine:
         return score
 
     async def _create_alert(
-        self, user_id: str, risk_level: FraudRiskLevel, reason: str, evidence: Dict[str, Any]
+        self,
+        user_id: str,
+        risk_level: FraudRiskLevel,
+        reason: str,
+        evidence: Dict[str, Any],
     ) -> str:
         """Create fraud alert"""
         alert_id = f"alert_{len(self.alerts) + 1}"
@@ -480,7 +496,9 @@ class FraudDetectionEngine:
             await self.block_user_async(user_id, reason)
             alert.action_taken = "blocked"
 
-        logger.warning(f"Fraud alert: {alert_id} (user={user_id}, risk={risk_level.value})")
+        logger.warning(
+            f"Fraud alert: {alert_id} (user={user_id}, risk={risk_level.value})"
+        )
         return alert_id
 
     async def block_user_async(self, user_id: str, reason: str) -> bool:
@@ -547,11 +565,13 @@ class FraudDetectionEngine:
         }
 
         # Average risk from recent alerts
-        recent_alerts = [a for a in user_alerts if (datetime.utcnow() - a.timestamp).days <= 7]
+        recent_alerts = [
+            a for a in user_alerts if (datetime.utcnow() - a.timestamp).days <= 7
+        ]
         if recent_alerts:
-            avg_risk = sum(risk_mapping.get(a.risk_level, 0) for a in recent_alerts) / len(
-                recent_alerts
-            )
+            avg_risk = sum(
+                risk_mapping.get(a.risk_level, 0) for a in recent_alerts
+            ) / len(recent_alerts)
             return avg_risk
 
         return 0.0

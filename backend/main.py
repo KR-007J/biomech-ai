@@ -9,74 +9,46 @@ import asyncio
 import json
 import logging
 import os
-import shutil
 import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import Any, Dict, List, Optional
-
-import cv2
-import numpy as np
+from typing import Any, Dict, Optional
 
 # Monitoring
 import sentry_sdk
-
 # Environment
 from dotenv import load_dotenv
-
 # FastAPI
-from fastapi import (
-    BackgroundTasks,
-    Depends,
-    FastAPI,
-    File,
-    Header,
-    HTTPException,
-    Request,
-    UploadFile,
-)
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-
 # AI & ML
 from google import genai
-from prometheus_client import REGISTRY, generate_latest
+from prometheus_client import generate_latest
 from sentry_sdk.integrations.fastapi import FastApiIntegration
-
 # Rate limiting
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.middleware.gzip import GZipMiddleware
-
 # Database
 from supabase import Client, create_client
 
 # Phase 2 modules
 from api_v2_phase2 import router as phase2_router
 from async_tasks import TaskManager, get_task_manager
-from biomechanics import get_biomechanical_analysis
 from cache import CacheManager, get_cache_manager
 from metrics import REGISTRY as METRICS_REGISTRY
 from metrics import MetricsCollector
-
 # Custom modules
 from pose_engine import PoseEngine
 from risk_engine import analyze_injury_risk
-
 # Data models
-from schemas import (
-    AnalysisResponse,
-    CoachFeedback,
-    FeedbackRequest,
-    HealthResponse,
-    MetricsData,
-    ProfileData,
-    SessionData,
-)
-from security import APIKeyManager, RequestValidator, TokenManager, get_security_headers
+from schemas import (AnalysisResponse, CoachFeedback, FeedbackRequest,
+                     HealthResponse, ProfileData, SessionData)
+from security import APIKeyManager, RequestValidator, get_security_headers
 
 # ==================== CONFIGURATION ====================
 
@@ -143,7 +115,8 @@ app.include_router(phase2_router)
 
 # ✅ CORS Configuration (Phase 1.1 - Enhanced for Phase 2)
 ALLOWED_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5000,http://localhost:8000"
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:5000,http://localhost:8000",
 ).split(",")
 
 app.add_middleware(
@@ -399,7 +372,9 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
                             confidence=0.96,
                         )
                         processing_status = "AI_AUGMENTED"
-                        MetricsCollector.record_ai_feedback("success", time.time() - start_time)
+                        MetricsCollector.record_ai_feedback(
+                            "success", time.time() - start_time
+                        )
             except TimeoutError:
                 logger.warning(f"Gemini timeout for {analysis_id}")
                 MetricsCollector.record_ai_feedback("timeout", time.time() - start_time)
@@ -424,10 +399,14 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
             },
             coach_feedback=ai_feedback,
             performance_metrics={
+                "processing_time_sec": round(duration, 3),
                 "total_processing_time": f"{round(duration, 2)}s",
                 "avg_latency_per_frame": f"{round((duration / 30) * 1000, 1) if duration > 0 else 0}ms",  # Estimated
-                "estimated_accuracy": "96.4%" if processing_status == "AI_AUGMENTED" else "85.0%",
+                "estimated_accuracy": (
+                    "96.4%" if processing_status == "AI_AUGMENTED" else "85.0%"
+                ),
                 "engine_status": processing_status,
+                "source": "live",
             },
         )
 
@@ -439,7 +418,9 @@ async def generate_feedback(request: Request, payload: FeedbackRequest):
         )
 
         # Record metrics
-        MetricsCollector.record_analysis(exercise_type, duration, risk_info["risk_level"])
+        MetricsCollector.record_analysis(
+            exercise_type, duration, risk_info["risk_level"]
+        )
 
         # Sync to database
         if supabase and user_id:
@@ -614,5 +595,8 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)), workers=int(os.getenv("WORKERS", 1))
+        app,
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", 8000)),
+        workers=int(os.getenv("WORKERS", 1)),
     )

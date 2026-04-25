@@ -3,7 +3,6 @@ TIER 6: Integration Ecosystem
 Strava, Apple Health, Google Fit, and third-party integrations
 """
 
-import asyncio
 import logging
 import uuid
 from dataclasses import dataclass, field
@@ -135,7 +134,9 @@ class IntegrationManager:
             provider_enum = IntegrationProvider(provider)
 
             # Validate credentials with provider
-            is_valid, account_info = await self._validate_credentials(provider_enum, credentials)
+            is_valid, account_info = await self._validate_credentials(
+                provider_enum, credentials
+            )
             if not is_valid:
                 return {"error": "Invalid credentials"}
 
@@ -168,7 +169,9 @@ class IntegrationManager:
         # In production, make actual API calls to validate
         return True, {"id": "external_123", "email": "user@example.com"}
 
-    async def sync_activities(self, integration_id: str, limit: int = 100) -> Dict[str, Any]:
+    async def sync_activities(
+        self, integration_id: str, limit: int = 100
+    ) -> Dict[str, Any]:
         """
         Sync activities from external provider
 
@@ -213,7 +216,9 @@ class IntegrationManager:
             integration.status = SyncStatus.CONNECTED
             integration.last_sync = datetime.utcnow()
 
-            logger.info(f"Synced {len(activities)} activities from {integration.provider.value}")
+            logger.info(
+                f"Synced {len(activities)} activities from {integration.provider.value}"
+            )
 
             return {
                 "success": True,
@@ -237,7 +242,9 @@ class IntegrationManager:
             logger.error(f"Token refresh failed: {str(e)}")
             return False
 
-    async def _fetch_activities(self, integration: IntegrationAccount, limit: int) -> List[Dict]:
+    async def _fetch_activities(
+        self, integration: IntegrationAccount, limit: int
+    ) -> List[Dict]:
         """Fetch activities from external provider"""
         try:
             # Provider-specific fetching

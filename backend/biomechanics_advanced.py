@@ -15,7 +15,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -89,8 +89,12 @@ class InverseKinematicsSolver:
         """Initialize 3D body skeleton model"""
         return {
             "pelvis": Joint("pelvis", np.array([0, 0, 0]), mass=5.0),
-            "left_hip": Joint("left_hip", np.array([-0.1, -0.2, 0]), "pelvis", mass=4.0),
-            "right_hip": Joint("right_hip", np.array([0.1, -0.2, 0]), "pelvis", mass=4.0),
+            "left_hip": Joint(
+                "left_hip", np.array([-0.1, -0.2, 0]), "pelvis", mass=4.0
+            ),
+            "right_hip": Joint(
+                "right_hip", np.array([0.1, -0.2, 0]), "pelvis", mass=4.0
+            ),
             "left_knee": Joint(
                 "left_knee",
                 np.array([-0.1, -0.5, 0]),
@@ -124,8 +128,12 @@ class InverseKinematicsSolver:
                 mass=1.5,
             ),
             "torso": Joint("torso", np.array([0, 0.3, 0]), "pelvis", mass=8.0),
-            "left_shoulder": Joint("left_shoulder", np.array([-0.25, 0.5, 0]), "torso", mass=2.0),
-            "right_shoulder": Joint("right_shoulder", np.array([0.25, 0.5, 0]), "torso", mass=2.0),
+            "left_shoulder": Joint(
+                "left_shoulder", np.array([-0.25, 0.5, 0]), "torso", mass=2.0
+            ),
+            "right_shoulder": Joint(
+                "right_shoulder", np.array([0.25, 0.5, 0]), "torso", mass=2.0
+            ),
             "left_elbow": Joint(
                 "left_elbow",
                 np.array([-0.3, 0.2, 0]),
@@ -144,7 +152,9 @@ class InverseKinematicsSolver:
             ),
         }
 
-    def solve(self, target_positions: Dict[str, Tuple[float, float, float]]) -> Dict[str, float]:
+    def solve(
+        self, target_positions: Dict[str, Tuple[float, float, float]]
+    ) -> Dict[str, float]:
         """
         Solve IK using CCD (Cyclic Coordinate Descent) algorithm
 
@@ -162,31 +172,33 @@ class InverseKinematicsSolver:
                 # Geometric IK for simple joints
                 if joint_name == "left_knee":
                     hip_y = -0.2
-                    ankle_y = -0.9
-                    knee_y = target_y
 
                     # Distance from hip to target
-                    hip_to_target = np.sqrt((target_x + 0.1) ** 2 + (target_y - hip_y) ** 2)
+                    hip_to_target = np.sqrt(
+                        (target_x + 0.1) ** 2 + (target_y - hip_y) ** 2
+                    )
                     upper_leg = 0.3
                     lower_leg = 0.4
 
                     if hip_to_target <= upper_leg + lower_leg:
                         # Law of cosines for knee angle
-                        cos_knee = (upper_leg**2 + lower_leg**2 - hip_to_target**2) / (
-                            2 * upper_leg * lower_leg
-                        )
+                        cos_knee = (
+                            upper_leg**2 + lower_leg**2 - hip_to_target**2
+                        ) / (2 * upper_leg * lower_leg)
                         cos_knee = np.clip(cos_knee, -1, 1)
                         knee_angle = np.degrees(np.arccos(cos_knee))
                         result["left_knee"] = float(np.clip(knee_angle, 0, 140))
 
                 # Similar logic for other joints
                 elif joint_name == "right_knee":
-                    hip_to_target = np.sqrt((target_x - 0.1) ** 2 + (target_y + 0.2) ** 2)
+                    hip_to_target = np.sqrt(
+                        (target_x - 0.1) ** 2 + (target_y + 0.2) ** 2
+                    )
                     upper_leg = 0.3
                     lower_leg = 0.4
-                    cos_knee = (upper_leg**2 + lower_leg**2 - hip_to_target**2) / (
-                        2 * upper_leg * lower_leg
-                    )
+                    cos_knee = (
+                        upper_leg**2 + lower_leg**2 - hip_to_target**2
+                    ) / (2 * upper_leg * lower_leg)
                     cos_knee = np.clip(cos_knee, -1, 1)
                     knee_angle = np.degrees(np.arccos(cos_knee))
                     result["right_knee"] = float(np.clip(knee_angle, 0, 140))
@@ -196,7 +208,9 @@ class InverseKinematicsSolver:
             logger.error(f"IK solve error: {e}")
             return {}
 
-    def forward_kinematics(self, joint_angles: Dict[str, float]) -> Dict[str, np.ndarray]:
+    def forward_kinematics(
+        self, joint_angles: Dict[str, float]
+    ) -> Dict[str, np.ndarray]:
         """
         Forward kinematics: given angles, compute end effector positions
 
@@ -220,12 +234,16 @@ class InverseKinematicsSolver:
                         # Knee affects ankle/foot position
                         segment_length = 0.4
                         parent_pos = positions.get(joint.parent_joint, joint.position)
-                        new_pos = parent_pos + segment_length * np.array([0, -np.cos(angle_rad), 0])
+                        new_pos = parent_pos + segment_length * np.array(
+                            [0, -np.cos(angle_rad), 0]
+                        )
                         positions[joint_name] = new_pos
                     elif "hip" in joint_name:
                         segment_length = 0.3
                         parent_pos = positions.get(joint.parent_joint, joint.position)
-                        new_pos = parent_pos + segment_length * np.array([0, -np.cos(angle_rad), 0])
+                        new_pos = parent_pos + segment_length * np.array(
+                            [0, -np.cos(angle_rad), 0]
+                        )
                         positions[joint_name] = new_pos
                     else:
                         positions[joint_name] = joint.position
@@ -243,7 +261,10 @@ class MuscleActivationModel:
     MUSCLE_REFERENCE = {
         "rectus_femoris": {"max_force": 1500, "optimal_angle": 60},  # Knee extension
         "biceps_femoris": {"max_force": 1200, "optimal_angle": 70},  # Knee flexion
-        "tibialis_anterior": {"max_force": 800, "optimal_angle": 20},  # Ankle dorsiflexion
+        "tibialis_anterior": {
+            "max_force": 800,
+            "optimal_angle": 20,
+        },  # Ankle dorsiflexion
         "gastrocnemius": {"max_force": 2000, "optimal_angle": 100},  # Plantarflexion
         "gluteus_maximus": {"max_force": 2000, "optimal_angle": 45},  # Hip extension
         "psoas_major": {"max_force": 1000, "optimal_angle": 90},  # Hip flexion
@@ -283,10 +304,16 @@ class MuscleActivationModel:
                     activation = max(0, 1 - (angle_diff / 90))  # Normalized to [0, 1]
 
                     # Force generation (Hill muscle model approximation)
-                    force = ref["max_force"] * activation * (1 - self.muscle_fatigue[muscle_name])
+                    force = (
+                        ref["max_force"]
+                        * activation
+                        * (1 - self.muscle_fatigue[muscle_name])
+                    )
 
                     # Power output (W = Force * Velocity)
-                    velocity = movement_velocity.get(self._get_relevant_joint(muscle_name), 0)
+                    velocity = movement_velocity.get(
+                        self._get_relevant_joint(muscle_name), 0
+                    )
                     power = force * velocity / 1000  # Convert to Watts
 
                     # Fatigue accumulation
@@ -343,7 +370,10 @@ class GaitAnalyzer:
 
     @staticmethod
     def detect_gait_phase(
-        left_ankle_y: float, right_ankle_y: float, left_hip_angle: float, right_hip_angle: float
+        left_ankle_y: float,
+        right_ankle_y: float,
+        left_hip_angle: float,
+        right_hip_angle: float,
     ) -> Tuple[GaitPhase, float]:
         """
         Detect current gait phase (0-100% of cycle)
@@ -358,7 +388,7 @@ class GaitAnalyzer:
             Tuple of (GaitPhase, cycle_percentage)
         """
         # Simplified gait detection based on ankle positions
-        ankle_diff = left_ankle_y - right_ankle_y
+        left_ankle_y - right_ankle_y
 
         # Determine cycle percentage based on joint angles
         cycle_pct = ((left_hip_angle + 90) / 180) * 100
@@ -450,7 +480,9 @@ class AdvancedBiomechanicsEngine:
             joint_angles.update(refined_angles)
 
             # 4. Joint torques (simplified 2D)
-            joint_torques = self._calculate_joint_torques(joint_angles, body_weight, height)
+            joint_torques = self._calculate_joint_torques(
+                joint_angles, body_weight, height
+            )
 
             # 5. Movement velocity
             movement_velocity = self._calculate_velocity(keypoints)
@@ -474,7 +506,9 @@ class AdvancedBiomechanicsEngine:
             grf = self._estimate_grf(gait_phase, body_weight)
 
             # 9. Joint loading (compression forces)
-            joint_loading = self._calculate_joint_loading(joint_angles, body_weight, grf)
+            joint_loading = self._calculate_joint_loading(
+                joint_angles, body_weight, grf
+            )
 
             # 10. Center of mass
             center_of_mass = self._calculate_center_of_mass(end_effector_positions)
@@ -485,7 +519,9 @@ class AdvancedBiomechanicsEngine:
             )
 
             # 12. Efficiency score
-            efficiency = self._calculate_efficiency(joint_angles, muscle_activations, gait_phase)
+            efficiency = self._calculate_efficiency(
+                joint_angles, muscle_activations, gait_phase
+            )
 
             # 13. Injury risk
             injury_risk = self._calculate_injury_risk_biomechanics(
@@ -518,7 +554,9 @@ class AdvancedBiomechanicsEngine:
             h = keypoints["left_hip"]
             k = keypoints["left_knee"]
             a = keypoints["left_ankle"]
-            angle = self._calculate_angle([h["x"], h["y"]], [k["x"], k["y"]], [a["x"], a["y"]])
+            angle = self._calculate_angle(
+                [h["x"], h["y"]], [k["x"], k["y"]], [a["x"], a["y"]]
+            )
             angles["left_knee"] = angle
 
         return angles
@@ -545,11 +583,15 @@ class AdvancedBiomechanicsEngine:
             if "knee" in joint:
                 mass_segment = 4.0  # kg (tibia/fibula)
                 moment_arm = 0.15  # meters
-                torques[joint] = float(mass_segment * 9.81 * moment_arm * np.sin(np.radians(angle)))
+                torques[joint] = float(
+                    mass_segment * 9.81 * moment_arm * np.sin(np.radians(angle))
+                )
             elif "hip" in joint:
                 mass_segment = 5.0
                 moment_arm = 0.1
-                torques[joint] = float(mass_segment * 9.81 * moment_arm * np.sin(np.radians(angle)))
+                torques[joint] = float(
+                    mass_segment * 9.81 * moment_arm * np.sin(np.radians(angle))
+                )
 
         return torques
 
@@ -608,7 +650,9 @@ class AdvancedBiomechanicsEngine:
         pos_array = np.array(list(positions.values()))
         return pos_array.mean(axis=0)
 
-    def _estimate_energy_expenditure(self, angles: Dict, muscles: Dict, weight: float) -> float:
+    def _estimate_energy_expenditure(
+        self, angles: Dict, muscles: Dict, weight: float
+    ) -> float:
         """Estimate energy expenditure in kcal/min"""
         # Simplified: based on muscle power output
         total_power = sum(m.power_output for m in muscles.values())
@@ -618,7 +662,9 @@ class AdvancedBiomechanicsEngine:
 
         return float(energy)
 
-    def _calculate_efficiency(self, angles: Dict, muscles: Dict, phase: GaitPhase) -> float:
+    def _calculate_efficiency(
+        self, angles: Dict, muscles: Dict, phase: GaitPhase
+    ) -> float:
         """Calculate movement efficiency (0-100)"""
         # Efficiency based on muscle activation optimization
         total_activation = sum(m.activation_level for m in muscles.values())
@@ -681,7 +727,9 @@ if __name__ == "__main__":
         "right_ankle": {"x": 0.6, "y": 0.7, "confidence": 0.91},
     }
 
-    result = engine.analyze(sample_keypoints, datetime.utcnow(), body_weight=70, height=1.75)
+    result = engine.analyze(
+        sample_keypoints, datetime.utcnow(), body_weight=70, height=1.75
+    )
 
     print(f"Gait Phase: {result.gait_phase}")
     print(f"Efficiency: {result.efficiency_score:.1f}%")

@@ -12,13 +12,12 @@ Advanced temporal analysis for biomechanical data:
 
 import json
 import logging
-from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import numpy as np
-import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -105,15 +104,21 @@ class TimeSeriesAnalyzer:
 
         self.data_history[metric_name].append(
             TimeSeriesPoint(
-                timestamp=timestamp or datetime.utcnow(), value=value, confidence=confidence
+                timestamp=timestamp or datetime.utcnow(),
+                value=value,
+                confidence=confidence,
             )
         )
 
         # Keep only recent data
         if len(self.data_history[metric_name]) > self.window_size * 2:
-            self.data_history[metric_name] = self.data_history[metric_name][-self.window_size :]
+            self.data_history[metric_name] = self.data_history[metric_name][
+                -self.window_size :
+            ]
 
-    def get_trend(self, metric_name: str, window: Optional[int] = None) -> Optional[TrendAnalysis]:
+    def get_trend(
+        self, metric_name: str, window: Optional[int] = None
+    ) -> Optional[TrendAnalysis]:
         """
         Analyze trend for metric
 
@@ -142,7 +147,7 @@ class TimeSeriesAnalyzer:
             # Linear regression
             coeffs = np.polyfit(x, values, 1)
             slope = coeffs[0]
-            intercept = coeffs[1]
+            coeffs[1]
 
             # Fit quality
             y_pred = np.polyval(coeffs, x)
@@ -217,7 +222,9 @@ class TimeSeriesAnalyzer:
                     if z_score > threshold:
                         expected = mean
                         severity = (
-                            "critical" if z_score > 4 else "high" if z_score > 3 else "medium"
+                            "critical"
+                            if z_score > 4
+                            else "high" if z_score > 3 else "medium"
                         )
                         anomalies.append(
                             Anomaly(
@@ -238,7 +245,9 @@ class TimeSeriesAnalyzer:
                     predictions = iso_forest.fit_predict(values)
 
                     mean = np.mean(values)
-                    for i, (pred, point, value) in enumerate(zip(predictions, points, values)):
+                    for i, (pred, point, value) in enumerate(
+                        zip(predictions, points, values)
+                    ):
                         if pred == -1:  # Anomaly
                             deviation = abs((value[0] - mean) / (np.std(values) + 1e-6))
                             severity = (
@@ -268,7 +277,9 @@ class TimeSeriesAnalyzer:
                     predictions = lof.fit_predict(values)
 
                     mean = np.mean(values)
-                    for i, (pred, point, value) in enumerate(zip(predictions, points, values)):
+                    for i, (pred, point, value) in enumerate(
+                        zip(predictions, points, values)
+                    ):
                         if pred == -1:  # Anomaly
                             deviation = abs((value[0] - mean) / (np.std(values) + 1e-6))
                             severity = (
@@ -300,7 +311,9 @@ class TimeSeriesAnalyzer:
             logger.error(f"Anomaly detection error: {e}")
             return []
 
-    def get_correlation(self, metric_1: str, metric_2: str) -> Optional[CorrelationPair]:
+    def get_correlation(
+        self, metric_1: str, metric_2: str
+    ) -> Optional[CorrelationPair]:
         """
         Calculate correlation between two metrics
 
@@ -370,7 +383,9 @@ class TimeSeriesAnalyzer:
             "median": float(np.median(values)),
             "q25": float(np.percentile(values, 25)),
             "q75": float(np.percentile(values, 75)),
-            "skewness": float((np.mean(values) - np.median(values)) / (np.std(values) + 1e-6)),
+            "skewness": float(
+                (np.mean(values) - np.median(values)) / (np.std(values) + 1e-6)
+            ),
         }
 
 
@@ -387,7 +402,9 @@ class ComparativeAnalyticsEngine:
             self.user_benchmarks[user_id] = {}
         self.user_benchmarks[user_id].update(metrics)
 
-    def add_cohort_data(self, cohort_name: str, metric_name: str, values: List[float]) -> None:
+    def add_cohort_data(
+        self, cohort_name: str, metric_name: str, values: List[float]
+    ) -> None:
         """Add cohort benchmark data"""
         if cohort_name not in self.cohort_data:
             self.cohort_data[cohort_name] = {}
@@ -424,7 +441,9 @@ class ComparativeAnalyticsEngine:
             return None
 
         # Calculate percentile
-        percentile = (np.sum(np.array(cohort_values) <= user_value) / len(cohort_values)) * 100
+        percentile = (
+            np.sum(np.array(cohort_values) <= user_value) / len(cohort_values)
+        ) * 100
 
         return {
             "user_value": float(user_value),
@@ -432,7 +451,9 @@ class ComparativeAnalyticsEngine:
             "cohort_std": float(np.std(cohort_values)),
             "percentile": float(percentile),
             "rank": (
-                f"Top {100 - percentile:.0f}%" if percentile > 50 else f"Bottom {percentile:.0f}%"
+                f"Top {100 - percentile:.0f}%"
+                if percentile > 50
+                else f"Bottom {percentile:.0f}%"
             ),
             "z_score": float(
                 (user_value - np.mean(cohort_values)) / (np.std(cohort_values) + 1e-6)
@@ -447,7 +468,9 @@ class ComparativeAnalyticsEngine:
 
         for metric in metrics:
             user_val = self.user_benchmarks.get(user_id, {}).get(metric)
-            peer_vals = [self.user_benchmarks.get(uid, {}).get(metric) for uid in similar_users]
+            peer_vals = [
+                self.user_benchmarks.get(uid, {}).get(metric) for uid in similar_users
+            ]
             peer_vals = [v for v in peer_vals if v is not None]
 
             if user_val is not None and peer_vals:
@@ -497,7 +520,9 @@ class MovementSignatureGenerator:
 
     @staticmethod
     def detect_new_patterns(
-        historical_signatures: List[str], new_signature: str, similarity_threshold: float = 0.95
+        historical_signatures: List[str],
+        new_signature: str,
+        similarity_threshold: float = 0.95,
     ) -> bool:
         """
         Detect if new movement is novel

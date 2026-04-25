@@ -4,10 +4,6 @@ Integration Tests - Phase 3.2 Testing Framework
 Tests for end-to-end workflows and component interactions.
 """
 
-import asyncio
-import time
-from unittest.mock import MagicMock, patch
-
 import pytest
 
 
@@ -15,7 +11,9 @@ class TestEndToEndAnalysisFlow:
     """End-to-end biomechanical analysis flow tests"""
 
     @pytest.mark.integration
-    def test_complete_analysis_workflow(self, client, sample_feedback_request, mock_supabase):
+    def test_complete_analysis_workflow(
+        self, client, sample_feedback_request, mock_supabase
+    ):
         """✅ Complete analysis workflow succeeds"""
         # Step 1: Submit analyze request
         response = client.post("/generate-feedback", json=sample_feedback_request)
@@ -65,7 +63,7 @@ class TestCacheIntegration:
         response1 = client.post("/generate-feedback", json=sample_feedback_request)
         assert response1.status_code == 200
         data1 = response1.json()
-        time1 = data1["performance_metrics"]["processing_time_sec"]
+        data1["performance_metrics"]["processing_time_sec"]
 
         # Second request - cache hit (should be faster)
         response2 = client.post("/generate-feedback", json=sample_feedback_request)
@@ -98,12 +96,20 @@ class TestMultipleUsers:
     def test_different_users_separate_caches(self, client, sample_metrics_data):
         """✅ Different users have separate cache entries"""
         # User 1 request
-        request1 = {"metrics": sample_metrics_data, "exercise_type": "squat", "user_id": "user-1"}
+        request1 = {
+            "metrics": sample_metrics_data,
+            "exercise_type": "squat",
+            "user_id": "user-1",
+        }
         response1 = client.post("/generate-feedback", json=request1)
         assert response1.status_code == 200
 
         # User 2 request
-        request2 = {"metrics": sample_metrics_data, "exercise_type": "squat", "user_id": "user-2"}
+        request2 = {
+            "metrics": sample_metrics_data,
+            "exercise_type": "squat",
+            "user_id": "user-2",
+        }
         response2 = client.post("/generate-feedback", json=request2)
         assert response2.status_code == 200
 

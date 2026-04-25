@@ -6,7 +6,7 @@ Cohort analysis, retention, funnel analysis, predictive segments
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 
@@ -130,7 +130,9 @@ class AdvancedAnalyticsEngine:
         """Register user"""
         if user_id not in self.users:
             self.users[user_id] = User(
-                user_id=user_id, created_at=datetime.utcnow(), attributes=attributes or {}
+                user_id=user_id,
+                created_at=datetime.utcnow(),
+                attributes=attributes or {},
             )
             logger.debug(f"User registered: {user_id}")
             return True
@@ -204,20 +206,31 @@ class AdvancedAnalyticsEngine:
                 day_buckets[days_since].add(event.user_id)
 
         # Calculate retention rates
-        total_users = len(cohort_users)
+        len(cohort_users)
         active_day0 = len(day_buckets.get(0, set()))
 
         if active_day0 > 0:
             metrics.day0_retention = 100.0
-            metrics.day1_retention = (len(day_buckets.get(1, set())) / active_day0) * 100
-            metrics.day7_retention = (len(day_buckets.get(7, set())) / active_day0) * 100
-            metrics.day30_retention = (len(day_buckets.get(30, set())) / active_day0) * 100
-            metrics.day90_retention = (len(day_buckets.get(90, set())) / active_day0) * 100
+            metrics.day1_retention = (
+                len(day_buckets.get(1, set())) / active_day0
+            ) * 100
+            metrics.day7_retention = (
+                len(day_buckets.get(7, set())) / active_day0
+            ) * 100
+            metrics.day30_retention = (
+                len(day_buckets.get(30, set())) / active_day0
+            ) * 100
+            metrics.day90_retention = (
+                len(day_buckets.get(90, set())) / active_day0
+            ) * 100
 
         return metrics
 
     async def analyze_funnel(
-        self, funnel_name: str, steps: List[tuple[str, str]], cohort_id: Optional[str] = None
+        self,
+        funnel_name: str,
+        steps: List[tuple[str, str]],
+        cohort_id: Optional[str] = None,
     ) -> List[FunnelStep]:
         """Analyze conversion funnel"""
         filter_users = None
@@ -254,7 +267,9 @@ class AdvancedAnalyticsEngine:
         logger.info(f"Funnel analyzed: {funnel_name}")
         return funnel_result
 
-    async def create_segment(self, segment_name: str, conditions: List[Dict[str, Any]]) -> str:
+    async def create_segment(
+        self, segment_name: str, conditions: List[Dict[str, Any]]
+    ) -> str:
         """Create dynamic user segment"""
         segment_users = set(self.users.keys())
 
@@ -301,7 +316,9 @@ class AdvancedAnalyticsEngine:
             return {}
 
         users_list = list(cohort.users)
-        event_count = sum(1 for e in self.events + self.event_buffer if e.user_id in cohort.users)
+        event_count = sum(
+            1 for e in self.events + self.event_buffer if e.user_id in cohort.users
+        )
 
         avg_ltv = 0.0
         if users_list:
@@ -320,7 +337,12 @@ class AdvancedAnalyticsEngine:
     async def list_cohorts(self) -> List[Dict[str, Any]]:
         """List all cohorts"""
         return [
-            {"cohort_id": c.cohort_id, "name": c.name, "size": c.size, "type": c.cohort_type.value}
+            {
+                "cohort_id": c.cohort_id,
+                "name": c.name,
+                "size": c.size,
+                "type": c.cohort_type.value,
+            }
             for c in self.cohorts.values()
         ]
 
@@ -346,7 +368,10 @@ def _compat_calculate_retention(
     self, cohort_id: str, users: List[Dict[str, Any]], days: List[int]
 ) -> Dict[str, float]:
     total = len(users) or 1
-    return {f"day_{day}": round(max(0.0, 1 - (day / (max(days) + total))), 2) for day in days}
+    return {
+        f"day_{day}": round(max(0.0, 1 - (day / (max(days) + total))), 2)
+        for day in days
+    }
 
 
 def _compat_analyze_funnel(

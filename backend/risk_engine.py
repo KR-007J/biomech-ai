@@ -33,12 +33,16 @@ def analyze_injury_risk(analysis_data: Dict[str, Any]) -> Dict[str, Any]:
     # Calculate risk from deviations
     for joint, deviation in deviations.items():
         if abs(deviation) > 0:
-            base_joint = "knee" if "knee" in joint else ("elbow" if "elbow" in joint else "hip")
+            base_joint = (
+                "knee" if "knee" in joint else ("elbow" if "elbow" in joint else "hip")
+            )
             penalty = abs(deviation) * WEIGHTS.get(base_joint, 1.0)
             risk_score += penalty
 
             if abs(deviation) > 20:
-                issues.append(f"Critical {joint.replace('_', ' ')} deviation: {deviation}°")
+                issues.append(
+                    f"Critical {joint.replace('_', ' ')} deviation: {deviation}°"
+                )
             elif abs(deviation) > 10:
                 issues.append(f"Notable {joint.replace('_', ' ')} strain: {deviation}°")
 

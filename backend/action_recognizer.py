@@ -11,10 +11,9 @@ Automatically detect and classify exercises/movements:
 """
 
 import logging
-from dataclasses import asdict, dataclass
-from datetime import datetime
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -79,7 +78,9 @@ class MovementFeatureExtractor:
     """Extract features for action recognition"""
 
     @staticmethod
-    def extract_joint_angles(keypoints: Dict[str, Dict[str, float]]) -> Dict[str, float]:
+    def extract_joint_angles(
+        keypoints: Dict[str, Dict[str, float]],
+    ) -> Dict[str, float]:
         """Extract key joint angles"""
         angles = {}
 
@@ -91,30 +92,42 @@ class MovementFeatureExtractor:
 
         if all(k in keypoints for k in ["right_hip", "right_knee", "right_ankle"]):
             angles["right_knee"] = MovementFeatureExtractor._angle_between_points(
-                keypoints["right_hip"], keypoints["right_knee"], keypoints["right_ankle"]
+                keypoints["right_hip"],
+                keypoints["right_knee"],
+                keypoints["right_ankle"],
             )
 
         # Hip angle
         if all(k in keypoints for k in ["left_shoulder", "left_hip", "left_knee"]):
             angles["left_hip"] = MovementFeatureExtractor._angle_between_points(
-                keypoints["left_shoulder"], keypoints["left_hip"], keypoints["left_knee"]
+                keypoints["left_shoulder"],
+                keypoints["left_hip"],
+                keypoints["left_knee"],
             )
 
         # Elbow angle
         if all(k in keypoints for k in ["left_shoulder", "left_elbow", "left_wrist"]):
             angles["left_elbow"] = MovementFeatureExtractor._angle_between_points(
-                keypoints["left_shoulder"], keypoints["left_elbow"], keypoints["left_wrist"]
+                keypoints["left_shoulder"],
+                keypoints["left_elbow"],
+                keypoints["left_wrist"],
             )
 
         # Similar for right side
         if all(k in keypoints for k in ["right_shoulder", "right_hip", "right_knee"]):
             angles["right_hip"] = MovementFeatureExtractor._angle_between_points(
-                keypoints["right_shoulder"], keypoints["right_hip"], keypoints["right_knee"]
+                keypoints["right_shoulder"],
+                keypoints["right_hip"],
+                keypoints["right_knee"],
             )
 
-        if all(k in keypoints for k in ["right_shoulder", "right_elbow", "right_wrist"]):
+        if all(
+            k in keypoints for k in ["right_shoulder", "right_elbow", "right_wrist"]
+        ):
             angles["right_elbow"] = MovementFeatureExtractor._angle_between_points(
-                keypoints["right_shoulder"], keypoints["right_elbow"], keypoints["right_wrist"]
+                keypoints["right_shoulder"],
+                keypoints["right_elbow"],
+                keypoints["right_wrist"],
             )
 
         return angles
@@ -131,7 +144,9 @@ class MovementFeatureExtractor:
         return angle
 
     @staticmethod
-    def extract_body_position(keypoints: Dict[str, Dict[str, float]]) -> Dict[str, float]:
+    def extract_body_position(
+        keypoints: Dict[str, Dict[str, float]],
+    ) -> Dict[str, float]:
         """Extract body position features"""
         features = {}
 
@@ -176,14 +191,22 @@ class MovementFeatureExtractor:
 
         # Knee velocity
         if "left_knee" in prev_keypoints and "left_knee" in curr_keypoints:
-            knee_x_vel = curr_keypoints["left_knee"]["x"] - prev_keypoints["left_knee"]["x"]
-            knee_y_vel = curr_keypoints["left_knee"]["y"] - prev_keypoints["left_knee"]["y"]
+            knee_x_vel = (
+                curr_keypoints["left_knee"]["x"] - prev_keypoints["left_knee"]["x"]
+            )
+            knee_y_vel = (
+                curr_keypoints["left_knee"]["y"] - prev_keypoints["left_knee"]["y"]
+            )
             features["knee_velocity"] = np.sqrt(knee_x_vel**2 + knee_y_vel**2)
 
         # Hip velocity
         if "left_hip" in prev_keypoints and "left_hip" in curr_keypoints:
-            hip_x_vel = curr_keypoints["left_hip"]["x"] - prev_keypoints["left_hip"]["x"]
-            hip_y_vel = curr_keypoints["left_hip"]["y"] - prev_keypoints["left_hip"]["y"]
+            hip_x_vel = (
+                curr_keypoints["left_hip"]["x"] - prev_keypoints["left_hip"]["x"]
+            )
+            hip_y_vel = (
+                curr_keypoints["left_hip"]["y"] - prev_keypoints["left_hip"]["y"]
+            )
             features["hip_velocity"] = np.sqrt(hip_x_vel**2 + hip_y_vel**2)
 
         # Acceleration (change in velocity)
@@ -191,8 +214,16 @@ class MovementFeatureExtractor:
             prev2_keypoints = keypoints_history[-3]
             if "left_knee" in prev2_keypoints and "left_knee" in prev_keypoints:
                 prev_vel = np.sqrt(
-                    (prev_keypoints["left_knee"]["x"] - prev2_keypoints["left_knee"]["x"]) ** 2
-                    + (prev_keypoints["left_knee"]["y"] - prev2_keypoints["left_knee"]["y"]) ** 2
+                    (
+                        prev_keypoints["left_knee"]["x"]
+                        - prev2_keypoints["left_knee"]["x"]
+                    )
+                    ** 2
+                    + (
+                        prev_keypoints["left_knee"]["y"]
+                        - prev2_keypoints["left_knee"]["y"]
+                    )
+                    ** 2
                 )
                 curr_vel = features.get("knee_velocity", 0)
                 features["knee_acceleration"] = curr_vel - prev_vel
@@ -285,7 +316,9 @@ class ActionClassifier:
             },
         }
 
-    def classify_action(self, keypoints: Dict[str, Dict[str, float]]) -> Tuple[ExerciseType, float]:
+    def classify_action(
+        self, keypoints: Dict[str, Dict[str, float]]
+    ) -> Tuple[ExerciseType, float]:
         """
         Classify current action
 
@@ -366,7 +399,10 @@ class ActionClassifier:
             score += 1.0 * 0.3
             weight_sum += 0.3
 
-        if characteristics.get("continuous_motion") and motion.get("knee_velocity", 0) > 0.05:
+        if (
+            characteristics.get("continuous_motion")
+            and motion.get("knee_velocity", 0) > 0.05
+        ):
             score += 1.0 * 0.2
             weight_sum += 0.2
 
@@ -375,7 +411,9 @@ class ActionClassifier:
 
         return 0.0
 
-    def detect_phase(self, angles: Dict[str, float], motion: Dict[str, float]) -> MovementPhase:
+    def detect_phase(
+        self, angles: Dict[str, float], motion: Dict[str, float]
+    ) -> MovementPhase:
         """Detect current phase of movement"""
         # Simplified phase detection
         velocity = motion.get("knee_velocity", 0)

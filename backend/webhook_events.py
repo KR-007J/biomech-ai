@@ -7,7 +7,7 @@ import hashlib
 import hmac
 import json
 import logging
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
@@ -61,7 +61,11 @@ class Event:
 
     def to_dict(self) -> Dict:
         """Convert to dictionary"""
-        event_type = self.event_type.value if hasattr(self.event_type, "value") else self.event_type
+        event_type = (
+            self.event_type.value
+            if hasattr(self.event_type, "value")
+            else self.event_type
+        )
         return {
             "event_id": self.event_id,
             "event_type": event_type,
@@ -132,7 +136,9 @@ class EventSystem:
         self.deliveries: Dict[str, WebhookDelivery] = {}
         self.subscribers: Dict[EventType, List[Callable]] = {}
         self.dead_letter_queue: List[Event] = []
-        self.circuit_breakers: Dict[str, Dict] = {}  # webhook_id -> {failures, last_failure_time}
+        self.circuit_breakers: Dict[str, Dict] = (
+            {}
+        )  # webhook_id -> {failures, last_failure_time}
         self.max_events_history = max_events
         self.circuit_breaker_threshold = 5  # failures before opening circuit
         self.circuit_breaker_timeout = 300  # seconds
@@ -145,7 +151,9 @@ class EventSystem:
         self.events.append(event)
 
         event_type_value = (
-            event.event_type.value if hasattr(event.event_type, "value") else event.event_type
+            event.event_type.value
+            if hasattr(event.event_type, "value")
+            else event.event_type
         )
         logger.info(f"Event published: {event_type_value} (id={event.event_id})")
 
@@ -193,10 +201,16 @@ class EventSystem:
                 except Exception:
                     normalized_events.append(event)
         webhook = Webhook(
-            url=url, events=normalized_events, user_id=user_id, secret=secret or str(uuid4())
+            url=url,
+            events=normalized_events,
+            user_id=user_id,
+            secret=secret or str(uuid4()),
         )
         self.webhooks[webhook.webhook_id] = webhook
-        self.circuit_breakers[webhook.webhook_id] = {"failures": 0, "last_failure_time": None}
+        self.circuit_breakers[webhook.webhook_id] = {
+            "failures": 0,
+            "last_failure_time": None,
+        }
 
         logger.info(f"Webhook registered: {webhook.webhook_id} -> {url}")
         return webhook.webhook_id
@@ -220,7 +234,7 @@ class EventSystem:
             for w in self.webhooks.values()
             if w.active
             and event_type in w.events
-            and self._is_circuit_breaker_open(w.webhook_id) == False
+            and not self._is_circuit_breaker_open(w.webhook_id)
         ]
 
     def _is_circuit_breaker_open(self, webhook_id: str) -> bool:
@@ -243,7 +257,9 @@ class EventSystem:
 
     async def _queue_webhook_delivery(self, webhook: Webhook, event: Event):
         """Queue webhook delivery"""
-        delivery = WebhookDelivery(webhook_id=webhook.webhook_id, event_id=event.event_id)
+        delivery = WebhookDelivery(
+            webhook_id=webhook.webhook_id, event_id=event.event_id
+        )
         self.deliveries[delivery.delivery_id] = delivery
 
         # Attempt delivery
@@ -259,10 +275,12 @@ class EventSystem:
         try:
             # Create signed payload
             payload = json.dumps(event.to_dict())
-            signature = self._create_signature(payload, webhook.secret)
+            self._create_signature(payload, webhook.secret)
 
             # Simulate HTTP delivery (in real app, use aiohttp)
-            logger.info(f"Webhook delivery: {webhook.url} (attempt {delivery.attempts})")
+            logger.info(
+                f"Webhook delivery: {webhook.url} (attempt {delivery.attempts})"
+            )
 
             # Example: delivery would happen here with aiohttp
             # For now, assume success
@@ -302,11 +320,16 @@ class EventSystem:
                 event_copy = Event(
                     event_id=delivery.event_id,
                     event_type=event.event_type,
-                    data={"webhook_id": webhook.webhook_id, "delivery_id": delivery.delivery_id},
+                    data={
+                        "webhook_id": webhook.webhook_id,
+                        "delivery_id": delivery.delivery_id,
+                    },
                 )
                 self.dead_letter_queue.append(event_copy)
 
-                logger.error(f"Webhook delivery failed permanently: {delivery.delivery_id}")
+                logger.error(
+                    f"Webhook delivery failed permanently: {delivery.delivery_id}"
+                )
 
     def _create_signature(self, payload: str, secret: str) -> str:
         """Create HMAC-SHA256 signature for webhook"""
@@ -345,7 +368,9 @@ class EventSystem:
                 self.circuit_breakers[webhook_id]["failures"] = 0
                 return True
 
-    async def verify_webhook_signature(self, payload: str, signature: str, secret: str) -> bool:
+    async def verify_webhook_signature(
+        self, payload: str, signature: str, secret: str
+    ) -> bool:
         """Verify webhook signature"""
         expected_signature = self._create_signature(payload, secret)
         return hmac.compare_digest(signature, expected_signature)
@@ -384,7 +409,9 @@ class EventSystem:
         if webhook := self.webhooks.get(webhook_id):
             total_attempts = webhook.success_count + webhook.failure_count
             success_rate = (
-                (webhook.success_count / total_attempts * 100) if total_attempts > 0 else 0
+                (webhook.success_count / total_attempts * 100)
+                if total_attempts > 0
+                else 0
             )
 
             return {
@@ -395,7 +422,9 @@ class EventSystem:
                 "failure_count": webhook.failure_count,
                 "success_rate": success_rate,
                 "last_triggered": (
-                    webhook.last_triggered.isoformat() if webhook.last_triggered else None
+                    webhook.last_triggered.isoformat()
+                    if webhook.last_triggered
+                    else None
                 ),
                 "circuit_breaker_open": self._is_circuit_breaker_open(webhook_id),
             }
@@ -422,10 +451,14 @@ class EventFactory:
     @staticmethod
     def user_created(user_id: str, email: str) -> Event:
         """User created event"""
-        return Event(event_type=EventType.USER_CREATED, user_id=user_id, data={"email": email})
+        return Event(
+            event_type=EventType.USER_CREATED, user_id=user_id, data={"email": email}
+        )
 
     @staticmethod
-    def session_completed(user_id: str, session_id: str, duration_seconds: int) -> Event:
+    def session_completed(
+        user_id: str, session_id: str, duration_seconds: int
+    ) -> Event:
         """Session completed event"""
         return Event(
             event_type=EventType.SESSION_COMPLETED,
@@ -446,7 +479,9 @@ class EventFactory:
         )
 
     @staticmethod
-    def achievement_unlocked(user_id: str, achievement_id: str, achievement_name: str) -> Event:
+    def achievement_unlocked(
+        user_id: str, achievement_id: str, achievement_name: str
+    ) -> Event:
         """Achievement unlocked event"""
         return Event(
             event_type=EventType.ACHIEVEMENT_UNLOCKED,

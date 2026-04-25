@@ -6,10 +6,9 @@ and operational health tracking.
 """
 
 import logging
-import time
-from typing import Any, Dict
 
-from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, Info
+from prometheus_client import (CollectorRegistry, Counter, Gauge, Histogram,
+                               Info)
 
 logger = logging.getLogger(__name__)
 
@@ -101,19 +100,28 @@ cache_hits = Counter(
 )
 
 cache_misses = Counter(
-    "biomech_cache_misses_total", "Total cache misses", ["cache_type"], registry=REGISTRY
+    "biomech_cache_misses_total",
+    "Total cache misses",
+    ["cache_type"],
+    registry=REGISTRY,
 )
 
 # Gauge: Cache size in bytes
 cache_size = Gauge(
-    "biomech_cache_size_bytes", "Current cache size in bytes", ["cache_type"], registry=REGISTRY
+    "biomech_cache_size_bytes",
+    "Current cache size in bytes",
+    ["cache_type"],
+    registry=REGISTRY,
 )
 
 # Counter: Cache operations
 cache_operations = Counter(
     "biomech_cache_operations_total",
     "Total cache operations",
-    ["operation", "status"],  # operation: 'set', 'get', 'delete'; status: 'success', 'failed'
+    [
+        "operation",
+        "status",
+    ],  # operation: 'set', 'get', 'delete'; status: 'success', 'failed'
     registry=REGISTRY,
 )
 
@@ -142,13 +150,19 @@ db_query_duration = Histogram(
 errors_total = Counter(
     "biomech_errors_total",
     "Total errors by type",
-    ["error_type", "endpoint"],  # error_type: 'validation', 'timeout', 'rate_limit', 'server'
+    [
+        "error_type",
+        "endpoint",
+    ],  # error_type: 'validation', 'timeout', 'rate_limit', 'server'
     registry=REGISTRY,
 )
 
 # Counter: 4xx and 5xx status codes
 http_errors = Counter(
-    "biomech_http_errors_total", "HTTP errors by status code", ["status_code"], registry=REGISTRY
+    "biomech_http_errors_total",
+    "HTTP errors by status code",
+    ["status_code"],
+    registry=REGISTRY,
 )
 
 # ==================== BACKGROUND TASK METRICS ====================
@@ -206,7 +220,10 @@ supabase_operations = Counter(
 
 # Counter: Rate limit hits
 rate_limit_hits = Counter(
-    "biomech_rate_limit_hits_total", "Total rate limit violations", ["endpoint"], registry=REGISTRY
+    "biomech_rate_limit_hits_total",
+    "Total rate limit violations",
+    ["endpoint"],
+    registry=REGISTRY,
 )
 
 # ==================== APPLICATION INFO ====================

@@ -7,9 +7,9 @@ import logging
 import math
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -298,10 +298,14 @@ class SportsScienceEngine:
 
             # Calculate angles
             hip_angle = self._calculate_joint_angle(
-                landmarks.get("left_hip"), landmarks.get("left_knee"), landmarks.get("left_ankle")
+                landmarks.get("left_hip"),
+                landmarks.get("left_knee"),
+                landmarks.get("left_ankle"),
             )
             knee_angle = self._calculate_joint_angle(
-                landmarks.get("left_hip"), landmarks.get("left_knee"), landmarks.get("left_ankle")
+                landmarks.get("left_hip"),
+                landmarks.get("left_knee"),
+                landmarks.get("left_ankle"),
             )
             ankle_angle = self._calculate_joint_angle(
                 landmarks.get("left_knee"),
@@ -422,7 +426,11 @@ class SportsScienceEngine:
 
     def _estimate_grf(self, pose_data: Dict) -> Dict[str, float]:
         """Estimate ground reaction forces"""
-        return {"vertical": 120.0, "braking": 25.0, "propulsive": 25.0}  # % of body weight
+        return {
+            "vertical": 120.0,
+            "braking": 25.0,
+            "propulsive": 25.0,
+        }  # % of body weight
 
     def _calculate_symmetry(self, landmarks: Dict) -> float:
         """Calculate left-right symmetry (0-100)"""
@@ -430,9 +438,17 @@ class SportsScienceEngine:
 
     def _detect_gait_phases(self, pose_data: Dict) -> List[str]:
         """Detect gait cycle phases"""
-        return ["heel_strike", "loading_response", "mid_stance", "terminal_stance", "pre_swing"]
+        return [
+            "heel_strike",
+            "loading_response",
+            "mid_stance",
+            "terminal_stance",
+            "pre_swing",
+        ]
 
-    async def _interpret_gait(self, analysis: GaitAnalysisData, sport: str) -> Dict[str, Any]:
+    async def _interpret_gait(
+        self, analysis: GaitAnalysisData, sport: str
+    ) -> Dict[str, Any]:
         """Interpret gait analysis results"""
         interpretations = []
 
@@ -443,7 +459,9 @@ class SportsScienceEngine:
                 if analysis.cadence_steps_per_min < standard.poor_value:
                     interpretations.append("Cadence too low - may reduce efficiency")
                 elif analysis.cadence_steps_per_min > standard.elite_value:
-                    interpretations.append("Cadence excellent - high running efficiency")
+                    interpretations.append(
+                        "Cadence excellent - high running efficiency"
+                    )
 
         if analysis.symmetry_index < 90:
             interpretations.append(
@@ -466,7 +484,9 @@ class SportsScienceEngine:
         try:
             standards = self.standards.get(sport, [])
 
-            filtered = [s for s in standards if s.age_group == age_group and s.gender == gender]
+            filtered = [
+                s for s in standards if s.age_group == age_group and s.gender == gender
+            ]
 
             return {
                 "sport": sport,
@@ -485,7 +505,9 @@ class SportsScienceEngine:
             logger.error(f"Standards fetch failed: {str(e)}")
             return {"error": str(e)}
 
-    async def enable_accessibility_feature(self, user_id: str, feature: str) -> Dict[str, bool]:
+    async def enable_accessibility_feature(
+        self, user_id: str, feature: str
+    ) -> Dict[str, bool]:
         """Enable accessibility feature"""
         try:
             # In production, store user preferences

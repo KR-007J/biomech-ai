@@ -15,7 +15,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, Field
 
 from unified_analyzer import UnifiedBiomechanicsAnalyzer
@@ -118,10 +118,14 @@ async def predict_injury_risk(request: InjuryPredictionRequest) -> Dict[str, Any
     Uses LSTM on historical session data to forecast injury probability
     """
     try:
-        prediction = analyzer.injury_tracker.get_prediction(request.user_id, request.weeks_ahead)
+        prediction = analyzer.injury_tracker.get_prediction(
+            request.user_id, request.weeks_ahead
+        )
 
         if not prediction:
-            raise HTTPException(status_code=404, detail="Insufficient data for prediction")
+            raise HTTPException(
+                status_code=404, detail="Insufficient data for prediction"
+            )
 
         return {
             "success": True,
@@ -134,7 +138,9 @@ async def predict_injury_risk(request: InjuryPredictionRequest) -> Dict[str, Any
                 "contributing_factors": prediction.contributing_factors,
                 "recommendations": prediction.recommendations,
                 "next_prediction": (
-                    prediction.next_prediction.isoformat() if prediction.next_prediction else None
+                    prediction.next_prediction.isoformat()
+                    if prediction.next_prediction
+                    else None
                 ),
             },
         }
@@ -206,14 +212,18 @@ async def get_trends(user_id: str, metric: str, days: int = 30) -> Dict[str, Any
 
 
 @router.post("/analytics/anomalies")
-async def detect_anomalies(user_id: str, metric: str, method: str = "zscore") -> Dict[str, Any]:
+async def detect_anomalies(
+    user_id: str, metric: str, method: str = "zscore"
+) -> Dict[str, Any]:
     """
     Detect anomalies in time series
 
     Supports: zscore, isolation_forest, lof
     """
     try:
-        anomalies = analyzer.analytics.detect_anomalies(metric, method=method, threshold=2.5)
+        anomalies = analyzer.analytics.detect_anomalies(
+            metric, method=method, threshold=2.5
+        )
 
         return {
             "success": True,
@@ -266,7 +276,9 @@ async def generate_report(request: ReportRequest) -> Dict[str, Any]:
             }
 
             report_data = analyzer.report_generator.generate_session_report(
-                user_id=request.user_id, session_data=aggregated, analysis_results=aggregated
+                user_id=request.user_id,
+                session_data=aggregated,
+                analysis_results=aggregated,
             )
 
             return {"success": True, "report": report_data}
@@ -278,7 +290,9 @@ async def generate_report(request: ReportRequest) -> Dict[str, Any]:
             )
 
             report_data = analyzer.report_generator.generate_trend_report(
-                user_id=request.user_id, historical_data=[], trend_analysis={}  # Would load from DB
+                user_id=request.user_id,
+                historical_data=[],
+                trend_analysis={},  # Would load from DB
             )
 
             return {"success": True, "report": report_data}
@@ -352,7 +366,9 @@ async def track_multiple_people(request: MultiPersonAnalysisRequest) -> Dict[str
     Real-time multi-person detection and re-identification
     """
     try:
-        tracked = analyzer.tracker.update(request.detected_persons, request.frame_timestamp)
+        tracked = analyzer.tracker.update(
+            request.detected_persons, request.frame_timestamp
+        )
 
         return {
             "success": True,
@@ -366,17 +382,23 @@ async def track_multiple_people(request: MultiPersonAnalysisRequest) -> Dict[str
 
 
 @router.post("/group-analysis/sync")
-async def analyze_group_synchronization(request: MultiPersonAnalysisRequest) -> Dict[str, Any]:
+async def analyze_group_synchronization(
+    request: MultiPersonAnalysisRequest,
+) -> Dict[str, Any]:
     """
     Analyze synchronization in group exercise
 
     Measures movement sync, phase alignment, pace consistency
     """
     try:
-        tracked = analyzer.tracker.update(request.detected_persons, request.frame_timestamp)
+        tracked = analyzer.tracker.update(
+            request.detected_persons, request.frame_timestamp
+        )
 
         if len(tracked) < 2:
-            raise HTTPException(status_code=400, detail="Need at least 2 people for group analysis")
+            raise HTTPException(
+                status_code=400, detail="Need at least 2 people for group analysis"
+            )
 
         sync_metrics = analyzer.group_analyzer.analyze_group_sync(
             list(tracked.values()), f"group_{request.session_id}"
@@ -413,7 +435,9 @@ async def recognize_action(request: FrameAnalysisRequest) -> Dict[str, Any]:
     Classifies actions and counts repetitions with form assessment
     """
     try:
-        action_type, confidence = analyzer.action_classifier.classify_action(request.keypoints)
+        action_type, confidence = analyzer.action_classifier.classify_action(
+            request.keypoints
+        )
 
         # Form assessment
         form_score, issues = analyzer.form_assessor.assess_squat_form(
@@ -451,7 +475,10 @@ async def analyze_session_comprehensive(
     try:
         # Run in background
         background_tasks.add_task(
-            analyzer.analyze_session, request.session_id, request.user_id, request.frames
+            analyzer.analyze_session,
+            request.session_id,
+            request.user_id,
+            request.frames,
         )
 
         return {
@@ -535,7 +562,11 @@ async def initialize_analyzer() -> Dict[str, Any]:
 
         return {
             "success": success,
-            "message": "Analyzer initialized successfully" if success else "Initialization failed",
+            "message": (
+                "Analyzer initialized successfully"
+                if success
+                else "Initialization failed"
+            ),
             "timestamp": datetime.utcnow().isoformat(),
         }
     except Exception as e:

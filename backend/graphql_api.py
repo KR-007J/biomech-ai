@@ -4,7 +4,7 @@ Type-safe GraphQL API with advanced querying
 """
 
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -108,7 +108,12 @@ class GraphQLQueryParser:
                 in_query = True
                 continue
 
-            if in_query and line and not line.startswith("{") and not line.startswith("}"):
+            if (
+                in_query
+                and line
+                and not line.startswith("{")
+                and not line.startswith("}")
+            ):
                 # Parse field
                 if ":" in line:
                     var_name, var_type = line.split(":", 1)
@@ -118,7 +123,9 @@ class GraphQLQueryParser:
 
         return parsed
 
-    def validate_query(self, query: Dict, schema: GraphQLSchema) -> tuple[bool, Optional[str]]:
+    def validate_query(
+        self, query: Dict, schema: GraphQLSchema
+    ) -> tuple[bool, Optional[str]]:
         """Validate query against schema"""
         for field in query.get("fields", []):
             if field not in schema.query_type.fields:
@@ -270,7 +277,9 @@ class GraphQLServer:
                 "poseAccuracy": GraphQLField("poseAccuracy", "Float"),
                 "injuryRisk": GraphQLField("injuryRisk", "Float"),
                 "formScore": GraphQLField("formScore", "Float"),
-                "recommendations": GraphQLField("recommendations", "String", list_type=True),
+                "recommendations": GraphQLField(
+                    "recommendations", "String", list_type=True
+                ),
             },
         )
 
@@ -303,7 +312,9 @@ class GraphQLServer:
                     "user", "User", args={"id": GraphQLArg("id", "ID", nullable=False)}
                 ),
                 "session": GraphQLField(
-                    "session", "Session", args={"id": GraphQLArg("id", "ID", nullable=False)}
+                    "session",
+                    "Session",
+                    args={"id": GraphQLArg("id", "ID", nullable=False)},
                 ),
                 "leaderboard": GraphQLField(
                     "leaderboard",
@@ -320,7 +331,9 @@ class GraphQLServer:
                     args={"userId": GraphQLArg("userId", "ID", nullable=False)},
                 ),
                 "analysis": GraphQLField(
-                    "analysis", "Analysis", args={"id": GraphQLArg("id", "ID", nullable=False)}
+                    "analysis",
+                    "Analysis",
+                    args={"id": GraphQLArg("id", "ID", nullable=False)},
                 ),
             },
         )
@@ -347,7 +360,9 @@ class GraphQLServer:
                     "Boolean",
                     args={
                         "userId": GraphQLArg("userId", "ID", nullable=False),
-                        "achievementId": GraphQLArg("achievementId", "ID", nullable=False),
+                        "achievementId": GraphQLArg(
+                            "achievementId", "ID", nullable=False
+                        ),
                     },
                 ),
             },
@@ -419,7 +434,10 @@ class GraphQLServer:
         query_string: Optional[str] = None,
     ) -> Dict[str, Any]:
         active_query = query if query is not None else query_string
-        return {"data": self._parse_query(active_query or ""), "operation_name": operation_name}
+        return {
+            "data": self._parse_query(active_query or ""),
+            "operation_name": operation_name,
+        }
 
     def execute_mutation(
         self, mutation: str, variables: Optional[Dict[str, Any]] = None

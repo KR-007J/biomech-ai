@@ -1,8 +1,6 @@
 import os
 import time
 
-import requests
-
 # Configuration
 API_BASE = "http://127.0.0.1:8000"
 TEST_FOLDER = "test-cases"
@@ -69,18 +67,23 @@ def run_validation():
             total_latency += float(res["latency"])
             total_confidence += float(res["confidence"])
             print(
-                f"{res['test_case']:<25} | {res['risk_level']:<10} | {res['confidence']:.2f} | {res['latency']:.2f}s | {res['status']}"
+                f"{res['test_case']:<25} | {res['risk_level']:<10} | "
+                f"{res['confidence']:.2f} | {res['latency']:.2f}s | {res['status']}"
             )
         except Exception as e:
-            print(f"{video:<25} | ERROR      | 0.00   | ---    | FAIL ({str(e)[:15]}...)")
+            print(
+                f"{video:<25} | ERROR      | 0.00   | ---    | FAIL ({str(e)[:15]}...)"
+            )
 
     if results:
         avg_lat = total_latency / len(results)
         avg_conf = total_confidence / len(results)
-        pass_rate = (len([r for r in results if r["status"] == "PASS"]) / len(results)) * 100
+        pass_rate = (
+            len([r for r in results if r["status"] == "PASS"]) / len(results)
+        ) * 100
 
         print("-" * 65)
-        print(f"\nAUDIT SYSTEM SUMMARY:")
+        print("\nAUDIT SYSTEM SUMMARY:")
         print(f"   - Reliability Score: {pass_rate:.1f}%")
         print(f"   - Avg AI Latency:    {avg_lat:.3f}s")
         print(f"   - Avg Pose Sense:    {avg_conf*100:.1f}%")
@@ -118,7 +121,8 @@ def generate_placeholder_report():
     print("-" * 65)
     for res in report:
         print(
-            f"{res['test_case']:<25} | {res['risk_level']:<10} | {res['confidence']:.2f} | {res['latency']:.2f}s | {res['status']}"
+            f"{res['test_case']:<25} | {res['risk_level']:<10} | "
+            f"{res['confidence']:.2f} | {res['latency']:.2f}s | {res['status']}"
         )
 
     print("-" * 65)

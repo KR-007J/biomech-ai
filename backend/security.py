@@ -59,7 +59,10 @@ class APIKeyManager:
             key_hash = hashlib.sha256(key_token.encode()).hexdigest()
 
             for key_id, key_data in cls._keys.items():
-                if hmac.compare_digest(key_data["hash"], key_hash) and not key_data["revoked"]:
+                if (
+                    hmac.compare_digest(key_data["hash"], key_hash)
+                    and not key_data["revoked"]
+                ):
                     # Update last used time
                     key_data["last_used"] = datetime.now().isoformat()
                     logger.debug(f"API key validated: {key_id}")
@@ -81,7 +84,9 @@ class APIKeyManager:
         return False
 
     @classmethod
-    def rotate_key(cls, key_id: str, name: Optional[str] = None) -> Optional[Tuple[str, str]]:
+    def rotate_key(
+        cls, key_id: str, name: Optional[str] = None
+    ) -> Optional[Tuple[str, str]]:
         """Rotate an API key (revoke old, generate new)"""
         if key_id not in cls._keys:
             return None
@@ -181,7 +186,9 @@ class RequestValidator:
         limit = cls.ENDPOINT_SIZE_LIMITS.get(endpoint, cls.MAX_REQUEST_SIZE)
 
         if content_length > limit:
-            error = f"Request size ({content_length} bytes) exceeds limit ({limit} bytes)"
+            error = (
+                f"Request size ({content_length} bytes) exceeds limit ({limit} bytes)"
+            )
             logger.warning(f"Request size validation failed: {error}")
             return False, error
 

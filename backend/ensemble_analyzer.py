@@ -16,7 +16,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import cv2
 import numpy as np
@@ -334,7 +334,9 @@ class EnsembleAnalyzer:
         if agreement >= self.consensus_threshold * 100:
             final_confidence = consensus_conf * (agreement / 100)
         else:
-            final_confidence = 0.3 * consensus_conf  # Lower confidence if poor agreement
+            final_confidence = (
+                0.3 * consensus_conf
+            )  # Lower confidence if poor agreement
 
         return EnsembleResult(
             landmark_name=landmark_name,
@@ -353,10 +355,12 @@ class EnsembleAnalyzer:
     ) -> Dict[str, EnsembleResult]:
         """Apply temporal smoothing using Kalman filter"""
         try:
-            from filterpy.kalman import KalmanFilter
+            pass
 
             smoothed_results = {}
-            current_dict = {r.landmark_name: (r.x, r.y) for r in current_results.values()}
+            current_dict = {
+                r.landmark_name: (r.x, r.y) for r in current_results.values()
+            }
 
             # Add to history
             self.frame_history.append(current_dict)
@@ -365,7 +369,10 @@ class EnsembleAnalyzer:
 
             # Apply simple moving average smoothing
             for landmark, result in current_results.items():
-                recent = [h.get(landmark, (result.x, result.y)) for h in self.frame_history[-5:]]
+                recent = [
+                    h.get(landmark, (result.x, result.y))
+                    for h in self.frame_history[-5:]
+                ]
                 if recent:
                     smooth_x = np.mean([r[0] for r in recent])
                     smooth_y = np.mean([r[1] for r in recent])

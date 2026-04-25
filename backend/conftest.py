@@ -7,7 +7,7 @@ Provides common fixtures and configuration for all pytest tests.
 import asyncio
 import os
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -18,7 +18,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from async_tasks import TaskManager
 from cache import CacheManager
 from main import app
-from metrics import MetricsCollector
 
 
 @pytest.fixture(scope="session")
@@ -109,7 +108,13 @@ def sample_profile():
 @pytest.fixture
 def sample_session():
     """Sample workout session"""
-    return {"user_id": "user-123", "exercise": "squat", "reps": 20, "score": 87.5, "duration": 45.3}
+    return {
+        "user_id": "user-123",
+        "exercise": "squat",
+        "reps": 20,
+        "score": 87.5,
+        "duration": 45.3,
+    }
 
 
 # Markers for organization

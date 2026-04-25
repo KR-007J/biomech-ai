@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 
@@ -44,7 +44,9 @@ def calculate_angle(a: List[float], b: List[float], c: List[float]) -> float:
         raise ValueError(f"Failed to calculate angle: {e}")
 
 
-def get_biomechanical_analysis(keypoints: Dict[str, Dict[str, float]]) -> Dict[str, Any]:
+def get_biomechanical_analysis(
+    keypoints: Dict[str, Dict[str, float]],
+) -> Dict[str, Any]:
     """
     Analyzes key joints and returns structured biomechanical data.
 
@@ -98,7 +100,9 @@ def get_biomechanical_analysis(keypoints: Dict[str, Dict[str, float]]) -> Dict[s
 
         # Calculate Deviations
         for joint, value in results["angles"].items():
-            base_joint = "knee" if "knee" in joint else ("elbow" if "elbow" in joint else "hip")
+            base_joint = (
+                "knee" if "knee" in joint else ("elbow" if "elbow" in joint else "hip")
+            )
             ideal = IDEAL_RANGES[base_joint]
             if value < ideal["min"]:
                 results["deviations"][joint] = float(round(value - ideal["min"], 2))

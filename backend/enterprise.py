@@ -92,7 +92,11 @@ class RolePermissions:
             "analysis:read",
             "client:manage",
         ],
-        UserRole.USER: ["org:read", "analysis:own", "profile:edit"],  # Only own analyses
+        UserRole.USER: [
+            "org:read",
+            "analysis:own",
+            "profile:edit",
+        ],  # Only own analyses
         UserRole.VIEWER: ["analysis:read"],  # Read-only access
     }
 
@@ -150,11 +154,15 @@ class MultiTenancyManager:
 
         return False
 
-    def get_organization_data(self, org_id: str, user_id: str, data_type: str) -> Optional[Dict]:
+    def get_organization_data(
+        self, org_id: str, user_id: str, data_type: str
+    ) -> Optional[Dict]:
         """Get organization data with access control"""
         # Verify user has access
         if not self.check_access(org_id, user_id, f"{data_type}:read"):
-            logger.warning(f"Access denied for user {user_id} to {data_type} in org {org_id}")
+            logger.warning(
+                f"Access denied for user {user_id} to {data_type} in org {org_id}"
+            )
             return None
 
         # Return isolated data for organization

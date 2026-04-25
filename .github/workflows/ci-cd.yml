@@ -1,4 +1,4 @@
-﻿name: Biomech AI CI/CD
+name: Biomech AI CI/CD
 
 on:
   push:
@@ -11,10 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: cd backend && pip install black flake8 isort && black --check . || true && isort --check-only . || true && flake8 . --max-line-length=100 || true
+          cache: 'pip'
+      - name: Install Linting Tools
+        run: cd backend && pip install black flake8 isort
+      - name: Check Formatting (Black)
+        run: cd backend && black --check .
+      - name: Check Imports (isort)
+        run: cd backend && isort --check-only .
+      - name: Lint Code (flake8)
+        run: cd backend && flake8 . --max-line-length=100
 
   test:
     runs-on: ubuntu-latest
@@ -31,14 +39,18 @@ jobs:
           - 6379:6379
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: cd backend && pip install -r requirements.txt pytest pytest-asyncio pytest-cov
-      - run: cd backend && pytest test_main.py -v --cov=. --cov-report=xml || true
+          cache: 'pip'
+      - name: Install Dependencies
+        run: cd backend && pip install -r requirements.txt pytest pytest-asyncio pytest-cov
+      - name: Run Unit Tests
+        run: cd backend && pytest test_main.py -v --cov=. --cov-report=xml
         env:
           REDIS_URL: redis://localhost:6379
-      - run: cd backend && pytest test_integration.py -v --cov-append --cov-report=xml || true
+      - name: Run Integration Tests
+        run: cd backend && pytest test_integration.py -v --cov-append --cov-report=xml
         env:
           REDIS_URL: redis://localhost:6379
 
@@ -47,27 +59,32 @@ jobs:
     needs: lint
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: cd backend && pip install bandit safety pip-audit
-      - run: cd backend && bandit -r . || true
-      - run: cd backend && safety check --json || true
-      - run: cd backend && pip-audit --disable-pip || true
+          cache: 'pip'
+      - name: Install Security Tools
+        run: cd backend && pip install bandit safety pip-audit
+      - name: Run Bandit (Security Scan)
+        run: cd backend && bandit -r .
+      - name: Run Safety Check
+        run: cd backend && safety check --json
+        continue-on-error: true # Safety sometimes fails on non-critical issues or API limits
+      - name: Run Pip Audit
+        run: cd backend && pip-audit --disable-pip
 
   build:
     runs-on: ubuntu-latest
     needs: [test, security]
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v2
-      - uses: docker/build-push-action@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v5
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: false
           tags: biomech-ai:latest
-        continue-on-error: true
 
   deploy:
     runs-on: ubuntu-latest
@@ -75,10 +92,16 @@ jobs:
     if: github.ref == 'refs/heads/develop'
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Deploy to staging"
+      - run: echo "Deploying to staging environment..."
 
   notify:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - run: echo "Pipeline complete"
+      - name: Final Status
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ CI/CD Pipeline completed successfully."
+          else
+            echo "❌ CI/CD Pipeline failed."
+          fi

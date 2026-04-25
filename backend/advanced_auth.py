@@ -3,7 +3,6 @@ TIER 5: Advanced Authentication & Authorization
 Implements RBAC, OAuth2, JWT, MFA, and enterprise security
 """
 
-import asyncio
 import base64
 import hashlib
 import hmac
@@ -286,7 +285,12 @@ class AuthenticationService:
         logger.info("Authentication service initialized")
 
     async def register_user(
-        self, username: str, email: str, password: str, role: str = "athlete", tenant_id: str = None
+        self,
+        username: str,
+        email: str,
+        password: str,
+        role: str = "athlete",
+        tenant_id: str = None,
     ) -> Dict[str, Any]:
         """
         Register new user
@@ -326,12 +330,19 @@ class AuthenticationService:
 
             logger.info(f"User registered: {username} ({user_id})")
 
-            return {"success": True, "user_id": user_id, "username": username, "email": email}
+            return {
+                "success": True,
+                "user_id": user_id,
+                "username": username,
+                "email": email,
+            }
         except Exception as e:
             logger.error(f"Registration failed: {str(e)}")
             return {"error": str(e)}
 
-    async def login(self, username: str, password: str, ip_address: str = None) -> Dict[str, Any]:
+    async def login(
+        self, username: str, password: str, ip_address: str = None
+    ) -> Dict[str, Any]:
         """
         Authenticate user
 
@@ -394,7 +405,9 @@ class AuthenticationService:
             logger.error(f"Login failed: {str(e)}")
             return {"error": str(e)}
 
-    async def verify_token(self, token: str, ip_address: str = None) -> Tuple[bool, Optional[Dict]]:
+    async def verify_token(
+        self, token: str, ip_address: str = None
+    ) -> Tuple[bool, Optional[Dict]]:
         """
         Verify JWT token
 
@@ -503,7 +516,9 @@ class AuthenticationService:
         payload = jwt_obj.to_dict()
         payload.update(jwt_obj.payload)
 
-        header = base64.b64encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()).decode()
+        header = base64.b64encode(
+            json.dumps({"alg": "HS256", "typ": "JWT"}).encode()
+        ).decode()
         body = base64.b64encode(json.dumps(payload).encode()).decode()
 
         signature = hmac.new(
@@ -539,7 +554,11 @@ class AuthenticationService:
             return None
 
     async def create_api_key(
-        self, user_id: str, name: str, permissions: List[str], expires_in_days: int = 365
+        self,
+        user_id: str,
+        name: str,
+        permissions: List[str],
+        expires_in_days: int = 365,
     ) -> Dict[str, Any]:
         """
         Create API key for integration
@@ -604,7 +623,11 @@ class AuthenticationService:
                         return False, None
 
                     await self._audit_log(
-                        api_key_obj.user_id, "api_call", "api_key", "success", ip_address
+                        api_key_obj.user_id,
+                        "api_call",
+                        "api_key",
+                        "success",
+                        ip_address,
                     )
 
                     return True, {
@@ -619,7 +642,12 @@ class AuthenticationService:
             return False, None
 
     async def _audit_log(
-        self, user_id: str, action: str, resource: str, status: str, ip_address: str = None
+        self,
+        user_id: str,
+        action: str,
+        resource: str,
+        status: str,
+        ip_address: str = None,
     ):
         """Record audit log entry"""
         log = AuditLog(
@@ -644,14 +672,18 @@ class AuthenticationService:
     def _hash_password(self, password: str) -> str:
         """Hash password"""
         salt = secrets.token_hex(16)
-        pwd_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000)
+        pwd_hash = hashlib.pbkdf2_hmac(
+            "sha256", password.encode(), salt.encode(), 100000
+        )
         return f"{salt}${pwd_hash.hex()}"
 
     def _verify_password(self, password: str, password_hash: str) -> bool:
         """Verify password"""
         try:
             salt, pwd_hash = password_hash.split("$")
-            verify_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000)
+            verify_hash = hashlib.pbkdf2_hmac(
+                "sha256", password.encode(), salt.encode(), 100000
+            )
             return verify_hash.hex() == pwd_hash
         except:
             return False

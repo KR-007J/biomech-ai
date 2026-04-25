@@ -4,11 +4,7 @@ Unit Tests - Phase 3.1 Testing Framework
 Tests for core API endpoints, data validation, and business logic.
 """
 
-import json
-from datetime import datetime
-
 import pytest
-from fastapi import HTTPException
 
 
 class TestHealthEndpoint:
@@ -308,7 +304,9 @@ class TestRequestValidation:
         """✅ Request size validation works"""
         from security import RequestValidator
 
-        is_valid, error = RequestValidator.validate_request_size("/generate-feedback", 1000)
+        is_valid, error = RequestValidator.validate_request_size(
+            "/generate-feedback", 1000
+        )
         assert is_valid is True
 
     @pytest.mark.unit

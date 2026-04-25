@@ -6,7 +6,7 @@ Provides detailed analytics, insights, and reporting capabilities.
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List
 
@@ -48,7 +48,9 @@ class AdvancedAnalytics:
 
         scores = []
         for analysis in analyses:
-            risk_level = analysis.get("summary", {}).get("risk", {}).get("risk_level", "UNKNOWN")
+            risk_level = (
+                analysis.get("summary", {}).get("risk", {}).get("risk_level", "UNKNOWN")
+            )
 
             # Score based on risk level
             if risk_level == "LOW":
@@ -172,15 +174,22 @@ class AdvancedAnalytics:
             reverse=True,
         )
 
-        return [{**issue_details[issue], "count": count} for issue, count in sorted_issues[:3]]
+        return [
+            {**issue_details[issue], "count": count}
+            for issue, count in sorted_issues[:3]
+        ]
 
     def _calculate_improvement(self, analyses: List[Dict]) -> float:
         """Calculate improvement percentage"""
         if len(analyses) < 2:
             return 0.0
 
-        first_risk = analyses[0].get("summary", {}).get("risk", {}).get("risk_score", 50)
-        last_risk = analyses[-1].get("summary", {}).get("risk", {}).get("risk_score", 50)
+        first_risk = (
+            analyses[0].get("summary", {}).get("risk", {}).get("risk_score", 50)
+        )
+        last_risk = (
+            analyses[-1].get("summary", {}).get("risk", {}).get("risk_score", 50)
+        )
 
         # Lower risk = improvement
         improvement = first_risk - last_risk
@@ -188,7 +197,9 @@ class AdvancedAnalytics:
             return (improvement / first_risk) * 100
         return 0.0
 
-    def generate_report(self, user_id: str, start_date: str, end_date: str) -> Dict[str, Any]:
+    def generate_report(
+        self, user_id: str, start_date: str, end_date: str
+    ) -> Dict[str, Any]:
         """Generate comprehensive analytics report"""
         return {
             "user_id": user_id,

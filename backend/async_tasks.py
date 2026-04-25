@@ -6,7 +6,6 @@ retry logic, and failure handling.
 """
 
 import asyncio
-import json
 import logging
 import os
 import uuid
@@ -30,7 +29,9 @@ class TaskStatus(str, Enum):
 class Task:
     """Represents an async task"""
 
-    def __init__(self, task_id: str, operation: str, data: Dict[str, Any], priority: int = 5):
+    def __init__(
+        self, task_id: str, operation: str, data: Dict[str, Any], priority: int = 5
+    ):
         self.task_id = task_id
         self.operation = operation
         self.data = data
@@ -53,7 +54,9 @@ class Task:
             "priority": self.priority,
             "created_at": self.created_at.isoformat(),
             "started_at": self.started_at.isoformat() if self.started_at else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "completed_at": (
+                self.completed_at.isoformat() if self.completed_at else None
+            ),
             "result": self.result,
             "error": self.error,
             "retry_count": self.retry_count,
@@ -85,7 +88,11 @@ class TaskManager:
         return decorator
 
     def create_task(
-        self, operation: str, data: Dict[str, Any], priority: int = 5, task_id: Optional[str] = None
+        self,
+        operation: str,
+        data: Dict[str, Any],
+        priority: int = 5,
+        task_id: Optional[str] = None,
     ) -> str:
         """Create and queue a new async task"""
         if task_id is None:
@@ -98,7 +105,9 @@ class TaskManager:
         # Sort by priority (higher priority first)
         self.task_queue.sort(key=lambda x: x.priority, reverse=True)
 
-        logger.info(f"Task created: {task_id} (operation: {operation}, priority: {priority})")
+        logger.info(
+            f"Task created: {task_id} (operation: {operation}, priority: {priority})"
+        )
         return task_id
 
     async def process_queue(self):
@@ -165,7 +174,9 @@ class TaskManager:
             return task.to_dict()
         return None
 
-    def get_all_tasks(self, status: Optional[TaskStatus] = None) -> List[Dict[str, Any]]:
+    def get_all_tasks(
+        self, status: Optional[TaskStatus] = None
+    ) -> List[Dict[str, Any]]:
         """Get all tasks, optionally filtered by status"""
         tasks = list(self.tasks.values())
         if status:

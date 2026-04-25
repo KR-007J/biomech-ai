@@ -4,12 +4,10 @@ TIER 4: AR/VR Engine
 Provides skeleton overlay, immersive coaching, and real-time form feedback
 """
 
-import asyncio
-import json
 import logging
 import math
 import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
@@ -252,7 +250,9 @@ class AREngine:
             logger.error(f"AR session start failed: {str(e)}")
             return {"error": str(e)}
 
-    async def update_skeleton_for_ar(self, session_id: str, pose_data: Dict) -> Dict[str, Any]:
+    async def update_skeleton_for_ar(
+        self, session_id: str, pose_data: Dict
+    ) -> Dict[str, Any]:
         """
         Update skeleton for AR rendering
 
@@ -372,7 +372,7 @@ class AREngine:
         corrections = []
 
         left_knee = skeleton.joints.get("left_knee")
-        right_knee = skeleton.joints.get("right_knee")
+        skeleton.joints.get("right_knee")
         left_hip = skeleton.joints.get("left_hip")
 
         if left_knee and left_hip:
@@ -384,7 +384,9 @@ class AREngine:
                     severity="warning",
                     affected_joint="left_knee",
                     current_position=left_knee,
-                    suggested_position=Vector3D(left_knee.x, left_hip.y + 0.2, left_knee.z),
+                    suggested_position=Vector3D(
+                        left_knee.x, left_hip.y + 0.2, left_knee.z
+                    ),
                     correction_vector=Vector3D(0, 0.2, 0),
                     visual_cue="arrow",
                 )
@@ -408,7 +410,9 @@ class AREngine:
                     severity="critical",
                     affected_joint="spine",
                     current_position=left_shoulder,
-                    suggested_position=Vector3D(left_hip.x, left_shoulder.y, left_shoulder.z),
+                    suggested_position=Vector3D(
+                        left_hip.x, left_shoulder.y, left_shoulder.z
+                    ),
                     correction_vector=Vector3D(left_hip.x - left_shoulder.x, 0, 0),
                     visual_cue="highlight",
                 )
@@ -635,7 +639,9 @@ class VREngine:
             logger.error(f"VR session start failed: {str(e)}")
             return {"error": str(e)}
 
-    async def ai_coaching_feedback(self, session_id: str, performance: Dict) -> Dict[str, Any]:
+    async def ai_coaching_feedback(
+        self, session_id: str, performance: Dict
+    ) -> Dict[str, Any]:
         """
         Generate AI coaching feedback in VR
 

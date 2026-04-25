@@ -13,24 +13,20 @@ Comprehensive integration tests for advanced platform features:
 - Fraud detection
 """
 
-import asyncio
-import json
-import time
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from ab_testing import ABTestingEngine, AllocationStrategy
 from advanced_analytics import AdvancedAnalyticsEngine
-
 # Phase 2 modules
-from async_job_queue import AsyncJobQueue, JobMetadata, JobPriority
-from fraud_detection import FraudDetectionEngine, RiskLevel
+from async_job_queue import AsyncJobQueue, JobPriority
+from fraud_detection import FraudDetectionEngine
 from graphql_api import GraphQLServer
-from model_versioning import ExperimentRun, ModelRegistry, ModelVersion
-from realtime_websocket import RealtimeEvents, RealtimeWebSocketHub
-from webhook_events import Event, EventSystem, Webhook
+from model_versioning import ModelRegistry
+from realtime_websocket import RealtimeWebSocketHub
+from webhook_events import Event, EventSystem
 
 
 @pytest.fixture
@@ -292,7 +288,9 @@ class TestPhase2Integration:
 
         # Publish event
         event = Event(
-            event_type="user.created", resource_id="user-123", data={"email": "test@example.com"}
+            event_type="user.created",
+            resource_id="user-123",
+            data={"email": "test@example.com"},
         )
 
         await event_system.publish_event(event)
@@ -330,7 +328,9 @@ class TestPhase2Integration:
         assert is_valid
 
         # Test invalid signature
-        is_invalid = event_system._verify_signature("invalid-sig", event, "my-secret-key")
+        is_invalid = event_system._verify_signature(
+            "invalid-sig", event, "my-secret-key"
+        )
         assert not is_invalid
 
     @pytest.mark.asyncio
@@ -413,7 +413,10 @@ class TestPhase2Integration:
         """✅ Model registration and versioning"""
         # Register model
         model_id = model_registry.register_model(
-            name="ensemble_v1", version="1.0.0", model_type="ENSEMBLE", metadata={"accuracy": 0.95}
+            name="ensemble_v1",
+            version="1.0.0",
+            model_type="ENSEMBLE",
+            metadata={"accuracy": 0.95},
         )
 
         assert model_id in model_registry.models
@@ -447,7 +450,9 @@ class TestPhase2Integration:
     def test_experiment_tracking(self, model_registry):
         """✅ Experiment run tracking"""
         experiment_id = model_registry.start_experiment(
-            name="accuracy_optimization", model_type="ENSEMBLE", parameters={"learning_rate": 0.001}
+            name="accuracy_optimization",
+            model_type="ENSEMBLE",
+            parameters={"learning_rate": 0.001},
         )
 
         assert experiment_id in model_registry.experiments
@@ -469,7 +474,9 @@ class TestPhase2Integration:
         # Create cohort
         cohort_id = analytics_engine.create_cohort(
             name="new_users_q1_2026",
-            criteria={"registration_date": {"start": "2026-01-01", "end": "2026-03-31"}},
+            criteria={
+                "registration_date": {"start": "2026-01-01", "end": "2026-03-31"}
+            },
             group_by="month",
         )
 
@@ -486,7 +493,9 @@ class TestPhase2Integration:
         ]
 
         # Calculate retention
-        retention = analytics_engine.calculate_retention(cohort_id, users, days=[1, 7, 30])
+        retention = analytics_engine.calculate_retention(
+            cohort_id, users, days=[1, 7, 30]
+        )
 
         assert "day_1" in retention
         assert "day_7" in retention
@@ -499,8 +508,14 @@ class TestPhase2Integration:
 
         # Simulate user progression
         user_journeys = [
-            {"user_id": "user-1", "steps": ["landing_page", "sign_up", "first_session", "payment"]},
-            {"user_id": "user-2", "steps": ["landing_page", "sign_up", "first_session"]},
+            {
+                "user_id": "user-1",
+                "steps": ["landing_page", "sign_up", "first_session", "payment"],
+            },
+            {
+                "user_id": "user-2",
+                "steps": ["landing_page", "sign_up", "first_session"],
+            },
             {"user_id": "user-3", "steps": ["landing_page", "sign_up"]},
             {"user_id": "user-4", "steps": ["landing_page"]},
         ]
@@ -565,7 +580,9 @@ class TestPhase2Integration:
     def test_user_allocation_strategies(self, ab_engine):
         """✅ Different allocation strategies"""
         experiment_id = ab_engine.create_experiment(
-            name="allocation_test", variants=["A", "B"], strategy=AllocationStrategy.STRATIFIED
+            name="allocation_test",
+            variants=["A", "B"],
+            strategy=AllocationStrategy.STRATIFIED,
         )
 
         ab_engine.start_experiment(experiment_id)
@@ -602,7 +619,10 @@ class TestPhase2Integration:
 
         assert "control" in results
         assert "variant" in results
-        assert results["variant"]["conversion_rate"] > results["control"]["conversion_rate"]
+        assert (
+            results["variant"]["conversion_rate"]
+            > results["control"]["conversion_rate"]
+        )
         assert "p_value" in results["variant"]
         assert "confidence_interval" in results["variant"]
 
@@ -614,7 +634,11 @@ class TestPhase2Integration:
 
         # Simulate suspicious actions
         actions = [
-            {"type": "api_call", "count": 150, "timeframe": "minute"},  # Velocity breach
+            {
+                "type": "api_call",
+                "count": 150,
+                "timeframe": "minute",
+            },  # Velocity breach
             {"type": "location_change", "from": "US", "to": "RU"},  # Geo anomaly
             {"type": "device_change", "new_device": True},  # Device anomaly
         ]
@@ -650,7 +674,11 @@ class TestPhase2Integration:
 
         # Simulate critical fraud indicators
         actions = [
-            {"type": "api_call", "count": 200, "timeframe": "minute"},  # Major velocity breach
+            {
+                "type": "api_call",
+                "count": 200,
+                "timeframe": "minute",
+            },  # Major velocity breach
             {"type": "location_change", "from": "US", "to": "UNKNOWN"},  # Geo anomaly
             {"type": "unusual_time", "hour": 3},  # Unusual hour
         ]
@@ -701,7 +729,6 @@ class TestPhase2EndToEndIntegration:
     async def test_analysis_job_with_websocket_updates(self, job_queue, websocket_hub):
         """✅ Job processing with real-time WebSocket updates"""
         # Setup WebSocket connection
-        connection_id = "conn-job-updates"
         user_id = "user-job-test"
 
         # Submit analysis job
@@ -719,7 +746,9 @@ class TestPhase2EndToEndIntegration:
 
     @pytest.mark.integration
     @pytest.mark.asyncio
-    async def test_model_update_with_webhook_notification(self, model_registry, event_system):
+    async def test_model_update_with_webhook_notification(
+        self, model_registry, event_system
+    ):
         """✅ Model update triggers webhook events"""
         # Register webhook for model events
         webhook_id = await event_system.register_webhook(
@@ -754,7 +783,9 @@ class TestPhase2EndToEndIntegration:
             ab_engine.record_conversion(experiment_id, user_id, converted)
 
             # Track in analytics
-            users.append({"id": user_id, "variant": variant, "converted": converted})  # 70% vs 50%
+            users.append(
+                {"id": user_id, "variant": variant, "converted": converted}
+            )  # 70% vs 50%
 
         # Analyze experiment
         results = ab_engine.analyze_results(experiment_id)
@@ -769,7 +800,9 @@ class TestPhase2EndToEndIntegration:
         )
 
         assert len(segments["converted"]) > 0
-        assert results["new_ui"]["conversion_rate"] > results["old_ui"]["conversion_rate"]
+        assert (
+            results["new_ui"]["conversion_rate"] > results["old_ui"]["conversion_rate"]
+        )
 
 
 if __name__ == "__main__":
