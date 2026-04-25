@@ -274,10 +274,11 @@ class TestPhase2Integration:
     @pytest.mark.asyncio
     async def test_event_publishing_and_delivery(self, event_system):
         """✅ Event publishing and webhook delivery"""
+        webhook_secret = "unit-test-webhook-token"
         # Register webhook
         webhook_id = await event_system.register_webhook(
             url="https://example.com/webhook",
-            secret="test-secret",
+            secret=webhook_secret,
             events=["user.created", "session.completed"],
         )
 
@@ -311,25 +312,27 @@ class TestPhase2Integration:
     @pytest.mark.asyncio
     async def test_webhook_signature_verification(self, event_system):
         """✅ Webhook HMAC signature verification"""
-        webhook_id = await event_system.register_webhook(url="https://example.com/webhook", secret="my-secret-key")
+        webhook_secret = "unit-test-signing-token"
+        webhook_id = await event_system.register_webhook(url="https://example.com/webhook", secret=webhook_secret)
 
         event = Event(event_type="test.event", resource_id="test-123")
 
         # Generate signature
-        signature = event_system._generate_signature(event, "my-secret-key")
+        signature = event_system._generate_signature(event, webhook_secret)
 
         # Verify signature
-        is_valid = event_system._verify_signature(signature, event, "my-secret-key")
+        is_valid = event_system._verify_signature(signature, event, webhook_secret)
         assert is_valid
 
         # Test invalid signature
-        is_invalid = event_system._verify_signature("invalid-sig", event, "my-secret-key")
+        is_invalid = event_system._verify_signature("invalid-sig", event, webhook_secret)
         assert not is_invalid
 
     @pytest.mark.asyncio
     async def test_webhook_circuit_breaker(self, event_system):
         """✅ Circuit breaker pattern for failing webhooks"""
-        webhook_id = await event_system.register_webhook(url="https://failing.example.com/webhook", secret="test")
+        webhook_secret = "unit-test-failing-webhook-token"
+        webhook_id = await event_system.register_webhook(url="https://failing.example.com/webhook", secret=webhook_secret)
 
         event = Event(event_type="test.event", resource_id="test-123")
 

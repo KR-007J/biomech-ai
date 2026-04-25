@@ -372,7 +372,7 @@ class SportsScienceEngine:
                 )
                 return dist * 1.5  # Approximate in meters
         except Exception:
-            pass
+            logger.debug("Stride length fallback used due to invalid landmarks")
         return 1.6  # Default stride length
 
     def _calculate_speed(self, stride_length: float, cadence: float) -> float:

@@ -6,7 +6,6 @@ Redis-based distributed cache with clustering and replication
 import asyncio
 import json
 import logging
-import pickle
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -372,8 +371,8 @@ class DistributedCache:
             elif isinstance(value, (list, dict)):
                 return max(1, len(json.dumps(value)) // (1024 * 1024))
             else:
-                return max(1, len(pickle.dumps(value)) // (1024 * 1024))
-        except:
+                return max(1, len(repr(value).encode("utf-8")) // (1024 * 1024))
+        except Exception:
             return 1
 
     async def get_stats(self) -> Dict[str, Any]:

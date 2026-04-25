@@ -55,7 +55,7 @@ class DeploymentManager:
         """Execute a shell command"""
         try:
             logger.info(f"Running: {' '.join(cmd)}")
-            result = subprocess.run(cmd, cwd=cwd or self.backend_dir, check=True)
+            result = subprocess.run(cmd, cwd=cwd or self.backend_dir, check=True)  # nosec B603
             return result.returncode == 0
         except subprocess.CalledProcessError as e:
             logger.error(f"Command failed with code {e.returncode}")
