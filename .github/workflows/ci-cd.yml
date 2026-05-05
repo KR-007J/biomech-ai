@@ -34,6 +34,11 @@ jobs:
         run: pip install pyyaml
       - name: Install frontend dependencies
         run: npm ci
+      - name: Create frontend config placeholder
+        run: |
+          if [ ! -f static/js/secrets.js ]; then
+            printf 'window.BIOMECH_CONFIG = window.BIOMECH_CONFIG || {};\n' > static/js/secrets.js
+          fi
       - name: Validate frontend and workflow
         run: npm test
 
