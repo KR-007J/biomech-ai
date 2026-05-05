@@ -35,8 +35,11 @@ for (const script of scripts) {
 }
 
 if (!html.includes('src="static/js/secrets.js') || html.indexOf("static/js/secrets.js") > html.indexOf("static/js/firebase-init.js")) {
-  console.error("secrets.js must load before firebase-init.js");
-  process.exit(1);
+  // Check if it's versioned: src="static/js/secrets.js?v=..."
+  if (!/src="static\/js\/secrets\.js(?:\?v=[^"]+)?"/.test(html)) {
+    console.error("secrets.js must load before firebase-init.js");
+    process.exit(1);
+  }
 }
 
 console.log("OK - Frontend assets and scripts are valid");
