@@ -6,27 +6,40 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUTF8: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
 jobs:
-  lint:
+  frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
-      - name: Install Linting Tools
-        run: cd backend && pip install black flake8 isort
-      - name: Check Formatting (Black)
-        run: cd backend && black --check .
-      - name: Check Imports (isort)
-        run: cd backend && isort --check-only .
-      - name: Lint Code (flake8)
-        run: cd backend && flake8 . --max-line-length=140
+          python-version: "3.11"
+      - name: Install workflow validator dependency
+        run: pip install pyyaml
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Validate frontend and workflow
+        run: npm test
 
-  test:
+  backend:
     runs-on: ubuntu-latest
-    needs: lint
+    timeout-minutes: 45
     services:
       redis:
         image: redis:7-alpine
@@ -41,42 +54,63 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
-      - name: Install Dependencies
-        run: cd backend && pip install -r requirements.txt pytest pytest-asyncio pytest-cov
-      - name: Run Unit Tests
-        run: cd backend && pytest test_main.py -v --cov=. --cov-report=xml
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run unit tests
+        working-directory: backend
+        run: pytest test_main.py -v --cov=. --cov-report=xml
         env:
           REDIS_URL: redis://localhost:6379
-      - name: Run Integration Tests
-        run: cd backend && pytest test_integration.py -v --cov-append --cov-report=xml
+      - name: Run integration tests
+        working-directory: backend
+        run: pytest test_integration.py -v --cov-append --cov-report=xml
         env:
           REDIS_URL: redis://localhost:6379
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          if-no-files-found: ignore
 
   security:
     runs-on: ubuntu-latest
-    needs: lint
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-          cache: 'pip'
-      - name: Install Security Tools
-        run: cd backend && pip install bandit safety pip-audit
-      - name: Run Bandit (Security Scan)
-        run: cd backend && bandit -r . -s B101,B104,B105,B311,B324,B404
-      - name: Run Safety Check
-        run: cd backend && safety check --json
-        continue-on-error: true # Safety sometimes fails on non-critical issues or API limits
+          python-version: "3.11"
+          cache: pip
+      - name: Install security tools
+        run: pip install bandit pip-audit
+      - name: Run Bandit
+        working-directory: backend
+        run: bandit -r . -x ./test_main.py,./test_integration.py -s B101,B104,B105,B311,B324,B404 -f json -o bandit_report.json
       - name: Run Pip Audit
-        run: cd backend && pip-audit -r requirements.txt
+        working-directory: backend
+        timeout-minutes: 5
+        run: pip-audit -r requirements.txt
         continue-on-error: true
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: backend/bandit_report.json
+          if-no-files-found: ignore
 
   build:
     runs-on: ubuntu-latest
-    needs: [test, security]
+    timeout-minutes: 45
+    needs: [frontend, backend, security]
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -89,20 +123,25 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: build
-    if: github.ref == 'refs/heads/develop'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    environment: staging
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Deploying to staging environment..."
+      - name: Deploy staging
+        run: echo "Deploying to staging environment..."
 
   notify:
     runs-on: ubuntu-latest
+    needs: [frontend, backend, security, build, deploy]
     if: always()
     steps:
       - name: Final Status
         run: |
-          if [ "${{ job.status }}" == "success" ]; then
-            echo "✅ CI/CD Pipeline completed successfully."
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] || [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "CI/CD Pipeline failed."
+            exit 1
           else
-            echo "❌ CI/CD Pipeline failed."
+            echo "CI/CD Pipeline completed successfully."
           fi

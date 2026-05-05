@@ -2,7 +2,7 @@
 """Complete CI/CD workflow validation"""
 import yaml
 
-with open('.github/workflows/ci-cd.yml', 'r', encoding='utf-8') as f:
+with open(".github/workflows/ci-cd.yml", "r", encoding="utf-8") as f:
     workflow = yaml.safe_load(f)
 
 print('=' * 60)
@@ -29,5 +29,5 @@ else:
     print('   ERROR - Deploy job missing')
 
 print()
-print('✅ All validations passed!')
+print("OK - All validations passed!")
 print('=' * 60)

@@ -4,7 +4,7 @@
   "description": "**Client-side** AI fitness coach powered by **MediaPipe Pose** + **Gemini 2.5 Flash**. \r Works in any browser. Deployable on Render, GitHub Pages, Netlify — **no server-side webcam processing needed**.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "python validate_workflow.py && python check_workflow.py"
   },
   "repository": {
     "type": "git",
